@@ -76,6 +76,8 @@ export function attachSocketHandlers(ctx: AppContext): void {
           role: claims.role === 'IMAM' ? 'IMAM' : 'ADMIN',
           userId: claims.sub,
           deviceId: auth.deviceId,
+          // Only the imam and mosque/platform admins may drive the live session; translators get admin-room updates only.
+          canCommand: claims.role === 'IMAM' || claims.role === 'MOSQUE_ADMIN' || claims.role === 'SUPER_ADMIN',
         };
         return next();
       }
@@ -133,42 +135,66 @@ export function attachSocketHandlers(ctx: AppContext): void {
       if (role === 'IMAM' && socket.data.deviceId) void heartbeat(ctx, tenantId, socket.data.deviceId, true);
     }
 
+    // Every handler below must tolerate a missing/invalid payload or callback: an exception thrown inside a
+    // socket.io listener (or an unhandled rejection from an async one) takes the whole API process down,
+    // and the public phone page connects without any authentication.
+    const reply = (ack: unknown, value: unknown) => {
+      if (typeof ack === 'function') ack(value);
+    };
+    const deviceIdOf = (payload: unknown): string | undefined => {
+      const d = (payload as { deviceId?: unknown } | null | undefined)?.deviceId;
+      return typeof d === 'string' && d.length > 0 && d.length <= 200 ? d : undefined;
+    };
+
     socket.on('display:hello', async (_payload, ack) => {
-      if (socket.data.displayId) touchDisplay(ctx, socket.data.displayId);
-      await sendState();
-      ack?.(true);
+      try {
+        if (socket.data.displayId) touchDisplay(ctx, socket.data.displayId);
+        await sendState();
+        reply(ack, true);
+      } catch (err) {
+        log.warn({ err }, 'display:hello failed');
+        reply(ack, false);
+      }
     });
 
     socket.on('imam:hello', async (payload, ack) => {
-      if (role !== 'IMAM' && role !== 'ADMIN') return ack?.(null);
-      socket.data.deviceId = payload.deviceId;
-      const snap = await getSnapshot(ctx, tenantId);
-      if (snap.khutbahId) {
-        const k = await getLiveKhutbah(ctx, tenantId, snap.khutbahId);
-        if (k) socket.emit('session:khutbah', k);
+      try {
+        if (role !== 'IMAM' && role !== 'ADMIN') return reply(ack, null);
+        const deviceId = deviceIdOf(payload);
+        if (deviceId) socket.data.deviceId = deviceId;
+        const snap = await getSnapshot(ctx, tenantId);
+        if (snap.khutbahId) {
+          const k = await getLiveKhutbah(ctx, tenantId, snap.khutbahId);
+          if (k) socket.emit('session:khutbah', k);
+        }
+        if (deviceId) void heartbeat(ctx, tenantId, deviceId, true);
+        reply(ack, snap);
+      } catch (err) {
+        log.warn({ err }, 'imam:hello failed');
+        reply(ack, null);
       }
-      void heartbeat(ctx, tenantId, payload.deviceId, true);
-      ack?.(snap);
     });
 
     socket.on('imam:command', async (payload, ack) => {
-      if (role !== 'IMAM' && role !== 'ADMIN') return ack?.({ ok: false, error: 'FORBIDDEN' });
-      const parsed = sessionCommandSchema.safeParse(payload.command);
-      if (!parsed.success) return ack?.({ ok: false, error: 'INVALID_COMMAND' });
       try {
+        if ((role !== 'IMAM' && role !== 'ADMIN') || !socket.data.canCommand) return reply(ack, { ok: false, error: 'FORBIDDEN' });
+        const body = (payload ?? {}) as { command?: unknown; commandId?: unknown };
+        const parsed = sessionCommandSchema.safeParse(body.command);
+        if (!parsed.success) return reply(ack, { ok: false, error: 'INVALID_COMMAND' });
         const snap = await applyCommand(ctx, tenantId, parsed.data as SessionCommand, socket.data.deviceId);
-        socket.emit('imam:ack', { seq: snap.seq, commandId: payload.commandId });
-        ack?.({ ok: true, seq: snap.seq });
+        socket.emit('imam:ack', { seq: snap.seq, commandId: typeof body.commandId === 'string' ? body.commandId : '' });
+        reply(ack, { ok: true, seq: snap.seq });
       } catch (err) {
-        ack?.({ ok: false, error: (err as Error).message });
+        reply(ack, { ok: false, error: (err as Error).message });
       }
     });
 
     socket.on('imam:heartbeat', (payload) => {
-      if (role === 'IMAM' || role === 'ADMIN') void heartbeat(ctx, tenantId, payload.deviceId, true);
+      const deviceId = deviceIdOf(payload);
+      if ((role === 'IMAM' || role === 'ADMIN') && deviceId) void heartbeat(ctx, tenantId, deviceId, true);
     });
 
-    socket.on('ping:time', (_clientTs, ack) => ack(Date.now()));
+    socket.on('ping:time', (_clientTs, ack) => reply(ack, Date.now()));
 
     socket.on('disconnect', async () => {
       if (role === 'DISPLAY' || role === 'PUBLIC') bumpDisplays(-1);

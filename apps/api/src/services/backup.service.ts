@@ -183,22 +183,31 @@ export async function restoreBackup(ctx: AppContext, tenantId: string, data: Bac
       if (data.providers.length) await tx.providerConfig.createMany({ data: strip(data.providers) as Prisma.ProviderConfigCreateManyInput[] });
       if (data.displays.length) await tx.display.createMany({ data: strip(data.displays) as Prisma.DisplayCreateManyInput[] });
 
+      // A backup file is user-supplied input. It may only ever create tenant-scoped roles: a file that claims a
+      // SUPER_ADMIN user would otherwise hand platform-wide access to whoever uploads it.
+      const TENANT_ROLES = new Set(['MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM', 'DISPLAY']);
+      const safeRole = (r: unknown) => (typeof r === 'string' && TENANT_ROLES.has(r) ? r : 'TRANSLATOR');
       for (const raw of data.users as Array<Record<string, unknown>>) {
         const u = revive(raw);
-        const existing = await tx.user.findFirst({ where: { tenantId, email: u.email as string } });
+        if (typeof u.email !== 'string' || !u.email) continue;
+        const existing = await tx.user.findFirst({ where: { tenantId, email: u.email } });
         if (existing) {
-          await tx.user.update({ where: { id: existing.id }, data: { name: u.name as string, role: u.role as never, isActive: u.isActive as boolean } });
-        } else {
+          // Never demote or disable the account performing the restore, and never touch a super admin's role.
+          const keepRole = existing.role === 'SUPER_ADMIN' || existing.id === actor.id;
+          await tx.user.update({
+            where: { id: existing.id },
+            data: { name: String(u.name ?? existing.name), ...(keepRole ? {} : { role: safeRole(u.role) as never, isActive: u.isActive !== false }) },
+          });
+        } else if (typeof u.passwordHash === 'string' && u.passwordHash.startsWith('scrypt$')) {
           await tx.user.create({
             data: {
-              id: u.id as string,
               tenantId,
-              email: u.email as string,
-              name: u.name as string,
-              role: u.role as never,
-              passwordHash: u.passwordHash as string,
-              locale: (u.locale as string) ?? 'ar',
-              isActive: (u.isActive as boolean) ?? true,
+              email: u.email,
+              name: String(u.name ?? u.email),
+              role: safeRole(u.role) as never,
+              passwordHash: u.passwordHash,
+              locale: u.locale === 'en' ? 'en' : 'ar',
+              isActive: u.isActive !== false,
             },
           });
         }

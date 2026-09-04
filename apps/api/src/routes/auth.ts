@@ -47,9 +47,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(loginSchema, request.body);
     const email = body.email.toLowerCase();
     const candidates = await db.user.findMany({ where: { email, isActive: true }, include: { tenant: true } });
-    let user = candidates.find((u) => (body.tenantSlug ? u.tenant?.slug === body.tenantSlug : true));
-    if (!user && candidates.length === 1) user = candidates[0];
-    if (!user && candidates.length > 1) throw badRequest('Multiple accounts use this email; specify tenantSlug');
+    // The same email may exist in several mosques (and as a super admin without a tenant). Without a slug the
+    // login is only unambiguous when exactly one account matches; never fall back to "the first one".
+    let user = body.tenantSlug ? candidates.find((u) => u.tenant?.slug === body.tenantSlug) : undefined;
+    if (!user && !body.tenantSlug && candidates.length === 1) user = candidates[0];
+    if (!user && !body.tenantSlug && candidates.length > 1) throw badRequest('Multiple accounts use this email; specify tenantSlug');
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
       await audit(db, null, { id: null, ip: request.ip }, 'auth.login.failed', 'User', null, null, { email });
       throw unauthorized('Invalid credentials');

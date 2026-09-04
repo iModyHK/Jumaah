@@ -19,7 +19,10 @@ export async function buildLiveKhutbah(db: Db, tenantId: string, khutbahId: stri
       const translations: LiveParagraph['translations'] = {};
       for (const t of p.translations) {
         if (!k.targetLanguages.includes(t.lang)) continue;
-        translations[t.lang] = { text: t.text, status: t.status };
+        // This payload reaches every screen and the unauthenticated phone page. Only approved text may leave the
+        // server; drafts and reviewed-but-unapproved text stay in the admin API. The status is kept so clients can
+        // show "translation pending" without ever seeing the draft.
+        translations[t.lang] = { text: t.status === 'APPROVED' ? t.text : '', status: t.status };
       }
       paragraphs.push({
         id: p.id,

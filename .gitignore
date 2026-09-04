@@ -13,3 +13,4 @@ backups/
 data/
 *.tsbuildinfo
 .DS_Store
+.test-backups/

@@ -114,6 +114,8 @@ export interface SocketData {
   userId?: string;
   displayId?: string;
   deviceId?: string;
+  /** True for imam, mosque admin and super admin tokens: the only roles allowed to send `imam:command`. */
+  canCommand?: boolean;
 }
 
 /** Redis channel naming */

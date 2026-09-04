@@ -121,7 +121,7 @@ export interface StartInput {
 
 export async function startSession(ctx: AppContext, tenantId: string, input: StartInput): Promise<LiveSessionSnapshot> {
   const current = await getSnapshot(ctx, tenantId);
-  const active = await ctx.db.liveSession.findFirst({ where: { tenantId, endedAt: null } });
+  const active = await ctx.db.liveSession.findFirst({ where: { tenantId, endedAt: null }, orderBy: { createdAt: 'desc' } });
   if (active && current.state !== 'ENDED') {
     const stale = Date.now() - active.lastHeartbeatAt.getTime() > SESSION_STALE_MS;
     const sameDevice = active.imamDeviceId === input.deviceId;
@@ -135,8 +135,10 @@ export async function startSession(ctx: AppContext, tenantId: string, input: Sta
         deviceId: input.deviceId,
       });
     }
-    await ctx.db.liveSession.update({ where: { id: active.id }, data: { endedAt: new Date(), state: 'ENDED' } });
   }
+  // Close every open row for this mosque, not just the newest: a row left open by a crash or a failed persist
+  // would otherwise be picked up as "the active session" after the next restart.
+  await ctx.db.liveSession.updateMany({ where: { tenantId, endedAt: null }, data: { endedAt: new Date(), state: 'ENDED' } });
   const khutbah = await getLiveKhutbah(ctx, tenantId, input.khutbahId);
   if (!khutbah) throw notFound('Khutbah');
   if (khutbah.paragraphs.length === 0) throw badRequest('Khutbah has no paragraphs');

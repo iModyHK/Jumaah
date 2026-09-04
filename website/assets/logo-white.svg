@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 100" width="440" height="100" role="img" aria-label="Jumaah">
+  <title>Jumaah</title>
+  <polygon fill="#5fbf9c" points="96,50 82.5,63.5 82.5,82.5 63.5,82.5 50,96 36.5,82.5 17.5,82.5 17.5,63.5 4,50 17.5,36.5 17.5,17.5 36.5,17.5 50,4 63.5,17.5 82.5,17.5 82.5,36.5"/>
+  <rect x="30" y="37" width="40" height="6" rx="3" fill="#0f1614" opacity=".55"/>
+  <rect x="35" y="47" width="30" height="6" rx="3" fill="#d4a03c"/>
+  <rect x="33" y="57" width="34" height="6" rx="3" fill="#0f1614" opacity=".55"/>
+  <text x="118" y="68" font-family="Bricolage Grotesque, Helvetica Neue, Arial, sans-serif" font-weight="800" font-size="56" letter-spacing="-1.5" fill="#ffffff">Jumaah</text>
+  <text x="432" y="66" text-anchor="end" font-family="Amiri, Scheherazade New, Traditional Arabic, serif" font-weight="700" font-size="44" fill="#5fbf9c" direction="rtl">جمعة</text>
+</svg>

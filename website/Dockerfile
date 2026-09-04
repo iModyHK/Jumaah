@@ -11,8 +11,9 @@ ARG APP_VERSION
 RUN node build.mjs
 
 FROM node:22-alpine
-# Pull Alpine security fixes released after the base image was published (Trivy gates the CI build on CRITICAL findings)
-RUN apk upgrade --no-cache
+# Pull Alpine security fixes released after the base image was published, and drop npm/yarn/corepack: the server has no
+# dependencies, and the bundled npm ships old packages (tar, pacote…) that Trivy flags. Trivy gates the CI build on CRITICAL.
+RUN apk upgrade --no-cache && rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn*
 WORKDIR /app
 COPY server.mjs ./
 COPY shared ./shared

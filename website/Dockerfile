@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY build.mjs ./
 COPY src ./src
@@ -10,7 +10,9 @@ ARG SOCIAL_PROOF=0
 ARG APP_VERSION
 RUN node build.mjs
 
-FROM node:20-alpine
+FROM node:22-alpine
+# Pull Alpine security fixes released after the base image was published (Trivy gates the CI build on CRITICAL findings)
+RUN apk upgrade --no-cache
 WORKDIR /app
 COPY server.mjs ./
 COPY shared ./shared

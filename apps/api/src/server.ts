@@ -1,9 +1,30 @@
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { createPrisma, encryptSecret, apiKeyHint } from '@jumaah/db';
 import { loadConfig } from './config.js';
 import { buildApp } from './app.js';
 import { createRedis } from './lib/redis.js';
 
+/** Load the repository-root .env in development (Docker passes real env vars; nothing is overridden). */
+function loadDotEnv() {
+  if (process.env.NODE_ENV === 'production') return;
+  const candidates = ['.env', '../.env', '../../.env'];
+  for (const c of candidates) {
+    try {
+      const file = resolve(process.cwd(), c);
+      if (!existsSync(file)) continue;
+      const before = { ...process.env };
+      process.loadEnvFile(file);
+      for (const k of Object.keys(before)) process.env[k] = before[k];
+      return;
+    } catch {
+      /* try next */
+    }
+  }
+}
+
 async function main() {
+  loadDotEnv();
   const config = loadConfig();
   const db = createPrisma(config.DATABASE_URL);
   const redis = createRedis(config.REDIS_URL, 'main');

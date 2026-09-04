@@ -51,7 +51,16 @@ export async function notifyKhutbahChanged(ctx: AppContext, tenantId: string, kh
 
 export async function getSnapshot(ctx: AppContext, tenantId: string): Promise<LiveSessionSnapshot> {
   const raw = await ctx.redis.get(SESSION_KEY(tenantId));
-  if (raw) return JSON.parse(raw) as LiveSessionSnapshot;
+  if (raw) {
+    const cached = JSON.parse(raw) as LiveSessionSnapshot;
+    // ENDED is transient (8s); if the API restarted before the reset timer fired, fall back to WAITING.
+    if (cached.state === 'ENDED' && Date.now() - new Date(cached.updatedAt).getTime() > 10_000) {
+      const snap = emptySnapshot(tenantId);
+      await ctx.redis.set(SESSION_KEY(tenantId), JSON.stringify(snap));
+      return snap;
+    }
+    return cached;
+  }
   // Recover from DB after a restart.
   const row = await ctx.db.liveSession.findFirst({ where: { tenantId, endedAt: null }, orderBy: { createdAt: 'desc' } });
   const snap = row

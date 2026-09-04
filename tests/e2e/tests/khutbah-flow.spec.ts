@@ -147,8 +147,9 @@ async function uiLogin(page: Page, url: string, email: string) {
 test('imam PWA: pick the khutbah, go live, advance with the big Next button', async ({ page, request }) => {
   await request.post(`${API_URL}/api/session/end`, { headers: { authorization: `Bearer ${imamToken}` } });
   await uiLogin(page, `${IMAM_URL}/imam/`, 'imam@demo.mosque');
-  await page.getByText('خطبة اختبار E2E').first().click();
-  await page.getByRole('button', { name: /بدء الخطبة|start khutbah|استئناف|resume/i }).first().click();
+  const card = page.locator('li', { hasText: 'خطبة اختبار E2E' }).first();
+  await expect(card).toBeVisible();
+  await card.getByRole('button', { name: /بدء الخطبة|start khutbah|استئناف|resume/i }).click();
   await expect(page.getByText(P1_AR).first()).toBeVisible();
   await page.getByRole('button', { name: /^التالي$|^next$/i }).first().click();
   await expect.poll(async () => {

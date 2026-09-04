@@ -2,7 +2,7 @@
 
 [🇸🇦 النسخة العربية](README.ar.md)
 
-> **For mosques:** [jumaah.net](https://jumaah.net) shows what Jumaah does, with a live demo, and how to get it. It is free for every mosque. This README is for the people who install or develop it. Questions: use the form on the website. Bugs: [open an issue](https://github.com/iModyHK/Jumaah/issues).
+> **For mosques:** [www.jumaah.net](https://www.jumaah.net) shows what Jumaah does, with a live demo, and how to get it. It is free for every mosque. This README is for the people who install or develop it. Questions: use the form on the website. Bugs: [open an issue](https://github.com/iModyHK/Jumaah/issues).
 
 Multi-tenant platform that shows the Friday khutbah, paragraph by paragraph, translated on the mosque's screens while the imam reads it in Arabic. Every mosque runs a small **edge server** (Docker, fully offline during the khutbah) and can optionally sync with a central **cloud server** (mosque management, shared khutbah library, central translation keys, backups).
 

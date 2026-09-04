@@ -2,7 +2,7 @@
   "name": "jumaah",
   "version": "1.0.0",
   "license": "MIT",
-  "homepage": "https://jumaah.net",
+  "homepage": "https://www.jumaah.net",
   "repository": { "type": "git", "url": "https://github.com/iModyHK/Jumaah.git" },
   "private": true,
   "description": "Multi-tenant Friday khutbah live translation platform (edge + cloud)",

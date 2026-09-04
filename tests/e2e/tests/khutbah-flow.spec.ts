@@ -141,7 +141,10 @@ async function uiLogin(page: Page, url: string, email: string) {
   await page.goto(url);
   await page.getByRole('textbox', { name: /email|البريد/i }).or(page.locator('input[type="email"]')).first().fill(email);
   await page.locator('input[type="password"]').first().fill('Demo12345!');
-  await page.getByRole('button', { name: /تسجيل الدخول|log in/i }).first().click();
+  const loginButton = page.getByRole('button', { name: /تسجيل الدخول|log in/i }).first();
+  await loginButton.click();
+  // wait for the login round-trip to finish (the form disappears) before navigating elsewhere
+  await expect(page.locator('input[type="password"]')).toBeHidden({ timeout: 20_000 });
 }
 
 test('imam PWA: pick the khutbah, go live, advance with the big Next button', async ({ page, request }) => {

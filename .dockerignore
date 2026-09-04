@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+.git
+.env
+.env.*
+!.env.example
+backups
+**/playwright-report
+**/test-results
+**/.test-backups
+*.log

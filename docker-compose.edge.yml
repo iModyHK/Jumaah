@@ -1,0 +1,140 @@
+# =============================================================================
+# Jumaah — EDGE stack (one per mosque). Works fully offline on the mosque LAN.
+#   docker compose -f docker-compose.edge.yml up -d --build
+# Services: web (Caddy + 3 PWAs) · api · sync-worker · db · redis · (optional) ollama / libretranslate
+# =============================================================================
+name: jumaah-edge
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DEPLOYMENT_MODE: edge
+  IMAGE_TAG: ${IMAGE_TAG:-1.0.0}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-jumaah}:${POSTGRES_PASSWORD:-jumaah_dev_password}@db:5432/${POSTGRES_DB:-jumaah}?schema=public
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+  REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+  RATE_LIMIT_AUTH: ${RATE_LIMIT_AUTH:-10}
+  RATE_LIMIT_GENERAL: ${RATE_LIMIT_GENERAL:-300}
+  CLOUD_API_URL: ${CLOUD_API_URL:-}
+  EDGE_TENANT_SLUG: ${EDGE_TENANT_SLUG:-demo}
+  EDGE_SYNC_KEY: ${EDGE_SYNC_KEY:-}
+  EDGE_DEVICE_ID: ${EDGE_DEVICE_ID:-}
+  SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-60}
+  OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+  OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
+  LIBRETRANSLATE_URL: ${LIBRETRANSLATE_URL:-http://libretranslate:5000}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
+  DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+  BACKUP_DIR: /app/backups
+  BACKUP_KEEP: ${BACKUP_KEEP:-20}
+  SEED_ON_START: ${SEED_ON_START:-0}
+  SEED_SUPER_ADMIN_EMAIL: ${SEED_SUPER_ADMIN_EMAIL:-admin@jumaah.app}
+  SEED_SUPER_ADMIN_PASSWORD: ${SEED_SUPER_ADMIN_PASSWORD:-Admin12345!}
+  SEED_DEMO_PASSWORD: ${SEED_DEMO_PASSWORD:-Demo12345!}
+
+services:
+  web:
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-web:${IMAGE_TAG:-1.0.0}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      API_UPSTREAM: api:4000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.0.0}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["api"]
+    environment: *app-env
+    volumes:
+      - backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "4000"
+
+  sync-worker:
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.0.0}
+    restart: unless-stopped
+    command: ["worker"]
+    environment: *app-env
+    depends_on:
+      api:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jumaah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jumaah_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-jumaah}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jumaah} -d ${POSTGRES_DB:-jumaah}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---- Optional offline translation engines (enable with: --profile local-ai) ----
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local-ai"]
+    restart: unless-stopped
+    volumes:
+      - ollama:/root/.ollama
+    expose:
+      - "11434"
+    # After first start:  docker compose -f docker-compose.edge.yml exec ollama ollama pull qwen2.5:7b
+
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    profiles: ["local-ai"]
+    restart: unless-stopped
+    environment:
+      LT_LOAD_ONLY: ${LT_LANGS:-ar,en,ur,bn,tr,id,fr,es}
+      LT_DISABLE_WEB_UI: "true"
+    volumes:
+      - ltdata:/home/libretranslate/.local
+    expose:
+      - "5000"
+
+volumes:
+  pgdata:
+  redisdata:
+  backups:
+  ollama:
+  ltdata:

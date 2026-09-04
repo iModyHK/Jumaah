@@ -1,0 +1,51 @@
+{
+	# Edge servers run on a LAN without public DNS: plain HTTP on :80 (or set SITE_ADDRESS to a domain for auto-TLS).
+	admin off
+}
+
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# ---- API + realtime ------------------------------------------------------
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:api:4000}
+	}
+	handle /socket.io/* {
+		reverse_proxy {$API_UPSTREAM:api:4000}
+	}
+
+	# ---- Frontends (static, PWA) --------------------------------------------
+	handle_path /admin/* {
+		root * /srv/admin
+		try_files {path} /index.html
+		file_server
+	}
+	handle_path /imam/* {
+		root * /srv/imam
+		try_files {path} /index.html
+		file_server
+	}
+	handle_path /display/* {
+		root * /srv/display
+		try_files {path} /index.html
+		file_server
+	}
+
+	redir /admin /admin/ permanent
+	redir /imam /imam/ permanent
+	redir /display /display/ permanent
+	redir / /admin/ temporary
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		# Service workers + fonts are same-origin; no CDN is ever used.
+		-Server
+	}
+	# Never cache the service worker / manifest, cache hashed assets for a long time.
+	@sw path /admin/sw.js /imam/sw.js /display/sw.js /admin/manifest.webmanifest /imam/manifest.webmanifest /display/manifest.webmanifest
+	header @sw Cache-Control "no-cache"
+	@assets path_regexp assets \.(js|css|woff2?|svg|png)$
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+}

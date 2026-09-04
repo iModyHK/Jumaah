@@ -1,0 +1,125 @@
+# =============================================================================
+# Jumaah — CLOUD stack (central platform): tenant management, shared library,
+# central translation keys, backups/sync target for every mosque's edge server.
+#   docker compose -f docker-compose.cloud.yml up -d --build
+# Set SITE_ADDRESS=your.domain.tld for automatic HTTPS (Caddy / Let's Encrypt).
+# =============================================================================
+name: jumaah-cloud
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DEPLOYMENT_MODE: cloud
+  IMAGE_TAG: ${IMAGE_TAG:-1.0.0}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-jumaah}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-jumaah}?schema=public
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://${SITE_ADDRESS:-localhost}}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+  REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+  RATE_LIMIT_AUTH: ${RATE_LIMIT_AUTH:-10}
+  RATE_LIMIT_GENERAL: ${RATE_LIMIT_GENERAL:-600}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  GOOGLE_TRANSLATE_API_KEY: ${GOOGLE_TRANSLATE_API_KEY:-}
+  DEEPL_API_KEY: ${DEEPL_API_KEY:-}
+  BACKUP_DIR: /app/backups
+  BACKUP_KEEP: ${BACKUP_KEEP:-50}
+  SEED_ON_START: ${SEED_ON_START:-0}
+  SEED_SUPER_ADMIN_EMAIL: ${SEED_SUPER_ADMIN_EMAIL:-admin@jumaah.app}
+  SEED_SUPER_ADMIN_PASSWORD: ${SEED_SUPER_ADMIN_PASSWORD:?set SEED_SUPER_ADMIN_PASSWORD}
+
+services:
+  web:
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-web:${IMAGE_TAG:-1.0.0}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      API_UPSTREAM: api:4000
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+
+  api:
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.0.0}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["api"]
+    environment: *app-env
+    volumes:
+      - backups:/app/backups
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      replicas: ${API_REPLICAS:-1}
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jumaah}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-jumaah}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jumaah} -d ${POSTGRES_DB:-jumaah}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Nightly logical dump of the whole platform database (kept 14 days).
+  db-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdumps:/dumps
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          pg_dump -h db -U ${POSTGRES_USER:-jumaah} ${POSTGRES_DB:-jumaah} | gzip > /dumps/jumaah-$(date +%F-%H%M).sql.gz
+          find /dumps -name '*.sql.gz' -mtime +14 -delete
+          sleep 86400
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  backups:
+  pgdumps:
+  caddy_data:
+  caddy_config:

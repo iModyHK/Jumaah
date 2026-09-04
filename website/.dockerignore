@@ -1,8 +1,0 @@
-.dev.vars
-.git
-.gitignore
-.wrangler
-node_modules
-functions
-README.md
-docker-compose.yml

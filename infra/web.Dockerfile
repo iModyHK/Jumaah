@@ -2,7 +2,7 @@
 # Builds the three frontends (admin, imam, display) and serves them with Caddy,
 # which also reverse-proxies /api and /socket.io to the API container.
 # Build context: repository root.  docker build -f infra/web.Dockerfile .
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./

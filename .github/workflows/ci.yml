@@ -67,7 +67,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build & push API image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: apps/api/Dockerfile
@@ -76,7 +76,7 @@ jobs:
             ghcr.io/imodyhk/jumaah-api:latest
             ghcr.io/imodyhk/jumaah-api:${{ github.sha }}
       - name: Build & push web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: infra/web.Dockerfile

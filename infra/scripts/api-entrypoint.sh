@@ -5,7 +5,7 @@ cd /app
 
 wait_for_db() {
   i=0
-  until node -e "const {PrismaClient}=require('@prisma/client');new PrismaClient().\$queryRaw\`SELECT 1\`.then(()=>process.exit(0)).catch(()=>process.exit(1))" >/dev/null 2>&1; do
+  until (cd packages/db && node -e "const {PrismaClient}=require('@prisma/client');new PrismaClient().\$queryRaw\`SELECT 1\`.then(()=>process.exit(0)).catch(()=>process.exit(1))") >/dev/null 2>&1; do
     i=$((i+1))
     if [ "$i" -gt 60 ]; then echo "database not reachable"; exit 1; fi
     echo "waiting for database… ($i)"; sleep 2

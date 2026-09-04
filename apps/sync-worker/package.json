@@ -14,7 +14,7 @@
   "dependencies": {
     "@jumaah/db": "workspace:*",
     "@jumaah/shared": "workspace:*",
-    "ioredis": "^5.4.2",
+    "ioredis": "^6.0.0",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0"
   },

@@ -34,10 +34,11 @@ export async function libraryRoutes(app: FastifyInstance): Promise<void> {
   app.get('/library', { preHandler: app.requireRole(...ALL_STAFF) }, async (request) => {
     const q = parse(paginationSchema.extend({ pending: z.string().optional() }), request.query);
     const isSuper = request.user!.role === 'SUPER_ADMIN';
-    const where = {
-      ...(isSuper && q.pending === '1' ? { approved: false } : isSuper ? {} : { OR: [{ approved: true }, { sourceTenantId: request.tenantId }] }),
-      ...(q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' as const } }, { tags: { has: q.q } }] } : {}),
-    };
+    // Visibility and search are separate OR groups; they must be combined with AND, otherwise a search term
+    // replaced the visibility filter and let a mosque list other mosques' unapproved submissions.
+    const visibility = isSuper && q.pending === '1' ? { approved: false } : isSuper ? {} : { OR: [{ approved: true }, { sourceTenantId: request.tenantId }] };
+    const search = q.q ? { OR: [{ title: { contains: q.q, mode: 'insensitive' as const } }, { tags: { has: q.q } }] } : {};
+    const where = { AND: [visibility, search] };
     const [items, total] = await Promise.all([
       db.libraryKhutbah.findMany({ where, include: { sourceTenant: { select: { name: true } } }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.pageSize, take: q.pageSize }),
       db.libraryKhutbah.count({ where }),

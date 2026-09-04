@@ -146,11 +146,18 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(tenantLanguagesSchema, request.body);
     const tenantId = request.tenantId;
     await db.$transaction(async (tx) => {
+      const before = await tx.tenantLanguage.findMany({ where: { tenantId }, select: { code: true } });
       await tx.tenantLanguage.deleteMany({ where: { tenantId } });
+      const kept = new Set<string>();
       for (let i = 0; i < body.languages.length; i++) {
         const l = body.languages[i];
+        kept.add(l.code);
         const row = await tx.tenantLanguage.create({ data: { tenantId, code: l.code, enabled: l.enabled, order: i } });
         await outbox(tx, tenantId, 'TenantLanguage', `${tenantId}:${l.code}`, 'UPSERT', row);
+      }
+      // Languages removed here must also disappear on the other side of the sync, so record a DELETE for each.
+      for (const { code } of before) {
+        if (!kept.has(code)) await outbox(tx, tenantId, 'TenantLanguage', `${tenantId}:${code}`, 'DELETE', { code });
       }
     });
     await audit(db, tenantId, actorOf(request), 'tenant.languages.update', 'Tenant', tenantId, null, body.languages);

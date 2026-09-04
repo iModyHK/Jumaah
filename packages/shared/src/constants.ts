@@ -53,4 +53,6 @@ export const MIN_PARAGRAPH_SECONDS = 8;
 export const SOURCE_LANG = 'ar';
 export const SESSION_HEARTBEAT_MS = 5000;
 export const SESSION_STALE_MS = 30000;
+/** Outbox rows rejected by the other side this many times are parked until an admin requeues them. */
+export const OUTBOX_MAX_ATTEMPTS = 10;
 export const MAX_DISPLAY_LANGUAGES = 4;

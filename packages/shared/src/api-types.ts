@@ -230,6 +230,8 @@ export interface SyncStatusDto {
   lastPushAt: string | null;
   lastPullAt: string | null;
   pendingOutbox: number;
+  /** Outbox rows parked after OUTBOX_MAX_ATTEMPTS rejected pushes; retried only via POST /sync/retry-failed. */
+  failedOutbox: number;
   lastError: string | null;
   imageTag: string;
   latestImageTag: string | null;

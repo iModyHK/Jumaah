@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { applySyncEntries, sha256 } from '@jumaah/db';
-import { remoteTranslateSchema, syncPullSchema, syncPushSchema, type SyncStatusDto } from '@jumaah/shared';
+import { OUTBOX_MAX_ATTEMPTS, remoteTranslateSchema, syncPullSchema, syncPushSchema, type SyncStatusDto } from '@jumaah/shared';
 import { z } from 'zod';
 import { audit } from '../lib/audit.js';
 import { forbidden, unauthorized } from '../lib/errors.js';
@@ -80,7 +80,10 @@ export async function syncRoutes(app: FastifyInstance): Promise<void> {
   // ---- Edge admin side ----
   app.get('/sync/status', { preHandler: app.requireRole(...ADMIN_ROLES) }, async (request) => {
     const state = await db.syncState.findUnique({ where: { tenantId: request.tenantId } });
-    const pendingOutbox = await db.outbox.count({ where: { tenantId: request.tenantId, syncedAt: null } });
+    const [pendingOutbox, failedOutbox] = await Promise.all([
+      db.outbox.count({ where: { tenantId: request.tenantId, syncedAt: null, attempts: { lt: OUTBOX_MAX_ATTEMPTS } } }),
+      db.outbox.count({ where: { tenantId: request.tenantId, syncedAt: null, attempts: { gte: OUTBOX_MAX_ATTEMPTS } } }),
+    ]);
     const online = config.isEdge ? await isOnline(app.ctx) : true;
     const latest = config.isCloud ? await db.platformSetting.findUnique({ where: { key: 'edge.latestImageTag' } }) : null;
     const dto: SyncStatusDto = {
@@ -90,6 +93,7 @@ export async function syncRoutes(app: FastifyInstance): Promise<void> {
       lastPushAt: state?.lastPushAt?.toISOString() ?? null,
       lastPullAt: state?.lastPullAt?.toISOString() ?? null,
       pendingOutbox,
+      failedOutbox,
       lastError: state?.lastError ?? null,
       imageTag: config.IMAGE_TAG,
       latestImageTag: state?.latestImageTag ?? (latest?.value as { tag?: string })?.tag ?? null,
@@ -101,6 +105,18 @@ export async function syncRoutes(app: FastifyInstance): Promise<void> {
     await redis.publish('jumaah:sync:now', request.tenantId);
     await audit(db, request.tenantId, actorOf(request), 'sync.trigger', 'Tenant', request.tenantId);
     return { ok: true };
+  });
+
+  /** Put parked outbox rows (rejected OUTBOX_MAX_ATTEMPTS times) back in the queue and trigger a sync. */
+  app.post('/sync/retry-failed', { preHandler: app.requireRole(...ADMIN_ROLES) }, async (request) => {
+    const res = await db.outbox.updateMany({
+      where: { tenantId: request.tenantId, syncedAt: null, attempts: { gte: OUTBOX_MAX_ATTEMPTS } },
+      data: { attempts: 0, lastError: null },
+    });
+    await db.syncState.updateMany({ where: { tenantId: request.tenantId }, data: { lastError: null } });
+    await redis.publish('jumaah:sync:now', request.tenantId);
+    await audit(db, request.tenantId, actorOf(request), 'sync.retryFailed', 'Tenant', request.tenantId, null, { requeued: res.count });
+    return { ok: true, requeued: res.count };
   });
 
   /** Edge: apply a bootstrap snapshot fetched by the worker (or uploaded by the admin). */

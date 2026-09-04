@@ -22,6 +22,14 @@ export function SyncPage() {
     },
     onError: (e) => toast.error(e),
   });
+  const retryFailed = useMutation({
+    mutationFn: () => api.post<{ ok: boolean; requeued: number }>('/sync/retry-failed'),
+    onSuccess: (r) => {
+      toast.success(t('sync.retried', { count: r.requeued }));
+      setTimeout(() => void qc.invalidateQueries({ queryKey: ['sync'] }), 2000);
+    },
+    onError: (e) => toast.error(e),
+  });
 
   const s = status.data;
   const updateAvailable = !!s?.latestImageTag && s.latestImageTag !== s.imageTag;
@@ -33,6 +41,11 @@ export function SyncPage() {
         actions={
           <>
             <Button onClick={() => void status.refetch()}>{t('common.refresh')}</Button>
+            {!!s?.failedOutbox && (
+              <Button variant="ghost" onClick={() => retryFailed.mutate()} disabled={retryFailed.isPending}>
+                {retryFailed.isPending ? <Spinner /> : `${t('sync.retryFailed')} (${s.failedOutbox})`}
+              </Button>
+            )}
             <Button variant="primary" onClick={() => syncNow.mutate()} disabled={syncNow.isPending || !s}>
               {syncNow.isPending ? <Spinner /> : t('sync.syncNow')}
             </Button>
@@ -46,6 +59,13 @@ export function SyncPage() {
             <Stat label={t('sync.mode')} value={t(`sync.${s.mode}`)} hint={s.cloudUrl ?? undefined} />
             <Stat label={t('common.status')} value={<StatusPill tone={s.online ? 'ok' : 'danger'}>{s.online ? t('sync.online') : t('sync.offline')}</StatusPill>} />
             <Stat label={t('sync.pending')} value={s.pendingOutbox} />
+            {s.failedOutbox > 0 && (
+              <Stat
+                label={t('sync.failed')}
+                value={<StatusPill tone="danger">{s.failedOutbox}</StatusPill>}
+                hint={t('sync.failedHint')}
+              />
+            )}
             <Stat
               label={t('sync.imageTag')}
               value={<code className="j-kbd">{s.imageTag}</code>}

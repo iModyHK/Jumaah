@@ -4,6 +4,7 @@
  * apply on both sides via SyncApplied ids). Also checks the latest edge image tag for the admin UI.
  */
 import { createPrisma, applySyncEntries, type SyncEntry } from '@jumaah/db';
+import { OUTBOX_MAX_ATTEMPTS } from '@jumaah/shared';
 import { Redis } from 'ioredis';
 import pino from 'pino';
 
@@ -80,9 +81,11 @@ export async function syncOnce(): Promise<void> {
     const state = await db.syncState.upsert({ where: { tenantId: tid }, update: {}, create: { tenantId: tid, deviceId: env.deviceId } });
 
     // ---- push
+    // Rows the cloud has rejected OUTBOX_MAX_ATTEMPTS times are parked: they no longer occupy the batch, so one bad
+    // row can never stall everything behind it. The admin sees the count in sync status and can requeue them.
     let pushed = 0;
     for (;;) {
-      const batch = await db.outbox.findMany({ where: { tenantId: tid, syncedAt: null }, orderBy: { occurredAt: 'asc' }, take: 200 });
+      const batch = await db.outbox.findMany({ where: { tenantId: tid, syncedAt: null, attempts: { lt: OUTBOX_MAX_ATTEMPTS } }, orderBy: { occurredAt: 'asc' }, take: 200 });
       if (batch.length === 0) break;
       const res = await cloud<{ applied: number; skipped: number; conflicts: number; errors: Array<{ id: string; error: string }> }>('/sync/push', {
         tenantSlug: env.tenantSlug,
@@ -118,10 +121,13 @@ export async function syncOnce(): Promise<void> {
       /* ignore */
     }
 
-    await db.syncState.update({ where: { tenantId: tid }, data: { lastPushAt: new Date(), lastPullAt: new Date(), lastError: null, deviceId: env.deviceId, latestImageTag } });
+    const parked = await db.outbox.count({ where: { tenantId: tid, syncedAt: null, attempts: { gte: OUTBOX_MAX_ATTEMPTS } } });
+    const lastError = parked > 0 ? `${parked} change(s) rejected by the cloud ${OUTBOX_MAX_ATTEMPTS} times and parked; use "Retry failed" in Cloud sync` : null;
+    await db.syncState.update({ where: { tenantId: tid }, data: { lastPushAt: new Date(), lastPullAt: new Date(), lastError, deviceId: env.deviceId, latestImageTag } });
     await db.syncApplied.deleteMany({ where: { tenantId: tid, appliedAt: { lt: new Date(Date.now() - 30 * 86400000) } } });
     await db.outbox.deleteMany({ where: { tenantId: tid, syncedAt: { lt: new Date(Date.now() - 30 * 86400000) } } });
-    log.info({ pushed, pulled, ms: Date.now() - started, latestImageTag }, 'sync ok');
+    if (parked > 0) log.warn({ parked }, 'outbox rows parked after repeated rejections');
+    log.info({ pushed, pulled, parked, ms: Date.now() - started, latestImageTag }, 'sync ok');
   } catch (err) {
     const message = (err as Error).message;
     log.warn({ err: message }, 'sync failed (will retry)');

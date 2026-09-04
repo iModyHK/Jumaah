@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
-        with: { node-version: 20 }
+        with: { node-version: 20, package-manager-cache: false }   # the site has no dependencies; skip the pnpm cache lookup
 
       - name: Build static site (sanity check of build.mjs)
         working-directory: website
@@ -67,8 +67,8 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload scan results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with: { sarif_file: trivy.sarif }
 
       - name: Log in to Docker Hub

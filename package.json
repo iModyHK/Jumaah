@@ -1,0 +1,32 @@
+{
+  "name": "jumaah",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant Friday khutbah live translation platform (edge + cloud)",
+  "packageManager": "pnpm@9.15.4",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "pnpm --filter @jumaah/e2e test",
+    "db:generate": "pnpm --filter @jumaah/db generate",
+    "db:migrate": "pnpm --filter @jumaah/db migrate:deploy",
+    "db:migrate:dev": "pnpm --filter @jumaah/db migrate:dev",
+    "db:seed": "pnpm --filter @jumaah/db seed",
+    "db:reset": "pnpm --filter @jumaah/db reset",
+    "edge:up": "docker compose -f docker-compose.edge.yml up -d --build",
+    "edge:down": "docker compose -f docker-compose.edge.yml down",
+    "cloud:up": "docker compose -f docker-compose.cloud.yml up -d --build",
+    "cloud:down": "docker compose -f docker-compose.cloud.yml down"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

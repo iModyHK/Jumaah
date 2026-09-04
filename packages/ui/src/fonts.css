@@ -1,0 +1,22 @@
+/* All fonts are bundled from @fontsource packages — served from the app itself, never from a CDN. */
+@import '@fontsource/noto-naskh-arabic/400.css';
+@import '@fontsource/noto-naskh-arabic/700.css';
+@import '@fontsource/amiri/400.css';
+@import '@fontsource/amiri/700.css';
+@import '@fontsource/noto-sans/400.css';
+@import '@fontsource/noto-sans/600.css';
+@import '@fontsource/noto-sans/700.css';
+@import '@fontsource/noto-nastaliq-urdu/400.css';
+@import '@fontsource/noto-nastaliq-urdu/700.css';
+@import '@fontsource/noto-sans-bengali/400.css';
+@import '@fontsource/noto-sans-bengali/700.css';
+@import '@fontsource/noto-sans-ethiopic/400.css';
+@import '@fontsource/noto-sans-ethiopic/700.css';
+@import '@fontsource/noto-sans-sc/400.css';
+@import '@fontsource/noto-sans-sc/700.css';
+@import '@fontsource/noto-sans-devanagari/400.css';
+@import '@fontsource/noto-sans-devanagari/700.css';
+@import '@fontsource/noto-sans-tamil/400.css';
+@import '@fontsource/noto-sans-tamil/700.css';
+@import '@fontsource/noto-sans-malayalam/400.css';
+@import '@fontsource/noto-sans-malayalam/700.css';

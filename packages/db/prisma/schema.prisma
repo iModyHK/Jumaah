@@ -1,0 +1,572 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  SUPER_ADMIN
+  MOSQUE_ADMIN
+  TRANSLATOR
+  IMAM
+  DISPLAY
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIAL
+  PAST_DUE
+  SUSPENDED
+}
+
+enum KhutbahStatus {
+  DRAFT
+  TRANSLATING
+  REVIEW
+  READY
+  DELIVERED
+  ARCHIVED
+}
+
+enum SectionType {
+  FIRST
+  SECOND
+  DUA
+}
+
+enum ParagraphKind {
+  TEXT
+  QURAN
+  HADITH
+}
+
+enum TranslationStatus {
+  PENDING
+  MACHINE
+  REVIEWED
+  APPROVED
+  REJECTED
+}
+
+enum ProviderType {
+  MANUAL
+  ANTHROPIC
+  OPENAI
+  GOOGLE
+  DEEPL
+  LIBRETRANSLATE
+  OLLAMA
+  CLOUD
+}
+
+enum GlossaryMode {
+  KEEP
+  REPLACE
+  HINT
+}
+
+enum SessionState {
+  WAITING
+  LIVE
+  PAUSED
+  IMPROV
+  ENDED
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+enum OutboxOp {
+  UPSERT
+  DELETE
+}
+
+// ---------------------------------------------------------------------------
+// Tenancy & identity
+// ---------------------------------------------------------------------------
+
+model Tenant {
+  id                    String             @id @default(cuid())
+  name                  String
+  slug                  String             @unique
+  timezone              String             @default("Asia/Riyadh")
+  locale                String             @default("ar")
+  plan                  SubscriptionPlan   @default(FREE)
+  subscriptionStatus    SubscriptionStatus @default(TRIAL)
+  subscriptionEndsAt    DateTime?
+  librarySharingAllowed Boolean            @default(false)
+  settings              Json               @default("{}")
+  /// Shared secret used by this tenant's edge server to authenticate against the cloud.
+  syncKeyHash           String?
+  isActive              Boolean            @default(true)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  users           User[]
+  invitations     Invitation[]
+  languages       TenantLanguage[]
+  khutbahs        Khutbah[]
+  glossary        GlossaryEntry[]
+  providers       ProviderConfig[]
+  displays        Display[]
+  sessions        LiveSession[]
+  auditLogs       AuditLog[]
+  outbox          Outbox[]
+  syncState       SyncState?
+  backups         Backup[]
+  translationJobs TranslationJob[]
+  libraryItems    LibraryKhutbah[]
+  cache           TranslationCache[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String?
+  email        String
+  name         String
+  passwordHash String
+  role         Role
+  locale       String    @default("ar")
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([email])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  tenantId   String
+  email      String
+  name       String?
+  role       Role
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  invitedBy  String?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, email])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model TenantLanguage {
+  tenantId String
+  code     String
+  enabled  Boolean @default(true)
+  order    Int     @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, code])
+}
+
+// ---------------------------------------------------------------------------
+// Khutbah content
+// ---------------------------------------------------------------------------
+
+model Khutbah {
+  id              String        @id @default(cuid())
+  tenantId        String
+  title           String
+  hijriDate       String?
+  gregorianDate   DateTime      @db.Date
+  imamName        String?
+  status          KhutbahStatus @default(DRAFT)
+  targetLanguages String[]      @default([])
+  /// Bumped on every text/translation change; displays use it to invalidate caches.
+  version         Int           @default(1)
+  notes           String?
+  copiedFromId    String?
+  libraryId       String?
+  createdById     String?
+  deletedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sections KhutbahSection[]
+  versions KhutbahVersion[]
+  jobs     TranslationJob[]
+  sessions LiveSession[]
+
+  @@index([tenantId, gregorianDate])
+  @@index([tenantId, status])
+}
+
+model KhutbahSection {
+  id        String      @id @default(cuid())
+  khutbahId String
+  tenantId  String
+  type      SectionType
+  order     Int
+
+  khutbah    Khutbah     @relation(fields: [khutbahId], references: [id], onDelete: Cascade)
+  paragraphs Paragraph[]
+
+  @@unique([khutbahId, type])
+  @@index([tenantId])
+}
+
+model Paragraph {
+  id               String        @id @default(cuid())
+  sectionId        String
+  tenantId         String
+  order            Int
+  kind             ParagraphKind @default(TEXT)
+  reference        String?
+  textAr           String
+  hash             String
+  estimatedSeconds Int           @default(20)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  section      KhutbahSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  translations Translation[]
+
+  @@index([sectionId, order])
+  @@index([tenantId, hash])
+}
+
+model Translation {
+  id           String            @id @default(cuid())
+  paragraphId  String
+  tenantId     String
+  lang         String
+  text         String
+  status       TranslationStatus @default(PENDING)
+  providerType ProviderType?
+  providerMeta Json?
+  version      Int               @default(1)
+  reviewedById String?
+  approvedById String?
+  reviewNote   String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  paragraph Paragraph            @relation(fields: [paragraphId], references: [id], onDelete: Cascade)
+  history   TranslationVersion[]
+
+  @@unique([paragraphId, lang])
+  @@index([tenantId, status])
+}
+
+model TranslationVersion {
+  id            String            @id @default(cuid())
+  translationId String
+  tenantId      String
+  version       Int
+  text          String
+  status        TranslationStatus
+  providerType  ProviderType?
+  changedById   String?
+  createdAt     DateTime          @default(now())
+
+  translation Translation @relation(fields: [translationId], references: [id], onDelete: Cascade)
+
+  @@index([translationId, version])
+}
+
+/// Full snapshot of a khutbah's Arabic text (and optionally translations) at a point in time.
+model KhutbahVersion {
+  id          String   @id @default(cuid())
+  khutbahId   String
+  tenantId    String
+  version     Int
+  snapshot    Json
+  changeNote  String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  khutbah Khutbah @relation(fields: [khutbahId], references: [id], onDelete: Cascade)
+
+  @@unique([khutbahId, version])
+}
+
+// ---------------------------------------------------------------------------
+// Translation engine configuration
+// ---------------------------------------------------------------------------
+
+model GlossaryEntry {
+  id          String       @id @default(cuid())
+  tenantId    String
+  term        String
+  lang        String       @default("*")
+  replacement String?
+  mode        GlossaryMode @default(KEEP)
+  note        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, term, lang])
+}
+
+model ProviderConfig {
+  id              String       @id @default(cuid())
+  /// null => global provider managed by the platform (Super Admin)
+  tenantId        String?
+  type            ProviderType
+  name            String
+  apiKeyEncrypted String?
+  apiKeyHint      String?
+  baseUrl         String?
+  model           String?
+  priority        Int          @default(10)
+  enabled         Boolean      @default(true)
+  options         Json         @default("{}")
+  lastTestedAt    DateTime?
+  lastTestOk      Boolean?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, priority])
+}
+
+model TranslationCache {
+  id           String       @id @default(cuid())
+  /// null => shared across tenants (no glossary applied)
+  tenantId     String?
+  key          String
+  sourceHash   String
+  lang         String
+  providerType ProviderType
+  text         String
+  hits         Int          @default(0)
+  createdAt    DateTime     @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([key])
+  @@index([sourceHash, lang])
+}
+
+model TranslationJob {
+  id            String    @id @default(cuid())
+  tenantId      String
+  khutbahId     String
+  status        JobStatus @default(QUEUED)
+  total         Int       @default(0)
+  done          Int       @default(0)
+  failed        Int       @default(0)
+  cached        Int       @default(0)
+  languages     String[]
+  providerChain String[]
+  force         Boolean   @default(false)
+  paragraphIds  String[]  @default([])
+  error         String?
+  createdById   String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  khutbah Khutbah @relation(fields: [khutbahId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Displays & live sessions
+// ---------------------------------------------------------------------------
+
+model Display {
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String
+  token        String    @unique
+  languages    String[]
+  layout       String    @default("single")
+  fontScale    Float     @default(1)
+  theme        String    @default("dark")
+  showPrevious Boolean   @default(true)
+  showArabic   Boolean   @default(false)
+  showQr       Boolean   @default(true)
+  logoUrl      String?
+  location     String?
+  lastSeenAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model LiveSession {
+  id                 String       @id @default(cuid())
+  tenantId           String
+  khutbahId          String
+  state              SessionState @default(WAITING)
+  currentParagraphId String?
+  currentIndex       Int          @default(0)
+  currentSection     SectionType?
+  autoAdvance        Boolean      @default(false)
+  seq                Int          @default(0)
+  imamUserId         String?
+  imamDeviceId       String?
+  lastHeartbeatAt    DateTime     @default(now())
+  startedAt          DateTime?
+  sectionStartedAt   DateTime?
+  endedAt            DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  khutbah Khutbah @relation(fields: [khutbahId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, endedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Library, audit, sync, backups
+// ---------------------------------------------------------------------------
+
+model LibraryKhutbah {
+  id             String    @id @default(cuid())
+  sourceTenantId String
+  sourceKhutbahId String?
+  title          String
+  description    String?
+  tags           String[]  @default([])
+  languages      String[]  @default([])
+  paragraphCount Int       @default(0)
+  snapshot       Json
+  approved       Boolean   @default(false)
+  approvedAt     DateTime?
+  approvedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  sourceTenant Tenant @relation(fields: [sourceTenantId], references: [id], onDelete: Cascade)
+
+  @@index([approved])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([entity, entityId])
+}
+
+/// Outbox pattern: every local mutation that must reach the other side (edge<->cloud).
+model Outbox {
+  id         String    @id @default(cuid())
+  tenantId   String
+  entity     String
+  entityId   String
+  op         OutboxOp
+  payload    Json
+  version    Int       @default(1)
+  occurredAt DateTime  @default(now())
+  syncedAt   DateTime?
+  attempts   Int       @default(0)
+  lastError  String?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, syncedAt, occurredAt])
+}
+
+model SyncState {
+  tenantId   String    @id
+  deviceId   String
+  lastPushAt DateTime?
+  lastPullAt DateTime?
+  /// Cursor (occurredAt) of the last applied remote change.
+  pullCursor DateTime?
+  lastError  String?
+  latestImageTag String?
+  updatedAt  DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+/// Records of changes applied from the remote side, used to avoid echoing them back.
+model SyncApplied {
+  id        String   @id
+  tenantId  String
+  appliedAt DateTime @default(now())
+
+  @@index([tenantId, appliedAt])
+}
+
+model Backup {
+  id        String   @id @default(cuid())
+  tenantId  String
+  filename  String
+  sizeBytes Int
+  note      String?
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
+/// Platform-level key/value settings (cloud): latest edge image tag, announcements, etc.
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

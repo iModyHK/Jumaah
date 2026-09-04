@@ -1,0 +1,15 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "JWT_SECRET", "ENCRYPTION_KEY", "VITE_API_URL"],
+  "tasks": {
+    "generate": { "cache": false },
+    "build": {
+      "dependsOn": ["^build", "^generate"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "dev": { "cache": false, "persistent": true },
+    "lint": {},
+    "typecheck": { "dependsOn": ["^build", "^generate"] },
+    "test": { "dependsOn": ["^build", "^generate"] }
+  }
+}

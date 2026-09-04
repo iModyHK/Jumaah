@@ -1,0 +1,39 @@
+{
+  "name": "@jumaah/ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fonts.css": "./src/fonts.css",
+    "./base.css": "./src/base.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/amiri": "^5.1.0",
+    "@fontsource/noto-naskh-arabic": "^5.1.0",
+    "@fontsource/noto-nastaliq-urdu": "^5.1.0",
+    "@fontsource/noto-sans": "^5.1.0",
+    "@fontsource/noto-sans-bengali": "^5.1.0",
+    "@fontsource/noto-sans-devanagari": "^5.1.0",
+    "@fontsource/noto-sans-ethiopic": "^5.1.0",
+    "@fontsource/noto-sans-malayalam": "^5.1.0",
+    "@fontsource/noto-sans-sc": "^5.1.0",
+    "@fontsource/noto-sans-tamil": "^5.1.0",
+    "@jumaah/shared": "workspace:*",
+    "i18next": "^24.2.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.4.0",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "^5.7.2"
+  }
+}

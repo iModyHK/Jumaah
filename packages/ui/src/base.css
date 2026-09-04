@@ -1,0 +1,153 @@
+/* Shared theme tokens for all Jumaah apps. Apps import this after Tailwind. */
+:root {
+  --j-bg: #0b1220;
+  --j-bg-soft: #111a2e;
+  --j-fg: #f5f7fb;
+  --j-fg-muted: #9aa7bd;
+  --j-accent: #2fb47c;
+  --j-accent-soft: rgba(47, 180, 124, 0.18);
+  --j-danger: #e5484d;
+  --j-warn: #f5a524;
+  --j-border: rgba(255, 255, 255, 0.08);
+  --j-font-ar: 'Noto Naskh Arabic', 'Amiri', serif;
+  --j-font-latin: 'Noto Sans', system-ui, sans-serif;
+}
+
+[data-theme='light'] {
+  --j-bg: #f7f8fb;
+  --j-bg-soft: #ffffff;
+  --j-fg: #0f172a;
+  --j-fg-muted: #526077;
+  --j-accent: #1f8f61;
+  --j-accent-soft: rgba(31, 143, 97, 0.14);
+  --j-border: rgba(15, 23, 42, 0.1);
+}
+
+[data-theme='green'] {
+  --j-bg: #062b21;
+  --j-bg-soft: #0a3a2d;
+  --j-fg: #f2fbf6;
+  --j-fg-muted: #a7d5c1;
+  --j-accent: #f2c14e;
+  --j-accent-soft: rgba(242, 193, 78, 0.2);
+  --j-border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='gold'] {
+  --j-bg: #1b1408;
+  --j-bg-soft: #2a1f0c;
+  --j-fg: #fff8e6;
+  --j-fg-muted: #d9c58f;
+  --j-accent: #e8b84a;
+  --j-accent-soft: rgba(232, 184, 74, 0.2);
+  --j-border: rgba(255, 255, 255, 0.1);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--j-bg);
+  color: var(--j-fg);
+  font-family: var(--j-font-latin);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[dir='rtl'],
+[lang='ar'],
+[lang='ur'],
+[lang='fa'],
+[lang='ps'] {
+  font-family: var(--j-font-ar);
+}
+
+.j-lang {
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.j-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--j-border);
+  background: var(--j-bg-soft);
+  color: var(--j-fg);
+  padding: 0.6rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms, transform 80ms, opacity 120ms;
+}
+.j-btn:active {
+  transform: scale(0.98);
+}
+.j-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.j-btn-primary {
+  background: var(--j-accent);
+  color: #06120c;
+  border-color: transparent;
+}
+.j-btn-danger {
+  background: var(--j-danger);
+  color: white;
+  border-color: transparent;
+}
+.j-btn-ghost {
+  background: transparent;
+}
+
+.j-card {
+  background: var(--j-bg-soft);
+  border: 1px solid var(--j-border);
+  border-radius: 1rem;
+}
+
+.j-input {
+  width: 100%;
+  border-radius: 0.6rem;
+  border: 1px solid var(--j-border);
+  background: var(--j-bg);
+  color: var(--j-fg);
+  padding: 0.55rem 0.8rem;
+  outline: none;
+}
+.j-input:focus {
+  border-color: var(--j-accent);
+}
+
+.j-spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--j-border);
+  border-top-color: var(--j-accent);
+  border-radius: 50%;
+  animation: j-spin 0.8s linear infinite;
+}
+@keyframes j-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.j-fade-in {
+  animation: j-fade 220ms ease-out;
+}
+@keyframes j-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

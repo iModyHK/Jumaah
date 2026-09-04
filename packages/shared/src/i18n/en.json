@@ -1,6 +1,12 @@
 {
   "app": { "name": "Jumaah", "tagline": "Live Friday khutbah translation" },
   "common": {
+    "optional": "Optional",
+    "noResults": "No results",
+    "open": "Open",
+    "page": "Page {{page}} of {{pages}} ({{total}})",
+    "from": "From",
+    "to": "To",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -84,6 +90,10 @@
     "imamView": "Imam view"
   },
   "dashboard": {
+    "currentSection": "Current section",
+    "state": "State",
+    "currentParagraph": "Current paragraph",
+    "states": {"WAITING":"Waiting","LIVE":"Live","PAUSED":"Paused","IMPROV":"Improvising","ENDED":"Ended"},
     "welcome": "Welcome {{name}}",
     "nextKhutbah": "Next khutbah",
     "noUpcoming": "No khutbah scheduled",
@@ -96,6 +106,32 @@
     "openImam": "Open imam view"
   },
   "khutbah": {
+    "includeTranslations": "Include translations",
+    "textMode": "Text",
+    "paragraphMode": "Paragraphs",
+    "replaceTextWarning": "This replaces the paragraphs of this section; translations of changed paragraphs will be reset. Continue?",
+    "addParagraph": "Add paragraph",
+    "addParagraphAfter": "Add paragraph after",
+    "splitPosition": "Place the cursor where the paragraph should be split",
+    "deleteParagraphConfirm": "This deletes the paragraph and its translations. Continue?",
+    "history": "History",
+    "force": "Re-translate existing machine translations",
+    "includeSpecialBlocks": "Include Quran/Hadith blocks",
+    "startTranslation": "Start translation",
+    "jobCancelled": "Translation cancelled",
+    "characters": "Characters",
+    "noVersions": "No versions yet",
+    "importCountMismatch": "The file has {{got}} blocks but {{expected}} paragraphs are expected",
+    "importSection": "Section (optional)",
+    "importTranslationsHint": "Text file: one paragraph per blank-line separated block, in the same order as the Arabic paragraphs",
+    "translationsImported": "{{count}} translations imported",
+    "notes": "Notes",
+    "noTranslation": "No translation yet",
+    "provider": "Provider",
+    "restoreConfirm": "The current text will be replaced with version {{version}}. Continue?",
+    "filterLanguage": "Show language",
+    "shared": "Shared to library",
+    "description": "Description",
     "title": "Khutbah title",
     "list": "Khutbahs",
     "new": "New khutbah",
@@ -160,6 +196,8 @@
     "readiness": "Readiness"
   },
   "glossary": {
+    "bulkTitle": "Bulk import",
+    "bulkHint": "One per line: term <TAB> approved translation",
     "title": "Glossary",
     "term": "Term",
     "replacement": "Approved translation",
@@ -171,6 +209,12 @@
     "hint": "Names of Allah, Shariah terms, proper nouns — to keep translations consistent."
   },
   "providers": {
+    "platformProviders": "Platform providers",
+    "noProviders": "No providers configured",
+    "sample": "Sample translation",
+    "lastTested": "Last tested",
+    "cloudRelay": "Cloud relay available",
+    "addToChain": "Add to chain:",
     "title": "Translation providers",
     "add": "Add provider",
     "type": "Type",
@@ -186,6 +230,7 @@
     "chainHint": "The first provider is tried; on failure the next one is used.",
     "global": "Central (platform)",
     "types": {
+      "CLOUD": "Cloud relay (central)",
       "MANUAL": "Manual",
       "ANTHROPIC": "Anthropic Claude",
       "OPENAI": "OpenAI",
@@ -196,6 +241,8 @@
     }
   },
   "displays": {
+    "noDisplays": "No displays yet",
+    "regenerateConfirm": "The current URL will stop working and the new one must be opened on the screen. Continue?",
     "title": "Mosque displays",
     "add": "Add display",
     "layout": "Layout",
@@ -217,6 +264,10 @@
     "publicUrl": "Public mobile URL"
   },
   "users": {
+    "resetPassword": "New password (leave empty to keep)",
+    "revoke": "Revoke",
+    "expiresAt": "Expires",
+    "deleteConfirm": "User {{name}} will be deleted. Continue?",
     "title": "Users",
     "invite": "Invite user",
     "inviteSent": "Invitation created",
@@ -228,6 +279,7 @@
     "pendingInvites": "Pending invitations"
   },
   "settings": {
+    "publicDisplay": "Public mobile display enabled",
     "title": "Mosque settings",
     "general": "General",
     "mosqueName": "Mosque name",
@@ -243,6 +295,9 @@
     "plan": "Plan"
   },
   "backup": {
+    "restoreFromFile": "Restore from file",
+    "restored": "Backup restored",
+    "noBackups": "No backups yet",
     "title": "Backups",
     "create": "Create backup now",
     "restore": "Restore",
@@ -251,6 +306,7 @@
     "note": "Note"
   },
   "audit": {
+    "details": "Details",
     "title": "Audit log",
     "user": "User",
     "action": "Action",
@@ -259,6 +315,19 @@
     "after": "After"
   },
   "tenants": {
+    "noTenantSelected": "No mosque selected",
+    "selectMosque": "Select a mosque to manage",
+    "currentMosque": "Mosque",
+    "platform": "Platform",
+    "syncKey": "Sync key",
+    "credentialsOnce": "Save these credentials now — they will not be shown again",
+    "adminPassword": "Admin password",
+    "impersonateHint": "Temporary (1 hour) access token with mosque admin rights. Its use is recorded in the audit log.",
+    "subscriptionEndsAt": "Subscription ends",
+    "rotateSyncKey": "Rotate sync key",
+    "suspend": "Suspend",
+    "activeSessions": "Active sessions",
+    "latestImageTagHint": "Software version offered to mosque servers",
     "title": "Mosques",
     "add": "Add mosque",
     "slug": "Identifier (slug)",
@@ -276,6 +345,8 @@
     "impersonate": "Log in as admin"
   },
   "library": {
+    "noItems": "The library is empty",
+    "imported": "Imported to your mosque as a draft",
     "title": "Shared khutbah library",
     "importToMosque": "Import to my mosque",
     "pendingApproval": "Pending platform approval",
@@ -284,6 +355,9 @@
     "tags": "Tags"
   },
   "sync": {
+    "triggered": "Sync triggered",
+    "lastError": "Last error",
+    "cloudUrl": "Cloud URL",
     "title": "Cloud sync",
     "mode": "Mode",
     "edge": "Mosque server (Edge)",

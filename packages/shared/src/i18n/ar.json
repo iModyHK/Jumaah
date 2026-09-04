@@ -1,6 +1,12 @@
 {
   "app": { "name": "جُمعة", "tagline": "ترجمة خطبة الجمعة لحظياً" },
   "common": {
+    "optional": "اختياري",
+    "noResults": "لا توجد نتائج",
+    "open": "فتح",
+    "page": "صفحة {{page}} من {{pages}} ({{total}})",
+    "from": "من",
+    "to": "إلى",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
@@ -84,6 +90,10 @@
     "imamView": "واجهة المنبر"
   },
   "dashboard": {
+    "currentSection": "القسم الحالي",
+    "state": "الحالة",
+    "currentParagraph": "الفقرة الحالية",
+    "states": {"WAITING":"بانتظار البدء","LIVE":"مباشر","PAUSED":"متوقف مؤقتاً","IMPROV":"ارتجال","ENDED":"انتهت"},
     "welcome": "مرحباً {{name}}",
     "nextKhutbah": "الخطبة القادمة",
     "noUpcoming": "لا توجد خطبة مجدولة",
@@ -96,6 +106,32 @@
     "openImam": "فتح واجهة المنبر"
   },
   "khutbah": {
+    "includeTranslations": "نسخ الترجمات أيضاً",
+    "textMode": "نص",
+    "paragraphMode": "فقرات",
+    "replaceTextWarning": "سيتم استبدال فقرات هذا القسم وإعادة تعيين ترجمات الفقرات التي تغيّرت. هل تريد المتابعة؟",
+    "addParagraph": "إضافة فقرة",
+    "addParagraphAfter": "إضافة فقرة بعدها",
+    "splitPosition": "ضع المؤشر في الموضع الذي تريد تقسيم الفقرة عنده",
+    "deleteParagraphConfirm": "سيتم حذف الفقرة وترجماتها. هل تريد المتابعة؟",
+    "history": "السجل",
+    "force": "إعادة ترجمة الترجمات الآلية الموجودة",
+    "includeSpecialBlocks": "تضمين آيات القرآن والأحاديث",
+    "startTranslation": "بدء الترجمة",
+    "jobCancelled": "تم إلغاء الترجمة",
+    "characters": "الأحرف",
+    "noVersions": "لا توجد نسخ سابقة",
+    "importCountMismatch": "يحتوي الملف على {{got}} فقرة بينما المتوقع {{expected}}",
+    "importSection": "القسم (اختياري)",
+    "importTranslationsHint": "ملف نصي: فقرة واحدة لكل كتلة مفصولة بسطر فارغ، بنفس ترتيب الفقرات العربية",
+    "translationsImported": "تم استيراد {{count}} ترجمة",
+    "notes": "ملاحظات",
+    "noTranslation": "لا توجد ترجمة بعد",
+    "provider": "المزوّد",
+    "restoreConfirm": "سيتم استبدال النص الحالي بالنسخة {{version}}. هل تريد المتابعة؟",
+    "filterLanguage": "عرض لغة",
+    "shared": "مشاركة في المكتبة",
+    "description": "الوصف",
     "title": "عنوان الخطبة",
     "list": "قائمة الخطب",
     "new": "خطبة جديدة",
@@ -160,6 +196,8 @@
     "readiness": "الجاهزية"
   },
   "glossary": {
+    "bulkTitle": "استيراد مصطلحات",
+    "bulkHint": "سطر لكل مصطلح: المصطلح <TAB> الترجمة المعتمدة",
     "title": "قاموس المصطلحات",
     "term": "المصطلح",
     "replacement": "الترجمة المعتمدة",
@@ -171,6 +209,12 @@
     "hint": "أسماء الله الحسنى، المصطلحات الشرعية، الأعلام — لضمان ترجمة موحدة."
   },
   "providers": {
+    "platformProviders": "مزوّدو المنصة",
+    "noProviders": "لا يوجد مزوّدون",
+    "sample": "ترجمة تجريبية",
+    "lastTested": "آخر اختبار",
+    "cloudRelay": "الترجمة عبر الخادم المركزي متاحة",
+    "addToChain": "إضافة إلى السلسلة:",
     "title": "مصادر الترجمة",
     "add": "إضافة مصدر",
     "type": "النوع",
@@ -186,6 +230,7 @@
     "chainHint": "يُجرَّب المصدر الأول، وعند الفشل ينتقل للتالي.",
     "global": "مركزي (من المنصة)",
     "types": {
+      "CLOUD": "الخادم المركزي (سحابة)",
       "MANUAL": "يدوي",
       "ANTHROPIC": "Anthropic Claude",
       "OPENAI": "OpenAI",
@@ -196,6 +241,8 @@
     }
   },
   "displays": {
+    "noDisplays": "لا توجد شاشات بعد",
+    "regenerateConfirm": "سيتوقف الرابط الحالي عن العمل وسيلزم فتح الرابط الجديد على الشاشة. هل تريد المتابعة؟",
     "title": "شاشات المسجد",
     "add": "إضافة شاشة",
     "layout": "التخطيط",
@@ -217,6 +264,10 @@
     "publicUrl": "رابط الجوال العام"
   },
   "users": {
+    "resetPassword": "كلمة مرور جديدة (اتركه فارغاً للإبقاء)",
+    "revoke": "إلغاء",
+    "expiresAt": "تنتهي في",
+    "deleteConfirm": "سيتم حذف المستخدم {{name}}. هل تريد المتابعة؟",
     "title": "المستخدمون",
     "invite": "دعوة مستخدم",
     "inviteSent": "أُرسلت الدعوة",
@@ -228,6 +279,7 @@
     "pendingInvites": "دعوات معلّقة"
   },
   "settings": {
+    "publicDisplay": "تفعيل شاشة الجوال العامة",
     "title": "إعدادات المسجد",
     "general": "عام",
     "mosqueName": "اسم المسجد",
@@ -243,6 +295,9 @@
     "plan": "الباقة"
   },
   "backup": {
+    "restoreFromFile": "استعادة من ملف",
+    "restored": "تمت الاستعادة",
+    "noBackups": "لا توجد نسخ احتياطية",
     "title": "النسخ الاحتياطي",
     "create": "إنشاء نسخة الآن",
     "restore": "استعادة",
@@ -251,6 +306,7 @@
     "note": "ملاحظة"
   },
   "audit": {
+    "details": "التفاصيل",
     "title": "سجل التدقيق",
     "user": "المستخدم",
     "action": "الإجراء",
@@ -259,6 +315,19 @@
     "after": "بعد"
   },
   "tenants": {
+    "noTenantSelected": "لم يتم اختيار مسجد",
+    "selectMosque": "اختر مسجداً للإدارة",
+    "currentMosque": "المسجد",
+    "platform": "المنصة",
+    "syncKey": "مفتاح المزامنة",
+    "credentialsOnce": "احفظ هذه البيانات الآن — لن تُعرض مرة أخرى",
+    "adminPassword": "كلمة مرور المدير",
+    "impersonateHint": "رمز دخول مؤقت (ساعة واحدة) بصلاحية مدير المسجد. يُسجَّل استخدامه في سجل التدقيق.",
+    "subscriptionEndsAt": "انتهاء الاشتراك",
+    "rotateSyncKey": "تجديد مفتاح المزامنة",
+    "suspend": "تعليق",
+    "activeSessions": "الجلسات النشطة",
+    "latestImageTagHint": "إصدار البرنامج المتاح لخوادم المساجد",
     "title": "المساجد",
     "add": "إضافة مسجد",
     "slug": "المعرّف (slug)",
@@ -276,6 +345,8 @@
     "impersonate": "الدخول كمدير"
   },
   "library": {
+    "noItems": "المكتبة فارغة",
+    "imported": "تم الاستيراد إلى مسجدك كمسودة",
     "title": "مكتبة الخطب المشتركة",
     "importToMosque": "استيراد إلى مسجدي",
     "pendingApproval": "بانتظار موافقة المنصة",
@@ -284,6 +355,9 @@
     "tags": "الوسوم"
   },
   "sync": {
+    "triggered": "تم طلب المزامنة",
+    "lastError": "آخر خطأ",
+    "cloudUrl": "عنوان الخادم المركزي",
     "title": "المزامنة السحابية",
     "mode": "وضع التشغيل",
     "edge": "سيرفر المسجد (Edge)",

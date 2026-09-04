@@ -3,6 +3,7 @@ WORKDIR /app
 COPY build.mjs ./
 COPY src ./src
 COPY assets ./assets
+COPY shared ./shared
 ARG TURNSTILE_SITE_KEY
 ARG SITE_URL=https://www.jumaah.net
 ARG SOCIAL_PROOF=0

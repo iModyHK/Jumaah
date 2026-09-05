@@ -33,5 +33,7 @@ declare module 'fastify' {
     user: RequestUser | null;
     /** Resolved tenant id for the request (user's tenant, or x-tenant-id for super admins). */
     tenantId: string;
+    /** Tenant slug taken from the Host header in the hosted edition (alnoor.jumaah.net -> "alnoor"), else null. */
+    hostSlug: string | null;
   }
 }

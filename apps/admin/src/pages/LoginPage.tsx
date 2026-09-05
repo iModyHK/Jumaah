@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { loginSchema } from '@jumaah/shared';
+import { loginSchema, type HostInfoDto } from '@jumaah/shared';
 import { ApiRequestError, Button, Spinner, currentLocale, setLocale } from '@jumaah/ui';
+import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 import { Field, TextInput } from '../components/Field';
 import { validate, clean } from '../lib/forms';
@@ -16,10 +17,24 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tenantSlug, setSlug] = useState('');
+  // Hosted edition: alnoor.jumaah.net already names the mosque, so the field is replaced by the mosque's name.
+  const [hostTenant, setHostTenant] = useState<HostInfoDto['tenant']>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const locale = currentLocale();
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.hostInfo().then((info) => {
+      if (cancelled || !info.tenant) return;
+      setHostTenant(info.tenant);
+      setSlug(info.tenant.slug);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (session) return <Navigate to="/" replace />;
 
@@ -46,7 +61,7 @@ export function LoginPage() {
       <form onSubmit={(e) => void submit(e)} className="j-card j-fade-in w-full max-w-sm p-6">
         <div className="mb-5 flex items-start justify-between">
           <div>
-            <div className="text-2xl font-bold">{t('app.name')}</div>
+            <div className="text-2xl font-bold">{hostTenant ? hostTenant.name : t('app.name')}</div>
             <div className="j-muted text-sm">{t('auth.loginTitle')}</div>
           </div>
           <Button type="button" className="px-2 py-1 text-xs" onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
@@ -60,9 +75,17 @@ export function LoginPage() {
           <Field label={t('common.password')} error={errors.password}>
             <TextInput type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
           </Field>
-          <Field label={t('auth.mosque')} error={errors.tenantSlug}>
-            <TextInput value={tenantSlug} onChange={(e) => setSlug(e.target.value)} dir="ltr" placeholder="my-mosque" />
-          </Field>
+          {hostTenant ? (
+            <Field label={t('auth.mosque')}>
+              <div className="j-muted text-sm" dir="ltr">
+                {window.location.hostname}
+              </div>
+            </Field>
+          ) : (
+            <Field label={t('auth.mosque')} error={errors.tenantSlug}>
+              <TextInput value={tenantSlug} onChange={(e) => setSlug(e.target.value)} dir="ltr" placeholder="my-mosque" />
+            </Field>
+          )}
           {error && (
             <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(229,72,77,0.12)', color: 'var(--j-danger)' }}>
               {error}

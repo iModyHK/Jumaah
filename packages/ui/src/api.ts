@@ -1,4 +1,4 @@
-import type { ApiError, AuthResponse, AuthUser } from '@jumaah/shared';
+import type { ApiError, AuthResponse, AuthUser, HostInfoDto } from '@jumaah/shared';
 
 export class ApiRequestError extends Error {
   constructor(
@@ -138,6 +138,14 @@ export function createApiClient(opts: ApiClientOptions) {
       const data = await request<AuthResponse>('/auth/login', { method: 'POST', body: { email, password, tenantSlug: tenantSlug || undefined } }, false);
       opts.setSession({ accessToken: data.accessToken, refreshToken: data.refreshToken, user: data.user, tenantId: data.user.tenantId });
       return data;
+    },
+    /** The mosque implied by the address the browser used (hosted edition); nulls elsewhere. Never throws. */
+    async hostInfo(): Promise<HostInfoDto> {
+      try {
+        return await request<HostInfoDto>('/public/host', { method: 'GET' }, false);
+      } catch {
+        return { tenantBaseDomain: null, slug: null, tenant: null };
+      }
     },
     async logout(): Promise<void> {
       const s = opts.getSession();

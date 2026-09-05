@@ -4,6 +4,7 @@ import type { Server as HttpServer } from 'node:http';
 import { ROOMS, sessionCommandSchema, type DisplayConfig, type SessionCommand } from '@jumaah/shared';
 import type { Redis } from 'ioredis';
 import type { AppContext, IO } from '../lib/context.js';
+import { tenantPublicBaseUrl } from '../lib/host.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { applyCommand, getLiveKhutbah, getSnapshot, heartbeat } from '../services/session.service.js';
@@ -38,11 +39,11 @@ export function displayConfigOf(d: {
 
 export function createSocketServer(
   httpServer: HttpServer,
-  deps: { redisUrl: string; corsOrigins: string[]; pub: Redis; sub: Redis },
+  deps: { redisUrl: string; corsOrigin: (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => void; pub: Redis; sub: Redis },
 ): IO {
   const io: IO = new Server(httpServer, {
     path: '/socket.io',
-    cors: { origin: deps.corsOrigins.length ? deps.corsOrigins : true, credentials: true },
+    cors: { origin: deps.corsOrigin, credentials: true },
     pingInterval: 5000,
     pingTimeout: 10000,
     transports: ['websocket', 'polling'],
@@ -123,7 +124,7 @@ export function attachSocketHandlers(ctx: AppContext): void {
       if (info) socket.emit('tenant:info', info);
       if (role === 'DISPLAY' && socket.data.displayId) {
         const d = await db.display.findUnique({ where: { id: socket.data.displayId }, include: { tenant: { select: { slug: true } } } });
-        if (d) socket.emit('display:config', displayConfigOf(d, config.PUBLIC_BASE_URL, d.tenant.slug));
+        if (d) socket.emit('display:config', displayConfigOf(d, tenantPublicBaseUrl(config, d.tenant.slug), d.tenant.slug));
         touchDisplay(ctx, socket.data.displayId);
       }
       await sendState();

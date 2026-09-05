@@ -39,6 +39,13 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+/** GET /public/host — the mosque implied by the address the browser used (hosted edition), else nulls. */
+export interface HostInfoDto {
+  tenantBaseDomain: string | null;
+  slug: string | null;
+  tenant: { id: string; name: string; slug: string; locale: 'ar' | 'en' } | null;
+}
+
 export interface TenantDto {
   id: string;
   name: string;

@@ -9,6 +9,7 @@ import { ZodError } from 'zod';
 import type { Config } from './config.js';
 import { HttpError } from './lib/errors.js';
 import type { AppContext } from './lib/context.js';
+import { isAllowedOrigin, tenantSlugFromHost } from './lib/host.js';
 import { authPlugin } from './plugins/auth.js';
 import { attachSocketHandlers, createSocketServer } from './realtime/socket.js';
 import { auditRoutes } from './routes/audit.js';
@@ -48,13 +49,19 @@ export async function buildApp(deps: BuildDeps): Promise<FastifyInstance> {
     disableRequestLogging: process.env.NODE_ENV === 'test',
   });
 
-  const io = createSocketServer(app.server, { redisUrl: config.REDIS_URL, corsOrigins: config.corsOrigins, pub: deps.pub, sub: deps.sub });
+  // Browser origins: the configured list, plus every mosque host under TENANT_BASE_DOMAIN in the hosted edition.
+  const corsOrigin = (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => cb(null, isAllowedOrigin(origin, config));
+  const io = createSocketServer(app.server, { redisUrl: config.REDIS_URL, corsOrigin, pub: deps.pub, sub: deps.sub });
   const ctx: AppContext = { db: deps.db, redis: deps.redis, config, log: app.log, io };
   app.decorate('ctx', ctx);
+  app.decorateRequest('hostSlug', null);
+  app.addHook('onRequest', async (request) => {
+    request.hostSlug = tenantSlugFromHost(request.headers.host, config.tenantBaseDomain);
+  });
 
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } });
   await app.register(cors, {
-    origin: config.corsOrigins.length ? config.corsOrigins : true,
+    origin: corsOrigin,
     credentials: true,
     exposedHeaders: ['content-disposition'],
   });

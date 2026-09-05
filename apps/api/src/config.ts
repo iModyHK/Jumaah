@@ -18,6 +18,8 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   PUBLIC_BASE_URL: z.string().default('http://localhost:8080'),
+  /** Hosted edition: mosques live at <slug>.<TENANT_BASE_DOMAIN>. Empty = single address (edge / self-hosted). */
+  TENANT_BASE_DOMAIN: z.string().optional(),
   CORS_ORIGINS: z.string().default(''),
   LOG_LEVEL: z.string().default('info'),
   JWT_SECRET: z.string().min(16),
@@ -62,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       .map((s) => s.trim())
       .filter(Boolean),
     cloudApiUrl: e.CLOUD_API_URL?.replace(/\/$/, '') || null,
+    tenantBaseDomain: e.TENANT_BASE_DOMAIN?.trim().toLowerCase().replace(/^\.+|\.+$/g, '') || null,
     edgeDeviceId: e.EDGE_DEVICE_ID || `edge-${randomBytes(4).toString('hex')}`,
   };
 }

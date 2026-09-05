@@ -3,6 +3,7 @@ import { hashPassword, randomToken, sha256 } from '@jumaah/db';
 import { createUserSchema, inviteUserSchema, paginationSchema, updateUserSchema } from '@jumaah/shared';
 import { audit } from '../lib/audit.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
+import { tenantPublicBaseUrl } from '../lib/host.js';
 import { userDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
@@ -42,7 +43,8 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
       data: { tenantId: request.tenantId, email, name: body.name ?? null, role: body.role, tokenHash: sha256(token), expiresAt: new Date(Date.now() + 7 * 86400000), invitedBy: request.user!.id },
     });
     await audit(db, request.tenantId, actorOf(request), 'user.invite', 'Invitation', inv.id, null, { email, role: body.role });
-    return reply.code(201).send({ id: inv.id, email, role: body.role, expiresAt: inv.expiresAt.toISOString(), inviteUrl: `${config.PUBLIC_BASE_URL}/admin/invite/${token}` });
+    const tenant = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId }, select: { slug: true } });
+    return reply.code(201).send({ id: inv.id, email, role: body.role, expiresAt: inv.expiresAt.toISOString(), inviteUrl: `${tenantPublicBaseUrl(config, tenant.slug)}/admin/invite/${token}` });
   });
 
   app.get('/users/invitations', { preHandler: admin }, async (request) => {

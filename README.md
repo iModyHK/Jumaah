@@ -107,6 +107,16 @@ SEED_ON_START=1 docker compose -f docker-compose.cloud.yml up -d --build
 
 Caddy obtains TLS automatically for `SITE_ADDRESS`. Central provider keys from `.env` are turned into global providers at first start (and can be managed in Admin → Providers → platform section). Nightly `pg_dump` in the `db-backup` service.
 
+### One address per mosque (hosted edition)
+
+Set `TENANT_BASE_DOMAIN=jumaah.net` and every mosque is reachable at `<slug>.jumaah.net`: the login pages skip the mosque field, screen and phone links use the mosque's own address (`alnoor.jumaah.net/display/m`), and invitations point there too. Requirements:
+
+- a wildcard DNS record `*.jumaah.net` pointing at the cloud server (plus `SITE_ADDRESS`, e.g. `cloud.jumaah.net`, for the super admin);
+- `CLOUDFLARE_API_TOKEN` with *Zone / DNS / Edit* on the domain, because a wildcard certificate is only issued through the DNS challenge (the web image ships Caddy with the Cloudflare module);
+- `CADDY_COMMAND="caddy run --config /etc/caddy/Caddyfile.cloud"` so the web container uses the wildcard site definition.
+
+Edge servers ignore all of this: without `TENANT_BASE_DOMAIN`, links keep using `PUBLIC_BASE_URL`.
+
 ## Setting up screens
 
 1. Admin → Displays → Add: name, languages (1–4), layout (single / split / grid), font scale, theme, previous-paragraph, Arabic strip, QR.

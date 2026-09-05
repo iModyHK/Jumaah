@@ -47,11 +47,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(loginSchema, request.body);
     const email = body.email.toLowerCase();
     const candidates = await db.user.findMany({ where: { email, isActive: true }, include: { tenant: true } });
+    // Hosted edition: the mosque is implied by the address (alnoor.jumaah.net). A slug in the body must agree with it.
+    if (request.hostSlug && body.tenantSlug && body.tenantSlug !== request.hostSlug) throw unauthorized('Invalid credentials');
+    const slug = body.tenantSlug ?? request.hostSlug ?? undefined;
     // The same email may exist in several mosques (and as a super admin without a tenant). Without a slug the
     // login is only unambiguous when exactly one account matches; never fall back to "the first one".
-    let user = body.tenantSlug ? candidates.find((u) => u.tenant?.slug === body.tenantSlug) : undefined;
-    if (!user && !body.tenantSlug && candidates.length === 1) user = candidates[0];
-    if (!user && !body.tenantSlug && candidates.length > 1) throw badRequest('Multiple accounts use this email; specify tenantSlug');
+    let user = slug ? candidates.find((u) => u.tenant?.slug === slug) : undefined;
+    // Super admins have no tenant; on a mosque address they may still sign in to support that mosque.
+    if (!user && slug && request.hostSlug) user = candidates.find((u) => !u.tenantId && u.role === 'SUPER_ADMIN');
+    if (!user && !slug && candidates.length === 1) user = candidates[0];
+    if (!user && !slug && candidates.length > 1) throw badRequest('Multiple accounts use this email; specify tenantSlug');
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
       await audit(db, null, { id: null, ip: request.ip }, 'auth.login.failed', 'User', null, null, { email });
       throw unauthorized('Invalid credentials');

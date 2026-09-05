@@ -3,6 +3,7 @@ import { randomToken } from '@jumaah/db';
 import { displaySchema } from '@jumaah/shared';
 import { audit, outbox } from '../lib/audit.js';
 import { notFound } from '../lib/errors.js';
+import { tenantPublicBaseUrl } from '../lib/host.js';
 import { displayDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { ADMIN_ROLES, ALL_STAFF } from '../plugins/auth.js';
@@ -15,8 +16,8 @@ export async function displayRoutes(app: FastifyInstance): Promise<void> {
 
   const withUrls = (d: Parameters<typeof displayDto>[0], slug: string) => ({
     ...displayDto(d),
-    url: `${config.PUBLIC_BASE_URL}/display/${d.token}`,
-    publicUrl: `${config.PUBLIC_BASE_URL}/display/m/${slug}`,
+    url: `${tenantPublicBaseUrl(config, slug)}/display/${d.token}`,
+    publicUrl: `${tenantPublicBaseUrl(config, slug)}/display/m/${slug}`,
   });
 
   app.get('/displays', { preHandler: app.requireRole(...ALL_STAFF) }, async (request) => {
@@ -44,7 +45,7 @@ export async function displayRoutes(app: FastifyInstance): Promise<void> {
     await audit(db, request.tenantId, actorOf(request), 'display.update', 'Display', id, displayDto(before), displayDto(row));
     // Push new config to the connected screen immediately.
     const sockets = await io.in(`t:${request.tenantId}:displays`).fetchSockets();
-    for (const s of sockets) if (s.data.displayId === id) s.emit('display:config', displayConfigOf(row, config.PUBLIC_BASE_URL, before.tenant.slug));
+    for (const s of sockets) if (s.data.displayId === id) s.emit('display:config', displayConfigOf(row, tenantPublicBaseUrl(config, before.tenant.slug), before.tenant.slug));
     return withUrls(row, before.tenant.slug);
   });
 

@@ -11,6 +11,8 @@ export function basePath(): string {
  *   /display/            -> token entry
  *   /display/<token>     -> wall screen
  *   /display/m/<slug>    -> public mobile page
+ *   /display/m           -> public mobile page of the mosque implied by the address (hosted edition:
+ *                           alnoor.jumaah.net/display/m); the slug is resolved from /api/public/host
  */
 export function parseRoute(pathname: string = window.location.pathname): Route {
   const base = basePath();
@@ -20,7 +22,7 @@ export function parseRoute(pathname: string = window.location.pathname): Route {
   const parts = p.split('/');
   if (parts[0] === 'm') {
     const slug = parts[1] ? safeDecode(parts[1]) : '';
-    return slug ? { name: 'mobile', slug } : { name: 'token' };
+    return { name: 'mobile', slug };
   }
   return { name: 'screen', token: safeDecode(parts[0]) };
 }

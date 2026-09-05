@@ -107,6 +107,16 @@ SEED_ON_START=1 docker compose -f docker-compose.cloud.yml up -d --build
 
 Caddy يحصل على شهادة TLS تلقائياً لـ `SITE_ADDRESS`. مفاتيح الموفّرين في `.env` تتحول إلى موفّرين عامّين عند أول تشغيل (وتُدار من الإدارة ← مصادر الترجمة ← قسم المنصة). نسخة `pg_dump` يومية في خدمة `db-backup`.
 
+### عنوان لكل مسجد (النسخة المستضافة)
+
+اضبط `TENANT_BASE_DOMAIN=jumaah.net` فيصبح لكل مسجد عنوانه `<slug>.jumaah.net`: صفحات الدخول تُخفي حقل «المسجد»، وروابط الشاشات والهواتف تستخدم عنوان المسجد نفسه (`alnoor.jumaah.net/display/m`)، والدعوات كذلك. المتطلبات:
+
+- سجل DNS شامل `*.jumaah.net` يشير إلى خادم السحابة (إضافةً إلى `SITE_ADDRESS` مثل `cloud.jumaah.net` للمدير العام)؛
+- `CLOUDFLARE_API_TOKEN` بصلاحية *Zone / DNS / Edit* على النطاق، لأن شهادة الـ wildcard لا تُصدر إلا عبر تحدي DNS (صورة الويب تشحن Caddy مع وحدة Cloudflare)؛
+- `CADDY_COMMAND="caddy run --config /etc/caddy/Caddyfile.cloud"` ليستخدم حاوي الويب تعريف الموقع الشامل.
+
+خوادم المساجد (edge) لا تتأثر: من دون `TENANT_BASE_DOMAIN` تبقى الروابط على `PUBLIC_BASE_URL`.
+
 ## إعداد الشاشات
 
 1. الإدارة ← الشاشات ← إضافة: الاسم، اللغات (1–4)، التخطيط (مفرد/مقسوم/شبكة)، حجم الخط، الثيم، الفقرة السابقة، شريط العربية، QR.

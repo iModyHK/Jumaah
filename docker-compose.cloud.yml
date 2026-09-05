@@ -15,6 +15,8 @@ x-app-env: &app-env
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
   ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env}
   PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://${SITE_ADDRESS:-localhost}}
+  # Hosted edition: mosques live at <slug>.<TENANT_BASE_DOMAIN>; leave empty for a single-address cloud.
+  TENANT_BASE_DOMAIN: ${TENANT_BASE_DOMAIN:-}
   CORS_ORIGINS: ${CORS_ORIGINS:-}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
@@ -41,9 +43,15 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    # With TENANT_BASE_DOMAIN set, use the cloud Caddyfile (wildcard certificate through Cloudflare DNS):
+    #   command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile.cloud"]
+    command: ${CADDY_COMMAND:-caddy run --config /etc/caddy/Caddyfile}
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-:80}
       API_UPSTREAM: api:4000
+      TENANT_BASE_DOMAIN: ${TENANT_BASE_DOMAIN:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      ACME_EMAIL: ${ACME_EMAIL:-}
     volumes:
       - caddy_data:/data
       - caddy_config:/config

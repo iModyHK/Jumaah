@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { HostInfoDto } from '@jumaah/shared';
 import { ApiRequestError, Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { store } from '../state/store';
@@ -10,8 +11,22 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [slug, setSlug] = useState('');
+  // Hosted edition: the address already names the mosque, so the field is replaced by the mosque's name.
+  const [hostTenant, setHostTenant] = useState<HostInfoDto['tenant']>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.hostInfo().then((info) => {
+      if (cancelled || !info.tenant) return;
+      setHostTenant(info.tenant);
+      setSlug(info.tenant.slug);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -37,7 +52,7 @@ export function Login() {
       <div className="j-card j-fade-in w-full max-w-md p-6 sm:p-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div>
-            <div className="text-3xl font-extrabold">{t('app.name')}</div>
+            <div className="text-3xl font-extrabold">{hostTenant ? hostTenant.name : t('app.name')}</div>
             <div className="text-lg" style={{ color: 'var(--j-fg-muted)' }}>
               {t('imam.title')}
             </div>
@@ -54,10 +69,19 @@ export function Login() {
             <span className="font-semibold">{t('common.password')}</span>
             <input className="j-input min-h-14 text-lg" type="password" autoComplete="current-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="font-semibold">{t('auth.mosque')}</span>
-            <input className="j-input min-h-14 text-lg" type="text" autoComplete="organization" dir="ltr" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="mosque-slug" />
-          </label>
+          {hostTenant ? (
+            <div className="flex flex-col gap-1.5">
+              <span className="font-semibold">{t('auth.mosque')}</span>
+              <div className="text-lg" style={{ color: 'var(--j-fg-muted)' }} dir="ltr">
+                {window.location.hostname}
+              </div>
+            </div>
+          ) : (
+            <label className="flex flex-col gap-1.5">
+              <span className="font-semibold">{t('auth.mosque')}</span>
+              <input className="j-input min-h-14 text-lg" type="text" autoComplete="organization" dir="ltr" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="mosque-slug" />
+            </label>
+          )}
 
           {error && (
             <div className="rounded-xl px-4 py-3 font-semibold" style={{ background: 'rgba(229,72,77,0.15)', color: '#ff8a8e' }} role="alert">

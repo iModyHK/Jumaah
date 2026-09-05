@@ -39,6 +39,8 @@ beforeAll(async () => {
     JWT_SECRET: 'test-secret-test-secret-test-secret',
     ENCRYPTION_KEY: 'test-encryption-key-test-encryption',
     DEPLOYMENT_MODE: 'cloud',
+    PUBLIC_BASE_URL: 'https://cloud.jumaah.test',
+    TENANT_BASE_DOMAIN: 'jumaah.test',
     BACKUP_DIR: './.test-backups',
     RATE_LIMIT_AUTH: '1000',
     RATE_LIMIT_GENERAL: '10000',
@@ -336,5 +338,55 @@ describe('sync (edge ↔ cloud)', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().format).toBe('jumaah-tenant-backup');
     expect(res.json().khutbahs.length).toBeGreaterThan(0);
+  });
+});
+
+describe('hostname tenancy (hosted edition)', () => {
+  const host = (h: string) => ({ host: h });
+
+  it('/public/host names the mosque behind a tenant address and nothing elsewhere', async () => {
+    const demo = await app.inject({ method: 'GET', url: '/api/public/host', headers: host('demo.jumaah.test') });
+    expect(demo.statusCode).toBe(200);
+    expect(demo.json()).toMatchObject({ tenantBaseDomain: 'jumaah.test', slug: 'demo', tenant: { slug: 'demo' } });
+    const platform = await app.inject({ method: 'GET', url: '/api/public/host', headers: host('cloud.jumaah.test') });
+    expect(platform.json()).toMatchObject({ tenantBaseDomain: 'jumaah.test', slug: null, tenant: null });
+    const unknown = await app.inject({ method: 'GET', url: '/api/public/host', headers: host('no-such-mosque.jumaah.test') });
+    expect(unknown.json()).toMatchObject({ slug: null, tenant: null });
+  });
+
+  it('login infers the mosque from the address and rejects a different one', async () => {
+    const ok = await app.inject({ method: 'POST', url: '/api/auth/login', headers: host('demo.jumaah.test'), payload: { email: 'admin@demo.mosque', password: 'Demo12345!' } });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(ok.json().user.tenantSlug).toBe('demo');
+    const wrongHost = await app.inject({ method: 'POST', url: '/api/auth/login', headers: host('other.jumaah.test'), payload: { email: 'admin@demo.mosque', password: 'Demo12345!' } });
+    expect(wrongHost.statusCode).toBe(401);
+    const conflicting = await app.inject({ method: 'POST', url: '/api/auth/login', headers: host('other.jumaah.test'), payload: { email: 'admin@demo.mosque', password: 'Demo12345!', tenantSlug: 'demo' } });
+    expect(conflicting.statusCode).toBe(401);
+    // the super admin has no mosque and may sign in on a mosque address to support it
+    const sup = await app.inject({ method: 'POST', url: '/api/auth/login', headers: host('demo.jumaah.test'), payload: { email: 'admin@jumaah.app', password: 'Admin12345!' } });
+    expect(sup.statusCode, sup.body).toBe(200);
+    expect(sup.json().user.role).toBe('SUPER_ADMIN');
+  });
+
+  it('screen, phone and invitation links use the mosque address', async () => {
+    const list = await app.inject({ method: 'GET', url: '/api/displays', headers: auth(adminToken) });
+    expect(list.statusCode).toBe(200);
+    for (const d of list.json() as Array<{ url: string; publicUrl: string }>) {
+      expect(d.url.startsWith('https://demo.jumaah.test/display/')).toBe(true);
+      expect(d.publicUrl).toBe('https://demo.jumaah.test/display/m/demo');
+    }
+    const pub = await app.inject({ method: 'GET', url: '/api/public/display/demo-main-display-token-0001' });
+    expect(pub.json().display.publicUrl).toBe('https://demo.jumaah.test/display/m/demo');
+    const inv = await app.inject({ method: 'POST', url: '/api/users/invite', headers: auth(adminToken), payload: { email: `host-test-${Date.now()}@example.com`, role: 'TRANSLATOR' } });
+    expect(inv.statusCode, inv.body).toBe(201);
+    expect(inv.json().inviteUrl.startsWith('https://demo.jumaah.test/admin/invite/')).toBe(true);
+    await app.ctx.db.invitation.delete({ where: { id: inv.json().id } });
+  });
+
+  it('CORS allows mosque origins under the base domain and rejects look-alikes', async () => {
+    const good = await app.inject({ method: 'OPTIONS', url: '/api/health', headers: { origin: 'https://alnoor.jumaah.test', 'access-control-request-method': 'GET' } });
+    expect(good.headers['access-control-allow-origin']).toBe('https://alnoor.jumaah.test');
+    const bad = await app.inject({ method: 'OPTIONS', url: '/api/health', headers: { origin: 'https://alnoor.jumaah.test.evil.com', 'access-control-request-method': 'GET' } });
+    expect(bad.headers['access-control-allow-origin']).toBeUndefined();
   });
 });

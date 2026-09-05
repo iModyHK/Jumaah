@@ -27,8 +27,16 @@ RUN pnpm --filter @jumaah/shared build \
  && pnpm --filter @jumaah/imam build \
  && pnpm --filter @jumaah/display build
 
+# Caddy with the Cloudflare DNS module, so the hosted edition can issue one wildcard certificate for *.jumaah.net.
+# Edge servers use the same binary with the plain Caddyfile; the module is simply unused there.
+FROM caddy:2-builder-alpine AS caddy-build
+RUN xcaddy build --with github.com/caddy-dns/cloudflare
+
 FROM caddy:2-alpine AS runtime
+COPY --from=caddy-build /usr/bin/caddy /usr/bin/caddy
+COPY infra/caddy/common.caddy /etc/caddy/common.caddy
 COPY infra/caddy/Caddyfile /etc/caddy/Caddyfile
+COPY infra/caddy/Caddyfile.cloud /etc/caddy/Caddyfile.cloud
 COPY --from=build /app/apps/admin/dist /srv/admin
 COPY --from=build /app/apps/imam/dist /srv/imam
 COPY --from=build /app/apps/display/dist /srv/display

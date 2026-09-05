@@ -154,6 +154,7 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
     // Platform-owned providers are metered (hosted edition); a mosque's own providers are not.
     const platformTypes = new Set(configs.filter((c) => c.tenantId === null).map((c) => c.type));
     let quotaLeft = ai?.remainingParagraphs ?? Number.POSITIVE_INFINITY;
+    let warned80 = !!ai?.monthlyParagraphs && quotaLeft <= ai.monthlyParagraphs * 0.2;
     const glossary = await loadGlossary(ctx.db, tenantId);
     const offline = ctx.config.isEdge && !(await isOnline(ctx));
     const tenant = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
@@ -226,6 +227,11 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
           for (const [providerType, m] of metered) {
             await recordAiUsage(ctx.db, tenantId, { khutbahId: job.khutbahId, lang, source: 'JOB', providerType, ...m });
             quotaLeft -= m.paragraphs;
+          }
+          // Operator alert: a mosque crossing 80 percent of its monthly allowance (once per job).
+          if (ai?.monthlyParagraphs && !warned80 && quotaLeft <= ai.monthlyParagraphs * 0.2) {
+            warned80 = true;
+            ctx.log.warn({ tenantId, plan: ai.plan, remaining: quotaLeft, monthly: ai.monthlyParagraphs }, 'platform AI allowance at 80 percent');
           }
         } catch (err) {
           if (controller.signal.aborted) break;

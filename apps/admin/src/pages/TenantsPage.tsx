@@ -119,7 +119,15 @@ export function TenantsPage() {
               </div>
             ),
           },
-          { key: 'ends', header: t('tenants.subscriptionEndsAt'), render: (x) => <span className="text-xs">{fmtDate(x.subscriptionEndsAt)}</span> },
+          {
+            key: 'ends',
+            header: t('tenants.subscriptionEndsAt'),
+            render: (x) => (
+              <span className="text-xs" style={x.subscriptionEndsAt && new Date(x.subscriptionEndsAt) < new Date() ? { color: 'var(--j-danger)' } : undefined}>
+                {fmtDate(x.subscriptionEndsAt)}
+              </span>
+            ),
+          },
           {
             key: 'counts',
             header: t('common.total'),
@@ -396,6 +404,7 @@ function EditTenantModal({ tenant, onClose }: { tenant: TenantDto | null; onClos
             <TextInput type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
           </Field>
         </FormRow>
+        <div className="j-muted text-xs">{t('tenants.paidUntilHint')}</div>
         <Checkbox label={t('tenants.librarySharing')} checked={sharing} onChange={setSharing} />
       </div>
     </Modal>

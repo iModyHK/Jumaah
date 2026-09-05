@@ -465,3 +465,36 @@ describe('hosted plans: platform AI gate and metering', () => {
     expect(res.json()).toMatchObject({ state: 'expired', allowed: false, reason: 'EXPIRED' });
   });
 });
+
+describe('hosted plans: trial defaults and platform overview', () => {
+  let createdId = '';
+  afterAll(async () => {
+    if (createdId) await app.ctx.db.tenant.delete({ where: { id: createdId } }).catch(() => undefined);
+  });
+
+  it('a new mosque starts a 30-day Standard trial', async () => {
+    const slug = `trial-${Date.now()}`;
+    const res = await app.inject({ method: 'POST', url: '/api/tenants', headers: auth(superToken), payload: { name: 'Trial mosque', slug, adminEmail: `${slug}@example.com`, adminName: 'Admin', languages: ['en'] } });
+    expect(res.statusCode, res.body).toBe(201);
+    const t = res.json().tenant;
+    createdId = t.id;
+    expect(t.plan).toBe('STANDARD');
+    expect(t.subscriptionStatus).toBe('TRIAL');
+    const days = (new Date(t.subscriptionEndsAt).getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29);
+    expect(days).toBeLessThanOrEqual(30);
+  });
+
+  it('the platform overview lists every mosque with plan state and usage', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/platform/ai-usage', headers: auth(superToken) });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { month: string; applies: boolean; items: Array<{ slug: string; plan: string; state: string; usedParagraphs: number; allowed: boolean }> };
+    expect(body.applies).toBe(true);
+    expect(body.month).toMatch(/^\d{4}-\d{2}$/);
+    const demo = body.items.find((i) => i.slug === 'demo');
+    expect(demo).toMatchObject({ plan: 'PRO', state: 'active', allowed: true });
+    expect(body.items.some((i) => i.plan === 'STANDARD' && i.state === 'active')).toBe(true);
+    const asAdmin = await app.inject({ method: 'GET', url: '/api/platform/ai-usage', headers: auth(adminToken) });
+    expect(asAdmin.statusCode).toBe(403);
+  });
+});

@@ -64,6 +64,8 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
 };
 /** Days after subscriptionEndsAt during which platform AI keeps working, so a late payment never blanks a Friday. */
 export const AI_GRACE_DAYS = 7;
+/** Length of the trial a new hosted mosque starts with. */
+export const TRIAL_DAYS = 30;
 
 export const SUBSCRIPTION_STATUSES = ['ACTIVE', 'TRIAL', 'PAST_DUE', 'SUSPENDED'] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];

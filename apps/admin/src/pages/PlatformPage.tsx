@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Spinner } from '@jumaah/ui';
+import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { Field, TextInput } from '../components/Field';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
+import { fmtDate } from '../lib/format';
 
 interface PlatformStats {
   tenants: number;
@@ -68,6 +69,70 @@ export function PlatformPage() {
           <TextInput dir="ltr" value={tag} onChange={(e) => setTag(e.target.value)} placeholder="v1.2.3" />
         </Field>
       </Card>
+      <AiUsageOverview />
     </div>
+  );
+}
+
+interface AiUsageRow {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  status: string;
+  state: 'active' | 'grace' | 'expired' | 'suspended';
+  endsAt: string | null;
+  aiIncluded: boolean;
+  usedParagraphs: number;
+  monthlyParagraphs: number | null;
+  allowed: boolean;
+}
+
+/** Hosted edition: every mosque's plan, state and platform-AI usage this month, the view used for manual billing. */
+function AiUsageOverview() {
+  const { t } = useTranslation();
+  const q = useQuery({ queryKey: ['platform', 'ai-usage'], queryFn: () => api.get<{ month: string; applies: boolean; items: AiUsageRow[] }>('/platform/ai-usage'), refetchInterval: 60_000 });
+  const d = q.data;
+  if (!d || !d.applies) return null;
+  const tone = (r: AiUsageRow) => (!r.allowed ? 'danger' : r.state === 'grace' || (r.monthlyParagraphs && r.usedParagraphs >= r.monthlyParagraphs * 0.8) ? 'warn' : 'ok');
+  return (
+    <Card title={`${t('tenants.aiUsage')} · ${d.month}`} className="mt-4">
+      <div className="j-muted mb-2 text-xs">{t('tenants.aiUsageHint')}</div>
+      {d.items.length === 0 && <div className="j-muted text-sm">{t('tenants.noAiUsage')}</div>}
+      {d.items.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="j-muted text-start text-xs">
+                <th className="py-1 text-start">{t('tenants.title')}</th>
+                <th className="py-1 text-start">{t('tenants.plan')}</th>
+                <th className="py-1 text-start">{t('common.status')}</th>
+                <th className="py-1 text-start">{t('tenants.subscriptionEndsAt')}</th>
+                <th className="py-1 text-start">{t('tenants.aiState')}</th>
+                <th className="py-1 text-end">{t('tenants.used')}</th>
+                <th className="py-1 text-end">{t('tenants.allowance')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.items.map((r) => (
+                <tr key={r.id} style={{ borderTop: '1px solid var(--j-border)' }}>
+                  <td className="py-1.5">
+                    {r.name} <span className="j-muted text-xs" dir="ltr">{r.slug}</span>
+                  </td>
+                  <td className="py-1.5">{t(`tenants.plans.${r.plan}`)}</td>
+                  <td className="py-1.5">{t(`tenants.subscriptionStatus.${r.status}`)}</td>
+                  <td className="py-1.5 text-xs">{fmtDate(r.endsAt)}</td>
+                  <td className="py-1.5">
+                    <StatusPill tone={tone(r)}>{t(`plan.state.${r.state}`)}</StatusPill>
+                  </td>
+                  <td className="py-1.5 text-end tabular-nums">{r.aiIncluded ? r.usedParagraphs : '—'}</td>
+                  <td className="py-1.5 text-end tabular-nums">{r.aiIncluded ? (r.monthlyParagraphs ?? t('plan.unlimited')) : t('plan.deny.NOT_INCLUDED', { plan: t(`tenants.plans.${r.plan}`) })}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
   );
 }

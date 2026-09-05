@@ -8,7 +8,8 @@ import { tenantDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { actorOf } from './auth.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
-import { getAiAllowance } from '../services/plan.service.js';
+import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.js';
+import { TRIAL_DAYS } from '@jumaah/shared';
 
 /** Super-admin tenant management + current-tenant settings. */
 export async function tenantRoutes(app: FastifyInstance): Promise<void> {
@@ -37,8 +38,11 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
           slug: body.slug,
           timezone: body.timezone,
           locale: body.locale,
-          plan: (body.plan as never) ?? 'FREE',
+          // Hosted edition: every new mosque gets a 30-day trial of the chosen plan (Standard by default); the super
+          // admin then sets the paid-until date by hand until billing is automated. Self-hosted servers ignore all of it.
+          plan: body.plan,
           subscriptionStatus: 'TRIAL',
+          subscriptionEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000),
           syncKeyHash: sha256(syncKey),
           languages: { create: body.languages.map((code, i) => ({ code, order: i })) },
         },
@@ -179,6 +183,21 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     ]);
     const latest = await db.platformSetting.findUnique({ where: { key: 'edge.latestImageTag' } });
     return { tenants, users, khutbahs, displays, activeSessions, latestImageTag: (latest?.value as { tag?: string })?.tag ?? config.IMAGE_TAG, imageTag: config.IMAGE_TAG, mode: config.DEPLOYMENT_MODE };
+  });
+
+  /** Hosted edition: every mosque's plan, subscription state and platform-AI usage this month, for manual billing. */
+  app.get('/platform/ai-usage', { preHandler: superOnly }, async () => {
+    const month = monthKey();
+    const [tenants, usage] = await Promise.all([
+      db.tenant.findMany({ where: { isActive: true }, select: { id: true, name: true, slug: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true }, orderBy: { name: 'asc' } }),
+      db.aiUsage.groupBy({ by: ['tenantId'], where: { month }, _sum: { paragraphs: true } }),
+    ]);
+    const used = new Map(usage.map((u) => [u.tenantId, u._sum.paragraphs ?? 0]));
+    const items = tenants.map((t) => {
+      const a = allowanceOf(t, used.get(t.id) ?? 0, config.isCloud);
+      return { id: t.id, name: t.name, slug: t.slug, plan: a.plan, status: a.status, state: a.state, endsAt: a.endsAt, graceEndsAt: a.graceEndsAt, aiIncluded: a.aiIncluded, usedParagraphs: a.usedParagraphs, monthlyParagraphs: a.monthlyParagraphs, allowed: a.allowed, reason: a.reason };
+    });
+    return { month, applies: config.isCloud, items };
   });
 
   app.get('/platform/settings', { preHandler: superOnly }, async () => {

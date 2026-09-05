@@ -378,7 +378,14 @@
       "SUSPENDED": "Suspended"
     },
     "librarySharing": "Allow sharing to library",
-    "impersonate": "Log in as admin"
+    "impersonate": "Log in as admin",
+    "paidUntilHint": "Platform AI keeps working for 7 days after this date, then switches off. Manual translation, review and screens never stop. New mosques start with a 30-day trial.",
+    "aiUsage": "AI usage this month",
+    "aiUsageHint": "Platform-provider translations per mosque. A mosque's own keys are not counted.",
+    "aiState": "AI",
+    "used": "Used",
+    "allowance": "Allowance",
+    "noAiUsage": "No mosques yet"
   },
   "library": {
     "noItems": "The library is empty",

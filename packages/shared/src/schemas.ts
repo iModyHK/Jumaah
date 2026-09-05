@@ -62,7 +62,8 @@ export const createTenantSchema = z.object({
     .regex(/^[a-z0-9-]+$/),
   timezone: z.string().min(1).max(64).default('Asia/Riyadh'),
   locale: z.enum(['ar', 'en']).default('ar'),
-  plan: z.enum(SUBSCRIPTION_PLANS).default('TRIAL' as never).catch('FREE'),
+  /** New mosques start a 30-day Standard trial unless the super admin picks another plan. */
+  plan: z.enum(SUBSCRIPTION_PLANS).default('STANDARD'),
   adminEmail: z.string().email(),
   adminName: z.string().min(1).max(120),
   adminPassword: z.string().min(8).max(200).optional(),

@@ -311,6 +311,9 @@ importers:
 
   packages/shared:
     dependencies:
+      adhan:
+        specifier: '4'
+        version: 4.4.6
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -1971,6 +1974,9 @@ packages:
     resolution: {integrity: sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  adhan@4.4.6:
+    resolution: {integrity: sha512-cpLLcr6qxx+mLc6jgSXJwAAHxDFrhXhVLuzRbZPrpQKIEpJw+0LcfG6u9WEjq66kcTX/2sCkI3VztgRoUXBnFg==}
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
@@ -5300,6 +5306,8 @@ snapshots:
       negotiator: 0.6.3
 
   acorn@8.18.0: {}
+
+  adhan@4.4.6: {}
 
   ajv-formats@3.0.1(ajv@8.20.0):
     optionalDependencies:

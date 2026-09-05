@@ -324,7 +324,36 @@
     "languages": "Enabled languages",
     "languagesHint": "Languages khutbahs are translated into by default",
     "subscription": "Subscription",
-    "plan": "Plan"
+    "plan": "Plan",
+    "prayerLocation": "Prayer times from the mosque location",
+    "prayerLocationHint": "With coordinates set, the five daily times are calculated every day for the mosque's location and the manual times below are ignored. The Jumu'ah time stays manual and is shown on Fridays only.",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "method": "Calculation method",
+    "madhab": "Asr (madhab)",
+    "useMyLocation": "Use this device's location",
+    "locationDenied": "Location was not available; enter the coordinates by hand.",
+    "clearLocation": "Use manual times instead",
+    "todayTimes": "Today",
+    "manualTimesHint": "Manual times. Used only when no location is set, except Jumu'ah which is always manual.",
+    "methods": {
+      "UmmAlQura": "Umm al-Qura (Saudi Arabia)",
+      "MuslimWorldLeague": "Muslim World League",
+      "Egyptian": "Egyptian General Authority",
+      "Karachi": "University of Karachi",
+      "Dubai": "Dubai",
+      "Kuwait": "Kuwait",
+      "Qatar": "Qatar",
+      "MoonsightingCommittee": "Moonsighting Committee",
+      "NorthAmerica": "ISNA (North America)",
+      "Singapore": "Singapore",
+      "Turkey": "Turkey (Diyanet)",
+      "Tehran": "Tehran"
+    },
+    "madhabs": {
+      "Shafi": "Shafi'i, Maliki, Hanbali",
+      "Hanafi": "Hanafi"
+    }
   },
   "backup": {
     "restoreFromFile": "Restore from file",

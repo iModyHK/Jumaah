@@ -37,7 +37,7 @@ export function Screen({ token }: { token: string }) {
   if (state === 'ENDED') {
     content = <EndedScreen languages={languages} />;
   } else if (state === 'WAITING' || !session.khutbahId) {
-    content = <IdleScreen tenant={tenant} logoUrl={logoUrl} offsetMs={live.offsetMs} qrUrl={config.showQr && config.publicUrl ? config.publicUrl : null} languages={languages} />;
+    content = <IdleScreen tenant={tenant} logoUrl={logoUrl} offsetMs={live.offsetMs} qrUrl={config.showQr && config.publicUrl ? config.publicUrl : null} languages={languages} expecting={!!session.khutbahId} />;
   } else if (!khutbah && state !== 'IMPROV') {
     // The snapshot arrived before its khutbah (rare: reconnect ordering). Render immediately once it lands.
     content = <CenterMessage spinner>{t('display.connecting')}</CenterMessage>;

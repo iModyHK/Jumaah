@@ -69,6 +69,7 @@ export async function buildTenantPublicInfo(db: Db, tenantId: string): Promise<T
     welcomeMessage: (s.welcomeMessage as string) ?? null,
     welcomeMessageEn: (s.welcomeMessageEn as string) ?? null,
     prayerTimes: (s.prayerTimes as Record<string, string>) ?? null,
+    prayerLocation: (s.prayerLocation as TenantPublicInfo['prayerLocation']) ?? null,
     languages: t.languages.filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     branding,
     signage: effectiveSignage(s, t),

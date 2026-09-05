@@ -3,10 +3,9 @@ import type { TenantPublicInfo } from '@jumaah/shared';
 import { LangText } from '@jumaah/ui';
 import { phrase } from '../phrases';
 import { useClock } from './Clock';
+import { PrayerTimesRow, useTodayPrayerTimes } from './PrayerTimes';
 import { QrCode } from './QrCode';
 import { Announcements, DateLine } from './Signage';
-
-const PRAYER_ORDER = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumuah'] as const;
 
 export function IdleScreen({
   tenant,
@@ -15,6 +14,7 @@ export function IdleScreen({
   qrUrl,
   languages,
   compact = false,
+  expecting = false,
 }: {
   tenant: TenantPublicInfo;
   logoUrl: string | null;
@@ -24,11 +24,15 @@ export function IdleScreen({
   /** Panel languages: a "waiting" phrase is shown in each of them. */
   languages: string[];
   compact?: boolean;
+  /** A khutbah is queued for this session, so the screen is genuinely waiting for it (any weekday). */
+  expecting?: boolean;
 }) {
   const { t } = useTranslation();
   const time = useClock(offsetMs, tenant.timezone);
-  const prayers = PRAYER_ORDER.filter((k) => tenant.prayerTimes?.[k]);
+  const { friday } = useTodayPrayerTimes(tenant, offsetMs);
   const extra = languages.filter((l) => l !== 'ar').slice(0, 4);
+  // During the week the screen is a prayer-times and announcements board; the waiting line belongs to Friday.
+  const waiting = !compact && (friday || expecting);
 
   return (
     <div className="j-idle j-fade-in">
@@ -51,18 +55,7 @@ export function IdleScreen({
       </div>
       {tenant.signage?.showDate && <DateLine offsetMs={offsetMs} timeZone={tenant.timezone} locale={tenant.locale} />}
       {tenant.signage?.announcements?.length ? <Announcements items={tenant.signage.announcements} compact={compact} /> : null}
-      {prayers.length > 0 && (
-        <div className="j-prayers">
-          {prayers.map((k) => (
-            <div className="j-prayer" key={k}>
-              <span className="j-prayer-label">{t(`display.prayerTimes.${k}`)}</span>
-              <span className="j-prayer-time" dir="ltr">
-                {tenant.prayerTimes?.[k]}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
+      <PrayerTimesRow tenant={tenant} offsetMs={offsetMs} />
       {qrUrl && (
         <div className="j-qr">
           <QrCode value={qrUrl} />
@@ -74,7 +67,7 @@ export function IdleScreen({
           </div>
         </div>
       )}
-      {!compact && (
+      {waiting && (
         <div className="j-idle-waiting">
           <LangText lang="ar" as="span">
             {phrase('waiting', 'ar')}

@@ -1,4 +1,5 @@
 import type { ParagraphKind, SectionType, SessionState, TranslationStatus } from './constants.js';
+import type { PrayerLocation } from './prayer-times.js';
 
 /** A paragraph as delivered to displays: source + every approved translation. */
 export interface LiveParagraph {
@@ -80,7 +81,10 @@ export interface TenantPublicInfo {
   logoUrl: string | null;
   welcomeMessage: string | null;
   welcomeMessageEn: string | null;
+  /** Manual times (and the Jumu'ah time, which is always manual). */
   prayerTimes: Record<string, string> | null;
+  /** When set, screens compute the five daily times from it every day. */
+  prayerLocation: PrayerLocation | null;
   languages: string[];
   branding: TenantPublicBranding;
   signage: TenantPublicSignage;

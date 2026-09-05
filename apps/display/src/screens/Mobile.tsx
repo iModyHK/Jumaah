@@ -67,7 +67,7 @@ export function Mobile({ slug }: { slug: string }) {
 
   let body: React.ReactNode;
   if (state === 'ENDED') body = <EndedScreen languages={selected} />;
-  else if (state === 'WAITING' || !session.khutbahId) body = <IdleScreen tenant={tenant} logoUrl={tenant.logoUrl} offsetMs={live.offsetMs} qrUrl={null} languages={selected} compact />;
+  else if (state === 'WAITING' || !session.khutbahId) body = <IdleScreen tenant={tenant} logoUrl={tenant.logoUrl} offsetMs={live.offsetMs} qrUrl={null} languages={selected} compact expecting={!!session.khutbahId} />;
   else if (!khutbah && state !== 'IMPROV') body = <CenterMessage spinner>{t('display.connecting')}</CenterMessage>;
   else body = <Panels languages={selected} layout="column" fontScale={prefs.scale} showPrevious showArabic={showArabic} state={state} current={current} previous={previous} mode="mobile" />;
 

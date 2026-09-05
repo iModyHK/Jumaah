@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PRAYER_METHODS } from './prayer-times.js';
 import {
   DISPLAY_LAYOUTS,
   DISPLAY_THEMES,
@@ -80,9 +81,19 @@ export const signageSchema = z
 export type Signage = z.infer<typeof signageSchema>;
 export type Announcement = z.infer<typeof announcementSchema>;
 
+/** Mosque coordinates and calculation method; when set, the five daily prayer times are computed every day. */
+export const prayerLocationSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  method: z.enum(PRAYER_METHODS).default('UmmAlQura'),
+  madhab: z.enum(['Shafi', 'Hanafi']).optional(),
+  adjustments: z.object({ fajr: z.number().int().min(-60).max(60), dhuhr: z.number().int().min(-60).max(60), asr: z.number().int().min(-60).max(60), maghrib: z.number().int().min(-60).max(60), isha: z.number().int().min(-60).max(60) }).partial().optional(),
+});
+
 export const tenantSettingsSchema = z.object({
   branding: brandingSchema.optional(),
   signage: signageSchema.optional(),
+  prayerLocation: prayerLocationSchema.nullable().optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),
   prayerTimes: z

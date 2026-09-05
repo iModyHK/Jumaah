@@ -390,3 +390,78 @@ describe('hostname tenancy (hosted edition)', () => {
     expect(bad.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
+
+describe('hosted plans: platform AI gate and metering', () => {
+  const setPlan = (plan: string, status = 'ACTIVE', endsAt: Date | null = null) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: status as never, subscriptionEndsAt: endsAt } });
+  const month = new Date().toISOString().slice(0, 7);
+  let providerId = '';
+  // The demo mosque has providers of its own; those are never gated, so they are switched off while the gate is tested.
+  let ownProviders: string[] = [];
+
+  beforeAll(async () => {
+    const own = await app.ctx.db.providerConfig.findMany({ where: { tenantId, enabled: true }, select: { id: true } });
+    ownProviders = own.map((x) => x.id);
+    await app.ctx.db.providerConfig.updateMany({ where: { id: { in: ownProviders } }, data: { enabled: false } });
+  });
+
+  afterAll(async () => {
+    await setPlan('PRO');
+    if (providerId) await app.ctx.db.providerConfig.deleteMany({ where: { id: providerId } });
+    await app.ctx.db.providerConfig.updateMany({ where: { id: { in: ownProviders } }, data: { enabled: true } });
+    await app.ctx.db.aiUsage.deleteMany({ where: { tenantId } });
+  });
+
+  it('reports the allowance of the demo mosque (Pro, active)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/tenant/ai-usage', headers: auth(adminToken) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ applies: true, plan: 'PRO', allowed: true, aiIncluded: true, maxLanguages: null, month, usedParagraphs: 0 });
+  });
+
+  it('a plan without AI cannot start platform translation, but the estimate still answers', async () => {
+    await setPlan('BASIC');
+    const est = await app.inject({ method: 'POST', url: `/api/khutbahs/${khutbahId}/translate/estimate`, headers: auth(adminToken), payload: { languages: ['en'] } });
+    expect(est.statusCode, est.body).toBe(200);
+    expect(est.json().ai).toMatchObject({ applies: true, allowed: false, reason: 'NOT_INCLUDED' });
+    const job = await app.inject({ method: 'POST', url: `/api/khutbahs/${khutbahId}/translate`, headers: auth(adminToken), payload: { languages: ['en'] } });
+    expect(job.statusCode).toBe(403);
+    expect(job.json().error.code).toBe('AI_NOT_INCLUDED');
+    // the edge relay is gated on the cloud as well
+    const relay = await app.inject({ method: 'POST', url: '/api/sync/translate', headers: { 'x-sync-key': 'demo-sync-key-change-me' }, payload: { tenantSlug: 'demo', items: [{ id: 'p1', text: 'الحمد لله' }], targetLangs: ['en'], glossary: [] } });
+    expect(relay.statusCode).toBe(403);
+    expect(relay.json().error.code).toBe('AI_NOT_INCLUDED');
+  });
+
+  it('Standard enforces the language limit and the monthly allowance against platform providers', async () => {
+    await setPlan('STANDARD', 'ACTIVE', new Date(Date.now() + 30 * 86_400_000));
+    const p = await app.ctx.db.providerConfig.create({ data: { tenantId: null, type: 'OLLAMA', name: 'platform test', baseUrl: 'http://127.0.0.1:9', model: 'x', priority: 5, enabled: true } });
+    providerId = p.id;
+    const tooMany = await app.inject({ method: 'POST', url: `/api/khutbahs/${khutbahId}/translate`, headers: auth(adminToken), payload: { languages: ['en', 'ur', 'bn', 'so', 'fr'] } });
+    expect(tooMany.statusCode, tooMany.body).toBe(403);
+    expect(tooMany.json().error.code).toBe('AI_LANGUAGES');
+    await app.ctx.db.aiUsage.create({ data: { tenantId, month, lang: 'en', source: 'JOB', providerType: 'OLLAMA', paragraphs: 900, characters: 1 } });
+    const usage = await app.inject({ method: 'GET', url: '/api/tenant/ai-usage', headers: auth(adminToken) });
+    expect(usage.json()).toMatchObject({ plan: 'STANDARD', usedParagraphs: 900, remainingParagraphs: 0, allowed: false, reason: 'QUOTA' });
+    const quota = await app.inject({ method: 'POST', url: `/api/khutbahs/${khutbahId}/translate`, headers: auth(adminToken), payload: { languages: ['en'] } });
+    expect(quota.statusCode).toBe(403);
+    expect(quota.json().error.code).toBe('AI_QUOTA');
+    await app.ctx.db.aiUsage.deleteMany({ where: { tenantId } });
+  });
+
+  it('an ended subscription keeps AI for the grace period, then switches it off', async () => {
+    // a mosque with its own provider is not gated even on a plan without AI
+    await setPlan('BASIC');
+    await app.ctx.db.providerConfig.updateMany({ where: { id: { in: ownProviders } }, data: { enabled: true } });
+    const own = await app.inject({ method: 'POST', url: `/api/khutbahs/${khutbahId}/translate/estimate`, headers: auth(adminToken), payload: { languages: ['en'] } });
+    expect(own.statusCode, own.body).toBe(200);
+    expect(own.json().ai.allowed).toBe(false);
+    expect(own.json().perProvider.length).toBeGreaterThan(0);
+    await app.ctx.db.providerConfig.updateMany({ where: { id: { in: ownProviders } }, data: { enabled: false } });
+
+    await setPlan('STANDARD', 'ACTIVE', new Date(Date.now() - 2 * 86_400_000));
+    let res = await app.inject({ method: 'GET', url: '/api/tenant/ai-usage', headers: auth(adminToken) });
+    expect(res.json()).toMatchObject({ state: 'grace', allowed: true });
+    await setPlan('STANDARD', 'ACTIVE', new Date(Date.now() - 9 * 86_400_000));
+    res = await app.inject({ method: 'GET', url: '/api/tenant/ai-usage', headers: auth(adminToken) });
+    expect(res.json()).toMatchObject({ state: 'expired', allowed: false, reason: 'EXPIRED' });
+  });
+});

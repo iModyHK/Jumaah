@@ -8,6 +8,7 @@ import { tenantDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { actorOf } from './auth.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
+import { getAiAllowance } from '../services/plan.service.js';
 
 /** Super-admin tenant management + current-tenant settings. */
 export async function tenantRoutes(app: FastifyInstance): Promise<void> {
@@ -136,6 +137,9 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     });
     return tenantDto(t);
   });
+
+  /** Hosted edition: the mosque's platform-AI allowance and usage this month (self-hosted servers report applies=false). */
+  app.get('/tenant/ai-usage', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR') }, async (request) => getAiAllowance(app.ctx, request.tenantId));
 
   app.get('/tenant/languages', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
     const rows = await db.tenantLanguage.findMany({ where: { tenantId: request.tenantId }, orderBy: { order: 'asc' } });

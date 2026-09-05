@@ -5,6 +5,7 @@ import { providerConfigSchema, type ProviderConfigDto, type ProviderType } from 
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
+import { AiPlanCard } from '../components/AiPlanCard';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Checkbox, Field, FormRow, Select, TextInput } from '../components/Field';
 import { Modal } from '../components/Modal';
@@ -176,6 +177,9 @@ export function ProvidersPage() {
           </Button>
         }
       />
+      <div className="mb-6">
+        <AiPlanCard />
+      </div>
       {data.isLoading && <Spinner />}
       {data.data && (
         <div className="flex flex-col gap-6">

@@ -1,5 +1,8 @@
 {
-  "app": { "name": "Jumaah", "tagline": "Live Friday khutbah translation" },
+  "app": {
+    "name": "Jumaah",
+    "tagline": "Live Friday khutbah translation"
+  },
   "common": {
     "optional": "Optional",
     "noResults": "No results",
@@ -93,7 +96,13 @@
     "currentSection": "Current section",
     "state": "State",
     "currentParagraph": "Current paragraph",
-    "states": {"WAITING":"Waiting","LIVE":"Live","PAUSED":"Paused","IMPROV":"Improvising","ENDED":"Ended"},
+    "states": {
+      "WAITING": "Waiting",
+      "LIVE": "Live",
+      "PAUSED": "Paused",
+      "IMPROV": "Improvising",
+      "ENDED": "Ended"
+    },
     "welcome": "Welcome {{name}}",
     "nextKhutbah": "Next khutbah",
     "noUpcoming": "No khutbah scheduled",
@@ -142,7 +151,11 @@
     "first": "First khutbah",
     "second": "Second khutbah",
     "dua": "Closing dua",
-    "sections": { "FIRST": "First khutbah", "SECOND": "Second khutbah", "DUA": "Closing dua" },
+    "sections": {
+      "FIRST": "First khutbah",
+      "SECOND": "Second khutbah",
+      "DUA": "Closing dua"
+    },
     "targetLanguages": "Target languages",
     "paragraphs": "Paragraphs",
     "paragraph": "Paragraph",
@@ -151,7 +164,11 @@
     "splitHere": "Split here",
     "mergeWithNext": "Merge with next",
     "kind": "Paragraph type",
-    "kinds": { "TEXT": "Text", "QURAN": "Quran verse", "HADITH": "Hadith" },
+    "kinds": {
+      "TEXT": "Text",
+      "QURAN": "Quran verse",
+      "HADITH": "Hadith"
+    },
     "reference": "Reference",
     "estimatedSeconds": "Estimated duration",
     "importFile": "Import from file (DOCX / TXT / PDF)",
@@ -202,7 +219,11 @@
     "term": "Term",
     "replacement": "Approved translation",
     "mode": "Handling",
-    "modes": { "KEEP": "Keep as-is", "REPLACE": "Replace with approved translation", "HINT": "Hint for translator" },
+    "modes": {
+      "KEEP": "Keep as-is",
+      "REPLACE": "Replace with approved translation",
+      "HINT": "Hint for translator"
+    },
     "note": "Note",
     "add": "Add term",
     "allLanguages": "All languages",
@@ -246,10 +267,19 @@
     "title": "Mosque displays",
     "add": "Add display",
     "layout": "Layout",
-    "layouts": { "single": "Single language", "split": "Split", "grid": "Grid" },
+    "layouts": {
+      "single": "Single language",
+      "split": "Split",
+      "grid": "Grid"
+    },
     "fontScale": "Font size",
     "theme": "Theme",
-    "themes": { "dark": "Dark", "light": "Light", "green": "Green", "gold": "Gold" },
+    "themes": {
+      "dark": "Dark",
+      "light": "Light",
+      "green": "Green",
+      "gold": "Gold"
+    },
     "showPrevious": "Show previous paragraph",
     "showArabic": "Show Arabic text",
     "showQr": "Show QR on waiting screen",
@@ -334,7 +364,13 @@
     "adminEmail": "Mosque admin email",
     "adminName": "Mosque admin name",
     "plan": "Plan",
-    "plans": { "FREE": "Free", "BASIC": "Basic", "PRO": "Pro", "ENTERPRISE": "Enterprise" },
+    "plans": {
+      "FREE": "Free",
+      "BASIC": "Basic",
+      "PRO": "Pro",
+      "ENTERPRISE": "Enterprise",
+      "STANDARD": "Standard"
+    },
     "subscriptionStatus": {
       "ACTIVE": "Active",
       "TRIAL": "Trial",
@@ -419,7 +455,14 @@
     "reconnecting": "Connection lost, retrying…",
     "invalidToken": "Invalid display token",
     "chooseLanguage": "Choose language",
-    "prayerTimes": { "fajr": "Fajr", "dhuhr": "Dhuhr", "asr": "Asr", "maghrib": "Maghrib", "isha": "Isha", "jumuah": "Jumuah" }
+    "prayerTimes": {
+      "fajr": "Fajr",
+      "dhuhr": "Dhuhr",
+      "asr": "Asr",
+      "maghrib": "Maghrib",
+      "isha": "Isha",
+      "jumuah": "Jumuah"
+    }
   },
   "errors": {
     "NOT_FOUND": "Not found",
@@ -431,5 +474,34 @@
     "PROVIDER_FAILED": "All translation providers failed",
     "SESSION_ACTIVE": "A session is already active",
     "NETWORK": "Cannot reach the server"
+  },
+  "plan": {
+    "title": "AI translation plan",
+    "usage": "Used this month",
+    "of": "of",
+    "paragraphs": "paragraphs",
+    "approxKhutbahs": "≈ {{used}} of {{total}} khutbah translations",
+    "unlimited": "Unlimited",
+    "languages": "AI languages",
+    "month": "Month",
+    "renewal": "Paid until",
+    "grace": "Grace period until {{date}}",
+    "remaining": "{{remaining}} of {{total}} paragraph translations left this month.",
+    "manualHint": "Manual translation, review and the screens keep working.",
+    "ownProvidersHint": "The mosque's own providers will be used instead.",
+    "contact": "Contact Jumaah to change the plan.",
+    "state": {
+      "active": "Active",
+      "grace": "Grace period",
+      "expired": "Expired",
+      "suspended": "Suspended"
+    },
+    "deny": {
+      "NOT_INCLUDED": "Machine translation is not included in the {{plan}} plan.",
+      "EXPIRED": "The subscription has ended, so machine translation is switched off.",
+      "SUSPENDED": "The subscription is suspended.",
+      "QUOTA": "This month's machine translation allowance is used up.",
+      "LANGUAGES": "The plan allows up to {{count}} AI languages per job."
+    }
   }
 }

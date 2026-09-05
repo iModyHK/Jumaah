@@ -65,6 +65,17 @@ export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah:
     onError: (e) => toast.error(e),
   });
 
+  // Hosted edition: the estimate carries the plan's answer. No providers at all means the plan blocks the job.
+  const ai = estimate?.ai;
+  const aiDeny: string | null = ai?.applies
+    ? !ai.allowed && ai.reason
+      ? t(`plan.deny.${ai.reason}`, { plan: t(`tenants.plans.${ai.plan}`), count: ai.maxLanguages ?? 0 })
+      : ai.maxLanguages !== null && languages.length > ai.maxLanguages
+        ? t('plan.deny.LANGUAGES', { count: ai.maxLanguages })
+        : null
+    : null;
+  const blocked = !!aiDeny && (estimate?.perProvider.length ?? 0) === 0;
+
   return (
     <Modal
       open={open}
@@ -73,13 +84,21 @@ export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah:
       footer={
         <>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button variant="primary" onClick={() => start.mutate()} disabled={start.isPending || languages.length === 0}>
+          <Button variant="primary" onClick={() => start.mutate()} disabled={start.isPending || languages.length === 0 || blocked}>
             {start.isPending ? <Spinner /> : t('khutbah.startTranslation')}
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-4">
+        {aiDeny && (
+          <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(229,72,77,0.12)', color: 'var(--j-danger)' }}>
+            {aiDeny} {blocked ? t('plan.manualHint') : t('plan.ownProvidersHint')}
+          </div>
+        )}
+        {ai?.applies && ai.allowed && ai.monthlyParagraphs !== null && (
+          <div className="j-muted text-xs">{t('plan.remaining', { remaining: ai.remainingParagraphs, total: ai.monthlyParagraphs })}</div>
+        )}
         <Field label={t('khutbah.targetLanguages')}>
           <LanguagePicker value={languages} onChange={setLanguages} options={khutbah.targetLanguages} />
         </Field>

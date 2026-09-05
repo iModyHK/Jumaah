@@ -38,8 +38,32 @@ export type DisplayLayout = (typeof DISPLAY_LAYOUTS)[number];
 export const DISPLAY_THEMES = ['dark', 'light', 'green', 'gold'] as const;
 export type DisplayTheme = (typeof DISPLAY_THEMES)[number];
 
-export const SUBSCRIPTION_PLANS = ['FREE', 'BASIC', 'PRO', 'ENTERPRISE'] as const;
+export const SUBSCRIPTION_PLANS = ['FREE', 'BASIC', 'STANDARD', 'PRO', 'ENTERPRISE'] as const;
 export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
+
+/**
+ * What each hosted plan includes. Only the platform's own AI providers are gated by this; a mosque's own keys and
+ * the self-hosted (community) edition are never limited. Allowances are counted in paragraph translations
+ * (one paragraph into one language); PARAGRAPHS_PER_KHUTBAH_UNIT turns them into "khutbah translations" for people.
+ */
+export interface PlanLimits {
+  /** Platform AI translation included. */
+  ai: boolean;
+  /** Distinct AI target languages allowed per job; null = unlimited. */
+  maxLanguages: number | null;
+  /** Paragraph translations per calendar month on platform AI; null = unlimited. */
+  monthlyParagraphs: number | null;
+}
+export const PARAGRAPHS_PER_KHUTBAH_UNIT = 15;
+export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
+  FREE: { ai: false, maxLanguages: 0, monthlyParagraphs: 0 },
+  BASIC: { ai: false, maxLanguages: 0, monthlyParagraphs: 0 },
+  STANDARD: { ai: true, maxLanguages: 4, monthlyParagraphs: 60 * PARAGRAPHS_PER_KHUTBAH_UNIT },
+  PRO: { ai: true, maxLanguages: null, monthlyParagraphs: 150 * PARAGRAPHS_PER_KHUTBAH_UNIT },
+  ENTERPRISE: { ai: true, maxLanguages: null, monthlyParagraphs: 1500 * PARAGRAPHS_PER_KHUTBAH_UNIT },
+};
+/** Days after subscriptionEndsAt during which platform AI keeps working, so a late payment never blanks a Friday. */
+export const AI_GRACE_DAYS = 7;
 
 export const SUBSCRIPTION_STATUSES = ['ACTIVE', 'TRIAL', 'PAST_DUE', 'SUSPENDED'] as const;
 export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];

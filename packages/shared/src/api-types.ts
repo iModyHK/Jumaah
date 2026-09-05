@@ -179,6 +179,31 @@ export interface CostEstimate {
   languages: number;
   cachedUnits: number;
   perProvider: Array<{ type: ProviderType; estimatedUsd: number; model?: string; note?: string }>;
+  /** Hosted edition: whether the platform's AI may be used for this job (absent on self-hosted servers). */
+  ai?: AiAllowanceDto;
+}
+
+export type AiDenyReason = 'NOT_INCLUDED' | 'EXPIRED' | 'SUSPENDED' | 'QUOTA' | 'LANGUAGES';
+
+/** GET /tenant/ai-usage — the mosque's platform-AI allowance for the current month. */
+export interface AiAllowanceDto {
+  /** false on self-hosted servers: nothing is gated there. */
+  applies: boolean;
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  /** active = paid or trial; grace = ended within the grace window; expired/suspended = AI off. */
+  state: 'active' | 'grace' | 'expired' | 'suspended';
+  aiIncluded: boolean;
+  maxLanguages: number | null;
+  monthlyParagraphs: number | null;
+  usedParagraphs: number;
+  remainingParagraphs: number | null;
+  /** YYYY-MM (UTC) the counters refer to. */
+  month: string;
+  endsAt: string | null;
+  graceEndsAt: string | null;
+  allowed: boolean;
+  reason: AiDenyReason | null;
 }
 
 export interface TranslationJobDto {

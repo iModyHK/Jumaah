@@ -23,6 +23,7 @@ enum Role {
 enum SubscriptionPlan {
   FREE
   BASIC
+  STANDARD
   PRO
   ENTERPRISE
 }
@@ -137,6 +138,28 @@ model Tenant {
   translationJobs TranslationJob[]
   libraryItems    LibraryKhutbah[]
   cache           TranslationCache[]
+  aiUsage         AiUsage[]
+}
+
+/// Platform-AI metering for the hosted edition: one row per job or relay call and language.
+/// Only translations produced by platform-owned providers are recorded; a mosque's own keys are never counted.
+model AiUsage {
+  id           String       @id @default(cuid())
+  tenantId     String
+  /// Calendar month in UTC, e.g. "2026-09"
+  month        String
+  khutbahId    String?
+  lang         String
+  /// JOB (translation job on this server) or RELAY (edge server relaying through the cloud)
+  source       String
+  providerType ProviderType
+  paragraphs   Int
+  characters   Int
+  createdAt    DateTime     @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, month])
 }
 
 model User {

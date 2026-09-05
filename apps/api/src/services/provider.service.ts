@@ -47,7 +47,18 @@ export class CloudRelayProvider implements TranslationProvider {
       if (isAbort(err)) throw err;
       throw new ProviderError('CLOUD', 'NETWORK', (err as Error).message, true, err);
     }
-    if (res.status === 401 || res.status === 403) throw new ProviderError('CLOUD', 'AUTH', 'sync key rejected');
+    if (res.status === 401) throw new ProviderError('CLOUD', 'AUTH', 'sync key rejected');
+    if (res.status === 403) {
+      // Either the sync key or the mosque's plan: surface the cloud's own message (e.g. AI_NOT_INCLUDED, AI_QUOTA).
+      let message = 'rejected by the cloud';
+      try {
+        const body = (await res.json()) as { error?: { code?: string; message?: string } };
+        message = body.error?.message ? `${body.error.message} (${body.error.code})` : message;
+      } catch {
+        /* keep default */
+      }
+      throw new ProviderError('CLOUD', 'AUTH', message);
+    }
     if (res.status === 429) throw new ProviderError('CLOUD', 'RATE_LIMITED', 'HTTP 429', true);
     if (!res.ok) throw new ProviderError('CLOUD', 'UNKNOWN', `HTTP ${res.status}: ${await res.text()}`, res.status >= 500);
     const body = (await res.json()) as {
@@ -102,14 +113,16 @@ export interface ResolvedChain {
  * Order: explicit override > tenant.settings.defaultProviderChain > priority (tenant providers, then global).
  * On edge with cloud configured, a CLOUD relay is appended (or placed where the chain names it).
  */
-export async function resolveChain(ctx: AppContext, tenantId: string, override?: ProviderType[]): Promise<ResolvedChain> {
-  const [tenant, configs] = await Promise.all([
+export async function resolveChain(ctx: AppContext, tenantId: string, override?: ProviderType[], opts: { platformAi?: boolean } = {}): Promise<ResolvedChain> {
+  const [tenant, allConfigs] = await Promise.all([
     ctx.db.tenant.findUnique({ where: { id: tenantId } }),
     ctx.db.providerConfig.findMany({
       where: { enabled: true, OR: [{ tenantId }, { tenantId: null }] },
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     }),
   ]);
+  // Hosted edition: platform-owned providers (tenantId null) are only offered when the mosque's plan allows them.
+  const configs = opts.platformAi === false ? allConfigs.filter((c) => c.tenantId !== null) : allConfigs;
   // Tenant-specific config wins over a global one of the same type.
   const byType = new Map<ProviderType, ProviderConfig>();
   for (const c of configs) {

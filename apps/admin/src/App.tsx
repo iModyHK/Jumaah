@@ -10,6 +10,7 @@ import { KhutbahEditorPage } from './pages/KhutbahEditorPage';
 import { HandoutPage } from './pages/HandoutPage';
 import { OrganisationPage } from './pages/OrganisationPage';
 import { OrganisationsPage } from './pages/OrganisationsPage';
+import { ApiPage } from './pages/ApiPage';
 import { GlossaryPage } from './pages/GlossaryPage';
 import { ProvidersPage } from './pages/ProvidersPage';
 import { DisplaysPage } from './pages/DisplaysPage';
@@ -61,6 +62,7 @@ export function App() {
         <Route path="sync" element={<RequireRole roles={[...ADMIN]}><RequireTenant><SyncPage /></RequireTenant></RequireRole>} />
         <Route path="library" element={<LibraryPage />} />
         <Route path="organisation" element={<OrganisationPage />} />
+        <Route path="api" element={<RequireRole roles={[...ADMIN]}><RequireTenant><ApiPage /></RequireTenant></RequireRole>} />
         <Route path="organisations" element={<RequireRole roles={['SUPER_ADMIN']}><OrganisationsPage /></RequireRole>} />
         <Route path="tenants" element={<RequireRole roles={['SUPER_ADMIN']}><TenantsPage /></RequireRole>} />
         <Route path="platform" element={<RequireRole roles={['SUPER_ADMIN']}><PlatformPage /></RequireRole>} />

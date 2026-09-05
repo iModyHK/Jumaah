@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { forbidden, unauthorized } from '../lib/errors.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import type { AppContext, RequestUser } from '../lib/context.js';
+import { API_KEY_FORBIDDEN, looksLikeApiKey, resolveApiKey, touchApiKey } from '../services/api-key.service.js';
 import { tenantInOrganisation } from '../services/organisation.service.js';
 
 /** What the liveness cache remembers about a user for a minute: still allowed in, and which organisation they administer. */
@@ -25,6 +26,20 @@ export async function authPlugin(app: FastifyInstance): Promise<void> {
     const header = request.headers.authorization;
     const token = header?.startsWith('Bearer ') ? header.slice(7) : (request.query as { token?: string })?.token;
     if (!token) throw unauthorized('Missing token');
+
+    // API keys (hosted edition): a key stands in for a mosque admin of its mosque, read-only or read-write, and
+    // can never reach account, key, webhook or subscription management.
+    if (looksLikeApiKey(token)) {
+      const key = await resolveApiKey(app.ctx, token);
+      if (!key) throw unauthorized('Invalid or revoked API key');
+      if (key.readOnly && request.method !== 'GET' && request.method !== 'HEAD') throw forbidden('This API key is read-only');
+      if (API_KEY_FORBIDDEN.test(request.url)) throw forbidden('Not available to API keys');
+      request.user = { id: `key:${key.id}`, email: `apikey:${key.name}`, role: 'MOSQUE_ADMIN', tenantId: key.tenantId, organisationId: null, apiKey: { id: key.id, readOnly: key.readOnly } };
+      request.tenantId = key.tenantId;
+      touchApiKey(app.ctx, key.id);
+      return;
+    }
+
     let claims;
     try {
       claims = await verifyAccessToken(app.ctx.config.JWT_SECRET, token);

@@ -8,6 +8,7 @@ import type {
   SubscriptionStatus,
   TranslationStatus,
   GlossaryMode,
+  WebhookEvent,
 } from './constants.js';
 import type { LiveKhutbah, TenantPublicInfo } from './socket-events.js';
 
@@ -358,4 +359,49 @@ export interface InsightSessionDto {
 export interface InsightDto {
   sessions: InsightSessionDto[];
   summary: { sessions: number; avgPhones: number; maxPhones: number; avgDisplays: number; avgDurationSec: number };
+}
+
+// ---------------------------------------------------------------------------
+// Shared translation network, API keys, webhooks (hosted edition)
+// ---------------------------------------------------------------------------
+
+export interface NetworkStatusDto {
+  plan: SubscriptionPlan;
+  /** What the plan permits. */
+  allowed: { read: boolean; publish: boolean };
+  /** The mosque's switches as stored. */
+  read: boolean;
+  publish: boolean;
+  /** Switches limited by the plan: what actually happens. */
+  effective: { read: boolean; publish: boolean };
+  /** Translations this mosque has published. */
+  published: number;
+  /** Translations this mosque picked up from the network. */
+  reused: number;
+  /** Size of the whole network. */
+  pool: number;
+}
+
+export interface ApiKeyDto {
+  id: string;
+  name: string;
+  /** First characters of the key, for recognising it; the key itself is shown once at creation. */
+  prefix: string;
+  readOnly: boolean;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface WebhookDto {
+  id: string;
+  name: string;
+  url: string;
+  events: WebhookEvent[];
+  enabled: boolean;
+  lastStatus: number | null;
+  lastError: string | null;
+  lastDeliveredAt: string | null;
+  failures: number;
+  createdAt: string;
 }

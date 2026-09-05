@@ -4,6 +4,10 @@
     "tagline": "Live Friday khutbah translation"
   },
   "common": {
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enable": "Enable",
+    "disable": "Disable",
     "optional": "Optional",
     "noResults": "No results",
     "open": "Open",
@@ -33,8 +37,6 @@
     "date": "Date",
     "language": "Language",
     "languages": "Languages",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
     "none": "None",
     "all": "All",
     "copy": "Copy",
@@ -93,7 +95,8 @@
     "live": "Live",
     "imamView": "Imam view",
     "organisation": "My organisation",
-    "organisations": "Organisations"
+    "organisations": "Organisations",
+    "api": "API & webhooks"
   },
   "dashboard": {
     "currentSection": "Current section",
@@ -667,5 +670,51 @@
     "adminHint": "Only admins of member mosques can be added. They sign in again to see the organisation.",
     "delete": "Delete",
     "deleteHint": "Remove all mosques first."
+  },
+  "network": {
+    "title": "Shared translation network",
+    "hint": "Mosques on Jumaah Cloud share approved translations of identical Arabic paragraphs (verses, du‘a, common phrases). When a match exists it is used before any AI, saving allowance and time. Shared translations arrive as \"reviewed\" and still need your approval.",
+    "read": "Use translations shared by other mosques",
+    "publish": "Share our approved translations with other mosques",
+    "publishHint": "Only approved text is shared, without the khutbah, the imam or the mosque name. Switching off removes everything you shared.",
+    "published": "Shared by us",
+    "reused": "Reused by us",
+    "pool": "In the network",
+    "publishAll": "Share all approved translations now"
+  },
+  "api": {
+    "title": "API & webhooks",
+    "hint": "Connect your own systems: read and create khutbahs, drive the live session, and get notified of events.",
+    "locked": "API access is part of the Pro and Organisation plans.",
+    "keys": "API keys",
+    "keyName": "Name",
+    "keyNamePlaceholder": "e.g. Website integration",
+    "readOnly": "Read-only",
+    "readWrite": "Read & write",
+    "createKey": "Create key",
+    "keyCreated": "API key created",
+    "keyOnce": "Copy the key now. For your safety it is stored hashed and will not be shown again.",
+    "prefix": "Key",
+    "scope": "Scope",
+    "lastUsed": "Last used",
+    "neverUsed": "Never used",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "noKeys": "No API keys yet.",
+    "webhooks": "Webhooks",
+    "webhooksHint": "We POST a signed JSON message to your HTTPS address when the chosen events happen. Verify the X-Jumaah-Signature header with the secret shown once at creation.",
+    "webhookName": "Name",
+    "webhookUrl": "HTTPS address",
+    "createWebhook": "Add webhook",
+    "webhookCreated": "Webhook created",
+    "secretOnce": "Copy the signing secret now; it will not be shown again.",
+    "noWebhooks": "No webhooks yet.",
+    "test": "Send test",
+    "testOk": "Delivered",
+    "testFailed": "Failed",
+    "docsTitle": "How to use the API",
+    "docsAuth": "Send the key as a bearer token on the same address as this admin. Read-only keys accept GET requests only.",
+    "docsEndpoints": "Common endpoints (every endpoint the admin uses is available):",
+    "docsWebhooks": "Webhook deliveries look like this:"
   }
 }

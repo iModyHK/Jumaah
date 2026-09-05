@@ -5,6 +5,7 @@ import type { Actor } from '../lib/audit.js';
 import { audit, outbox } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { notifyKhutbahChanged } from './session.service.js';
+import { emitWebhook } from './webhook.service.js';
 
 export const FULL_INCLUDE = {
   sections: {
@@ -113,6 +114,7 @@ export async function createKhutbah(
     return k;
   });
   await audit(ctx.db, tenantId, actor, 'khutbah.create', 'Khutbah', khutbah.id, null, { title: khutbah.title });
+  emitWebhook(ctx, tenantId, 'khutbah.created', { khutbahId: khutbah.id, title: khutbah.title, gregorianDate: khutbah.gregorianDate.toISOString().slice(0, 10), targetLanguages: khutbah.targetLanguages });
   return getKhutbahOrThrow(ctx.db, tenantId, khutbah.id);
 }
 

@@ -123,3 +123,7 @@ export const SESSION_STALE_MS = 30000;
 /** Outbox rows rejected by the other side this many times are parked until an admin requeues them. */
 export const OUTBOX_MAX_ATTEMPTS = 10;
 export const MAX_DISPLAY_LANGUAGES = 4;
+
+/** Webhook events a mosque can subscribe to (hosted edition, plans with the API feature). */
+export const WEBHOOK_EVENTS = ['khutbah.created', 'khutbah.updated', 'translations.approved', 'session.started', 'session.ended', 'ping'] as const;
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];

@@ -3,7 +3,7 @@
  * (branding, signage, archive, …) are what distinguishes the paid edition from the free core. A community server
  * simply has the FREE plan; the core it needs is never listed in PLAN_FEATURES.
  */
-import { PLAN_FEATURES, type ArchiveSettings, type Branding, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
+import { PLAN_FEATURES, type ArchiveSettings, type Branding, type NetworkSettings, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
 import { HttpError } from '../lib/errors.js';
 import { subscriptionState, type SubscriptionLike } from './plan.service.js';
 
@@ -57,6 +57,14 @@ export function assertArchiveAllowed(archive: ArchiveSettings | undefined, t: Su
 /** Is the public archive page open right now: the plan includes it and the mosque switched it on. */
 export function archiveEnabled(settings: Record<string, unknown>, t: SubscriptionLike): boolean {
   return tenantFeatures(t).features.archive && !!(settings.archive as ArchiveSettings | undefined)?.enabled;
+}
+
+/** Reading the network needs networkRead, publishing needs networkPublish; switching either off is always fine. */
+export function assertNetworkAllowed(network: NetworkSettings | undefined, t: SubscriptionLike): void {
+  if (!network) return;
+  const { plan, features } = tenantFeatures(t);
+  if (network.publish && !features.networkPublish) throw featureDenied('networkPublish', plan);
+  if (network.read === true && !features.networkRead) throw featureDenied('networkRead', plan);
 }
 
 /** Throws FEATURE_NOT_IN_PLAN unless the mosque's current plan includes the feature. */

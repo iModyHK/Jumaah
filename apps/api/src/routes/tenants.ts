@@ -9,7 +9,7 @@ import { idParam, parse } from '../lib/validate.js';
 import { actorOf } from './auth.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
 import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.js';
-import { assertArchiveAllowed, assertBrandingAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
+import { assertArchiveAllowed, assertBrandingAllowed, assertNetworkAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { TRIAL_DAYS } from '@jumaah/shared';
 
@@ -130,6 +130,7 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     assertBrandingAllowed(body.settings?.branding, before);
     assertSignageAllowed(body.settings?.signage, before);
     assertArchiveAllowed(body.settings?.archive, before);
+    assertNetworkAllowed(body.settings?.network, before);
     const mergedBranding = body.settings?.branding ? { ...(((before.settings as { branding?: object }).branding) ?? {}), ...body.settings.branding } : undefined;
     const settings = body.settings ? { ...(before.settings as object), ...body.settings, ...(mergedBranding ? { branding: mergedBranding } : {}) } : undefined;
     const t = await db.tenant.update({

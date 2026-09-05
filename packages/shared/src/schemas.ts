@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PRAYER_METHODS } from './prayer-times.js';
 import {
   ORG_MAX_TENANTS,
+  WEBHOOK_EVENTS,
   DISPLAY_LAYOUTS,
   DISPLAY_THEMES,
   GLOSSARY_MODES,
@@ -95,10 +96,15 @@ export const prayerLocationSchema = z.object({
 export const archiveSchema = z.object({ enabled: z.boolean().optional() });
 export type ArchiveSettings = z.infer<typeof archiveSchema>;
 
+/** Shared translation network switches: read others' approved translations (default on), publish your own (opt-in). */
+export const networkSchema = z.object({ read: z.boolean().optional(), publish: z.boolean().optional() });
+export type NetworkSettings = z.infer<typeof networkSchema>;
+
 export const tenantSettingsSchema = z.object({
   branding: brandingSchema.optional(),
   signage: signageSchema.optional(),
   archive: archiveSchema.optional(),
+  network: networkSchema.optional(),
   prayerLocation: prayerLocationSchema.nullable().optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),
@@ -162,6 +168,19 @@ export const createOrganisationSchema = z.object({
 export const updateOrganisationSchema = createOrganisationSchema.partial();
 export const organisationTenantSchema = z.object({ tenantId: idSchema });
 export const organisationAdminSchema = z.object({ email: z.string().email().max(200) });
+
+// ---------- API keys and webhooks (hosted edition) ----------
+export const createApiKeySchema = z.object({
+  name: z.string().min(1).max(80),
+  readOnly: z.boolean().default(true),
+});
+export const createWebhookSchema = z.object({
+  name: z.string().min(1).max(80),
+  url: z.string().url().max(500),
+  events: z.array(z.enum(WEBHOOK_EVENTS)).min(1).max(10),
+  enabled: z.boolean().default(true),
+});
+export const updateWebhookSchema = createWebhookSchema.partial();
 
 export const tenantLanguagesSchema = z.object({
   languages: z.array(z.object({ code: langCode, enabled: z.boolean().default(true) })).max(30),

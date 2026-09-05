@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { ArchiveCard } from '../components/ArchiveCard';
 import { BrandingCard } from '../components/BrandingCard';
 import { DomainCard } from '../components/DomainCard';
+import { NetworkCard } from '../components/NetworkCard';
 import { SignageCard } from '../components/SignageCard';
 import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../components/Field';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -232,6 +233,7 @@ export function SettingsPage() {
         <SignageCard tenant={tenant.data} />
         <ArchiveCard tenant={tenant.data} />
         <DomainCard tenant={tenant.data} />
+        <NetworkCard />
 
         <Card
           title={t('settings.languages')}

@@ -783,3 +783,139 @@ describe('custom domains (Pro) and organisation accounts (hosted edition)', () =
     expect((await app.inject({ method: 'GET', url: '/api/organisation', headers: auth(orgTok) })).statusCode).toBe(403);
   });
 });
+
+describe('shared translation network, API keys and webhooks (Pro)', () => {
+  const setPlan = (plan: string) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+  let originalSettings: unknown;
+  let netKhutbahId = '';
+  let readKey = '';
+  let readKeyId = '';
+  let hookId = '';
+
+  beforeAll(async () => {
+    originalSettings = (await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).settings;
+  });
+  afterAll(async () => {
+    if (hookId) await app.ctx.db.webhook.deleteMany({ where: { id: hookId } });
+    if (netKhutbahId) await app.inject({ method: 'DELETE', url: `/api/khutbahs/${netKhutbahId}`, headers: auth(adminToken) });
+    await app.ctx.db.networkTranslation.deleteMany({ where: { sourceTenantId: tenantId } });
+    await app.ctx.db.apiKey.deleteMany({ where: { tenantId } });
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', settings: originalSettings as never } });
+  });
+
+  it('Standard may read the network but not publish; Pro publishes its approved translations', async () => {
+    await setPlan('STANDARD');
+    const st = await app.inject({ method: 'GET', url: '/api/network', headers: auth(adminToken) });
+    expect(st.statusCode, st.body).toBe(200);
+    expect(st.json()).toMatchObject({ plan: 'STANDARD', allowed: { read: true, publish: false } });
+    const denied = await app.inject({ method: 'PUT', url: '/api/network', headers: auth(adminToken), payload: { publish: true } });
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe('FEATURE_NOT_IN_PLAN');
+    const off = await app.inject({ method: 'PUT', url: '/api/network', headers: auth(adminToken), payload: { read: false } });
+    expect(off.statusCode, off.body).toBe(200);
+    expect(off.json().effective.read).toBe(false);
+    expect((await app.inject({ method: 'PUT', url: '/api/network', headers: auth(adminToken), payload: { read: true } })).json().effective.read).toBe(true);
+
+    await setPlan('PRO');
+    const on = await app.inject({ method: 'PUT', url: '/api/network', headers: auth(adminToken), payload: { publish: true } });
+    expect(on.statusCode, on.body).toBe(200);
+    expect(on.json().effective.publish).toBe(true);
+    expect(on.json().published).toBeGreaterThan(0);
+  });
+
+  it('a translation job reuses a published translation before any AI is called', async () => {
+    const created = await app.inject({
+      method: 'POST',
+      url: '/api/khutbahs',
+      headers: auth(adminToken),
+      payload: { title: 'شبكة الترجمة', gregorianDate: '2026-09-18', targetLanguages: ['en'], sections: [{ type: 'FIRST', rawText: 'الحمد لله رب العالمين.\n\nجملة لا يعرفها أحد بعد.' }] },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    netKhutbahId = created.json().id;
+    const first = created.json().sections.find((s: { type: string }) => s.type === 'FIRST').paragraphs[0];
+    const published = await app.ctx.db.networkTranslation.findFirst({ where: { hash: first.hash, lang: 'en' } });
+    expect(published).toBeTruthy();
+
+    const job = await app.inject({ method: 'POST', url: `/api/khutbahs/${netKhutbahId}/translate`, headers: auth(adminToken), payload: { languages: ['en'] } });
+    expect(job.statusCode, job.body).toBe(202);
+    let row = job.json();
+    for (let i = 0; i < 40 && (row.status === 'RUNNING' || row.status === 'QUEUED'); i++) {
+      await new Promise((r) => setTimeout(r, 250));
+      row = (await app.inject({ method: 'GET', url: `/api/translation-jobs/${job.json().id}`, headers: auth(adminToken) })).json();
+    }
+    expect(row.cached).toBeGreaterThanOrEqual(1);
+    const k = (await app.inject({ method: 'GET', url: `/api/khutbahs/${netKhutbahId}`, headers: auth(adminToken) })).json();
+    const tr = k.sections.find((s: { type: string }) => s.type === 'FIRST').paragraphs[0].translations.find((x: { lang: string }) => x.lang === 'en');
+    expect(tr.status).toBe('REVIEWED');
+    expect(tr.text).toBe(published!.text);
+    const st = await app.inject({ method: 'GET', url: '/api/network', headers: auth(adminToken) });
+    expect(st.json().reused).toBeGreaterThanOrEqual(1);
+  });
+
+  it('switching publishing off takes the contributions down', async () => {
+    const off = await app.inject({ method: 'PUT', url: '/api/network', headers: auth(adminToken), payload: { publish: false } });
+    expect(off.statusCode, off.body).toBe(200);
+    expect(off.json().published).toBe(0);
+    expect(await app.ctx.db.networkTranslation.count({ where: { sourceTenantId: tenantId } })).toBe(0);
+  });
+
+  it('API keys: gated by plan, read-only versus read-write, never for account management, revocable', async () => {
+    await setPlan('STANDARD');
+    expect((await app.inject({ method: 'POST', url: '/api/api-keys', headers: auth(adminToken), payload: { name: 'Nope' } })).statusCode).toBe(403);
+    await setPlan('PRO');
+    const ro = await app.inject({ method: 'POST', url: '/api/api-keys', headers: auth(adminToken), payload: { name: 'Reader', readOnly: true } });
+    expect(ro.statusCode, ro.body).toBe(201);
+    readKey = ro.json().key;
+    readKeyId = ro.json().id;
+    expect(readKey.startsWith('jk_')).toBe(true);
+    const keyAuth = (k: string) => ({ authorization: `Bearer ${k}` });
+    const list = await app.inject({ method: 'GET', url: '/api/khutbahs', headers: keyAuth(readKey) });
+    expect(list.statusCode, list.body).toBe(200);
+    expect(list.json().total).toBeGreaterThan(0);
+    expect((await app.inject({ method: 'GET', url: '/api/tenant', headers: keyAuth(readKey) })).json().slug).toBe('demo');
+    const write = await app.inject({ method: 'POST', url: '/api/khutbahs', headers: keyAuth(readKey), payload: { title: 'x', gregorianDate: '2026-09-25' } });
+    expect(write.statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/api-keys', headers: keyAuth(readKey) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/users', headers: keyAuth(readKey) })).statusCode).toBe(403);
+
+    const rw = await app.inject({ method: 'POST', url: '/api/api-keys', headers: auth(adminToken), payload: { name: 'Writer', readOnly: false } });
+    expect(rw.statusCode, rw.body).toBe(201);
+    const made = await app.inject({ method: 'POST', url: '/api/khutbahs', headers: keyAuth(rw.json().key), payload: { title: 'عبر الواجهة البرمجية', gregorianDate: '2026-09-25', targetLanguages: ['en'] } });
+    expect(made.statusCode, made.body).toBe(201);
+    await app.inject({ method: 'DELETE', url: `/api/khutbahs/${made.json().id}`, headers: auth(adminToken) });
+    // the list shows prefixes only, never the key
+    const keys = await app.inject({ method: 'GET', url: '/api/api-keys', headers: auth(adminToken) });
+    expect(keys.json().some((k: { key?: string }) => k.key)).toBe(false);
+    expect(keys.json().find((k: { id: string }) => k.id === readKeyId).prefix).toBe(readKey.slice(0, 11));
+
+    const revoked = await app.inject({ method: 'DELETE', url: `/api/api-keys/${readKeyId}`, headers: auth(adminToken) });
+    expect(revoked.statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/khutbahs', headers: keyAuth(readKey) })).statusCode).toBe(401);
+    // a plan without the API turns every key off
+    await setPlan('STANDARD');
+    await app.ctx.redis.del(`apikey:${(await import('@jumaah/db')).sha256(rw.json().key)}`);
+    expect((await app.inject({ method: 'GET', url: '/api/khutbahs', headers: keyAuth(rw.json().key) })).statusCode).toBe(401);
+    await setPlan('PRO');
+  });
+
+  it('webhooks: unsafe addresses are refused, deliveries are signed and reported', async () => {
+    const bad = await app.inject({ method: 'POST', url: '/api/webhooks', headers: auth(adminToken), payload: { name: 'local', url: 'http://127.0.0.1/hook', events: ['ping'] } });
+    expect(bad.statusCode).toBe(400);
+    const created = await app.inject({ method: 'POST', url: '/api/webhooks', headers: auth(adminToken), payload: { name: 'Test hook', url: 'https://hooks.invalid/jumaah', events: ['khutbah.created', 'ping'] } });
+    expect(created.statusCode, created.body).toBe(201);
+    hookId = created.json().id;
+    expect(created.json().secret.startsWith('whsec_')).toBe(true);
+    const test = await app.inject({ method: 'POST', url: `/api/webhooks/${hookId}/test`, headers: auth(adminToken) });
+    expect(test.statusCode, test.body).toBe(200);
+    // .invalid never resolves: the delivery fails and the failure is recorded on the webhook
+    expect(test.json().ok).toBe(false);
+    expect(test.json().error).toBeTruthy();
+    const list = await app.inject({ method: 'GET', url: '/api/webhooks', headers: auth(adminToken) });
+    expect(list.json().find((h: { id: string }) => h.id === hookId)).toMatchObject({ failures: 1, lastStatus: null });
+    expect(list.json().some((h: { secret?: string }) => h.secret)).toBe(false);
+    const off = await app.inject({ method: 'PATCH', url: `/api/webhooks/${hookId}`, headers: auth(adminToken), payload: { enabled: false } });
+    expect(off.json().enabled).toBe(false);
+    expect((await app.inject({ method: 'DELETE', url: `/api/webhooks/${hookId}`, headers: auth(adminToken) })).statusCode).toBe(200);
+    hookId = '';
+  });
+});

@@ -12,6 +12,7 @@ import type { Actor } from '../lib/audit.js';
 import { audit, outbox } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { jobDto } from '../lib/serialize.js';
+import { lookupNetwork, networkAccessOf, saveNetworkTranslation } from './network.service.js';
 import { aiDenied, getAiAllowance, platformAiDenied, recordAiUsage } from './plan.service.js';
 import { isOnline, loadGlossary, resolveChain } from './provider.service.js';
 import { notifyKhutbahChanged } from './session.service.js';
@@ -64,14 +65,18 @@ export async function estimateCost(ctx: AppContext, tenantId: string, khutbahId:
   let cachedUnits = 0;
   const uniqueParagraphs = new Map<string, Paragraph>();
   for (const w of work) uniqueParagraphs.set(w.paragraph.id, w.paragraph);
-  // Cache hits are provider-specific; count against the first provider in the chain.
+  // Network hits cost nothing; cache hits are provider-specific and count against the first provider in the chain.
+  const network = await networkAccessOf(ctx.db, tenantId);
   const first = providers[0];
-  if (first) {
-    for (const w of work) {
-      const { key } = cacheKey({ text: w.paragraph.textAr, targetLang: w.lang, providerType: first.type, model: null, glossary });
-      const hit = await ctx.db.translationCache.findUnique({ where: { key } });
-      if (hit) cachedUnits += 1;
+  for (const w of work) {
+    if (network.read && (await lookupNetwork(ctx.db, w.paragraph.hash, w.lang))) {
+      cachedUnits += 1;
+      continue;
     }
+    if (!first) continue;
+    const { key } = cacheKey({ text: w.paragraph.textAr, targetLang: w.lang, providerType: first.type, model: null, glossary });
+    const hit = await ctx.db.translationCache.findUnique({ where: { key } });
+    if (hit) cachedUnits += 1;
   }
   const characters = [...uniqueParagraphs.values()].reduce((n, p) => n + p.textAr.length, 0);
   const perLang = languages.length;
@@ -156,6 +161,7 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
     let quotaLeft = ai?.remainingParagraphs ?? Number.POSITIVE_INFINITY;
     let warned80 = !!ai?.monthlyParagraphs && quotaLeft <= ai.monthlyParagraphs * 0.2;
     const glossary = await loadGlossary(ctx.db, tenantId);
+    const network = await networkAccessOf(ctx.db, tenantId);
     const offline = ctx.config.isEdge && !(await isOnline(ctx));
     const tenant = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
 
@@ -170,9 +176,18 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
 
     for (const [lang, items] of byLang) {
       if (controller.signal.aborted) break;
-      // 1) cache
+      // 1) shared translation network (a reviewed translation from another mosque), then the cache
       const toTranslate: typeof items = [];
       for (const w of items) {
+        if (network.read) {
+          const net = await lookupNetwork(ctx.db, w.paragraph.hash, lang);
+          if (net) {
+            await saveNetworkTranslation(ctx, tenantId, w.paragraph.id, lang, net, job.createdById);
+            cached += 1;
+            done += 1;
+            continue;
+          }
+        }
         const hit = await lookupCache(ctx, w.paragraph.textAr, lang, providers, glossary);
         if (hit) {
           await saveTranslation(ctx, tenantId, w.paragraph.id, lang, hit.text, hit.providerType, { cached: true }, job.createdById);

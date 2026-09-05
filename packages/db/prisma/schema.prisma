@@ -145,8 +145,70 @@ model Tenant {
   libraryItems    LibraryKhutbah[]
   cache           TranslationCache[]
   aiUsage         AiUsage[]
+  apiKeys         ApiKey[]
+  webhooks        Webhook[]
+  networkTranslations NetworkTranslation[]
 
   @@index([organisationId])
+}
+
+/// Shared translation network (hosted edition): approved translations a mosque chose to share, keyed by the
+/// paragraph hash (normalised Arabic) and language. Read by every mosque whose plan includes the network.
+model NetworkTranslation {
+  id             String        @id @default(cuid())
+  hash           String
+  lang           String
+  text           String
+  kind           ParagraphKind @default(TEXT)
+  reference      String?
+  sourceTenantId String
+  uses           Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sourceTenant Tenant @relation(fields: [sourceTenantId], references: [id], onDelete: Cascade)
+
+  @@unique([hash, lang, sourceTenantId])
+  @@index([hash, lang])
+}
+
+/// API key of a mosque (hosted edition, plans with the API feature). Hashed at rest; read-only or read-write.
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  prefix      String
+  keyHash     String    @unique
+  readOnly    Boolean   @default(true)
+  createdById String?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+/// Webhook endpoint of a mosque: signed JSON deliveries for the chosen events.
+model Webhook {
+  id              String    @id @default(cuid())
+  tenantId        String
+  name            String
+  url             String
+  secret          String
+  events          String[]
+  enabled         Boolean   @default(true)
+  lastStatus      Int?
+  lastError       String?
+  lastDeliveredAt DateTime?
+  failures        Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
 }
 
 /// Hosted edition: an organisation (charity, awqaf office, chain of mosques) whose admins manage several mosques

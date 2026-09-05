@@ -7,7 +7,9 @@ import { signAccessToken } from '../lib/jwt.js';
 import { parse } from '../lib/validate.js';
 
 export function actorOf(request: FastifyRequest) {
-  return { id: request.user?.id ?? null, email: request.user?.email ?? null, ip: request.ip, userAgent: request.headers['user-agent'] ?? null };
+  const u = request.user;
+  // API keys are not users: their audit rows carry the key's name and no user id (the user foreign key would fail).
+  return { id: u?.apiKey ? null : (u?.id ?? null), email: u?.email ?? null, ip: request.ip, userAgent: request.headers['user-agent'] ?? null };
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {

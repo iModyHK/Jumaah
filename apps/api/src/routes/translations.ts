@@ -8,7 +8,9 @@ import { idParam, parse } from '../lib/validate.js';
 import { ALL_STAFF, EDITOR_ROLES } from '../plugins/auth.js';
 import { getKhutbahOrThrow } from '../services/khutbah.service.js';
 import { notifyKhutbahChanged } from '../services/session.service.js';
+import { publishLater } from '../services/network.service.js';
 import { cancelJob, estimateCost, startJob } from '../services/translation.service.js';
+import { emitWebhook } from '../services/webhook.service.js';
 import { actorOf } from './auth.js';
 
 export async function translationRoutes(app: FastifyInstance): Promise<void> {
@@ -52,6 +54,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     });
     await audit(db, tenantId, actorOf(request), 'translation.upsert', 'Translation', row.id, existing ? { text: existing.text, status: existing.status } : null, { text: row.text, status: row.status });
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
+    if (row.status === 'APPROVED') publishLater(app.ctx, tenantId, [row.id]);
     return translationDto(row);
   });
 
@@ -82,6 +85,10 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     await audit(db, tenantId, actorOf(request), `translation.${body.action}`, 'Translation', id, { status: t.status, text: t.text }, { status: row.status, text: row.text });
     await notifyKhutbahChanged(app.ctx, tenantId, t.paragraph.section.khutbahId);
     await maybeMarkReady(t.paragraph.section.khutbahId, tenantId);
+    if (row.status === 'APPROVED') {
+      publishLater(app.ctx, tenantId, [row.id]);
+      emitWebhook(app.ctx, tenantId, 'translations.approved', { khutbahId: t.paragraph.section.khutbahId, count: 1, lang: row.lang });
+    }
     return translationDto(row);
   });
 
@@ -107,6 +114,10 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     await audit(db, tenantId, actorOf(request), 'translation.approveAll', 'Khutbah', khutbahId, null, { count: ids.length, lang });
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
     await maybeMarkReady(khutbahId, tenantId);
+    if (ids.length) {
+      publishLater(app.ctx, tenantId, ids);
+      emitWebhook(app.ctx, tenantId, 'translations.approved', { khutbahId, count: ids.length, lang: lang ?? null });
+    }
     return { approved: ids.length };
   });
 
@@ -119,6 +130,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     const paragraphs = k.sections.filter((s) => !body.sectionType || s.type === body.sectionType).flatMap((s) => s.paragraphs);
     if (body.texts.length !== paragraphs.length) throw badRequest(`Expected ${paragraphs.length} entries, received ${body.texts.length}`);
     let written = 0;
+    const writtenIds: string[] = [];
     await db.$transaction(async (tx) => {
       for (let i = 0; i < paragraphs.length; i++) {
         const text = body.texts[i]?.trim();
@@ -132,10 +144,12 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
         await tx.translationVersion.create({ data: { translationId: r.id, tenantId, version: r.version, text, status: body.status, providerType: 'MANUAL', changedById: request.user!.id } });
         await outbox(tx, tenantId, 'Translation', r.id, 'UPSERT', r, r.version);
         written += 1;
+        writtenIds.push(r.id);
       }
     });
     await audit(db, tenantId, actorOf(request), 'translation.import', 'Khutbah', khutbahId, null, { lang: body.lang, written });
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
+    if (body.status === 'APPROVED') publishLater(app.ctx, tenantId, writtenIds);
     return { written };
   });
 

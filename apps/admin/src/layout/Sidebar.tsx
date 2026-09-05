@@ -25,6 +25,7 @@ const ITEMS: NavItem[] = [
   { to: '/audit', key: 'nav.audit', icon: '≡', admin: true },
   { to: '/backups', key: 'nav.backups', icon: '⬇', admin: true, needsTenant: true },
   { to: '/sync', key: 'nav.sync', icon: '☁', admin: true, needsTenant: true },
+  { to: '/api', key: 'nav.api', icon: '⌁', admin: true, needsTenant: true },
   { to: '/organisation', key: 'nav.organisation', icon: '🏛', orgOnly: true },
   { to: '/tenants', key: 'nav.tenants', icon: '🕌', superOnly: true },
   { to: '/organisations', key: 'nav.organisations', icon: '🏛', superOnly: true },

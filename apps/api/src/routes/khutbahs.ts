@@ -10,6 +10,7 @@ import { assertFeature, effectiveBranding } from '../services/features.service.j
 import { extractDocument } from '../services/import.service.js';
 import { FULL_INCLUDE, copyKhutbah, createKhutbah, getKhutbahOrThrow, replaceSectionText, restoreVersion } from '../services/khutbah.service.js';
 import { getLiveKhutbah, notifyKhutbahChanged } from '../services/session.service.js';
+import { emitWebhook } from '../services/webhook.service.js';
 import { actorOf } from './auth.js';
 
 const listQuery = paginationSchema.extend({
@@ -87,6 +88,7 @@ export async function khutbahRoutes(app: FastifyInstance): Promise<void> {
     await outbox(db, request.tenantId, 'Khutbah', id, 'UPSERT', { ...k, sections: undefined });
     await audit(db, request.tenantId, actorOf(request), 'khutbah.update', 'Khutbah', id, { title: before.title, status: before.status, targetLanguages: before.targetLanguages }, { title: k.title, status: k.status, targetLanguages: k.targetLanguages });
     await notifyKhutbahChanged(app.ctx, request.tenantId, id);
+    emitWebhook(app.ctx, request.tenantId, 'khutbah.updated', { khutbahId: id, title: k.title, status: k.status, targetLanguages: k.targetLanguages });
     return khutbahDto(k, true);
   });
 

@@ -23,6 +23,8 @@ export interface RequestUser {
   impersonating?: boolean;
   /** Organisation admins may target any mosque of their organisation with x-tenant-id. */
   organisationId?: string | null;
+  /** Set when the request is authenticated with an API key rather than a signed-in person. */
+  apiKey?: { id: string; readOnly: boolean };
 }
 
 declare module 'fastify' {

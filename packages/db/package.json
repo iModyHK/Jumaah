@@ -6,9 +6,14 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "prisma": { "seed": "node --import tsx src/seed.ts" },
+  "prisma": {
+    "seed": "node --import tsx src/seed.ts"
+  },
   "scripts": {
     "generate": "prisma generate",
     "build": "prisma generate && tsc -p tsconfig.json",
@@ -21,11 +26,11 @@
   },
   "dependencies": {
     "@jumaah/shared": "workspace:*",
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "^6.1.0",
+    "prisma": "^6.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "prisma": "^6.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

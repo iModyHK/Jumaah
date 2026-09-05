@@ -1,5 +1,6 @@
 #!/bin/sh
 # Entrypoint for the API image. Usage: api-entrypoint.sh [api|worker|migrate|seed]
+# No package manager at runtime: the Prisma CLI is called from the workspace bin so an offline mosque server still migrates.
 set -eu
 cd /app
 
@@ -16,10 +17,10 @@ case "${1:-api}" in
   api)
     wait_for_db
     echo "applying migrations"
-    (cd packages/db && pnpm exec prisma migrate deploy)
+    (cd packages/db && ./node_modules/.bin/prisma migrate deploy)
     if [ "${SEED_ON_START:-0}" = "1" ]; then
       echo "seeding (SEED_ON_START=1)"
-      (cd packages/db && node --import tsx src/seed.ts) || echo "seed skipped/failed (non-fatal)"
+      (cd packages/db && node dist/seed.js) || echo "seed skipped/failed (non-fatal)"
     fi
     exec node apps/api/dist/server.js
     ;;
@@ -29,11 +30,11 @@ case "${1:-api}" in
     ;;
   migrate)
     wait_for_db
-    exec sh -c "cd packages/db && pnpm exec prisma migrate deploy"
+    exec sh -c "cd packages/db && ./node_modules/.bin/prisma migrate deploy"
     ;;
   seed)
     wait_for_db
-    exec sh -c "cd packages/db && node --import tsx src/seed.ts"
+    exec sh -c "cd packages/db && node dist/seed.js"
     ;;
   *)
     exec "$@"

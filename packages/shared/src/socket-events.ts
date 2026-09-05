@@ -49,6 +49,20 @@ export interface LiveSessionSnapshot {
   imamConnected: boolean;
 }
 
+/** Branding as screens and phones may show it: stored settings already filtered by the mosque's plan. */
+export interface TenantPublicBranding {
+  /** Uploaded logo (data URL) when the plan allows it, else the plain logo URL, else null. */
+  logoUrl: string | null;
+  /** Highlight colour (#RRGGBB) or null for the theme default. */
+  primary: string | null;
+  /** Background colour (#RRGGBB) or null for the theme default. */
+  accent: string | null;
+  /** Free-form CSS for screens and the phone page (Pro), or null. */
+  css: string | null;
+  /** Hide the small Jumaah mark (Pro). */
+  hideMark: boolean;
+}
+
 export interface TenantPublicInfo {
   id: string;
   name: string;
@@ -60,6 +74,7 @@ export interface TenantPublicInfo {
   welcomeMessageEn: string | null;
   prayerTimes: Record<string, string> | null;
   languages: string[];
+  branding: TenantPublicBranding;
 }
 
 export interface DisplayConfig {

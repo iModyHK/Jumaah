@@ -1,5 +1,6 @@
 import type { Db } from '@jumaah/db';
 import type { LiveKhutbah, LiveParagraph, TenantPublicInfo } from '@jumaah/shared';
+import { effectiveBranding } from '../services/features.service.js';
 
 /** Build the payload displays/imam receive: full khutbah tree with translation statuses. */
 export async function buildLiveKhutbah(db: Db, tenantId: string, khutbahId: string): Promise<LiveKhutbah | null> {
@@ -57,16 +58,18 @@ export async function buildTenantPublicInfo(db: Db, tenantId: string): Promise<T
   const t = await db.tenant.findUnique({ where: { id: tenantId }, include: { languages: true } });
   if (!t) return null;
   const s = (t.settings as Record<string, unknown>) ?? {};
+  const branding = effectiveBranding(s, t);
   return {
     id: t.id,
     name: t.name,
     slug: t.slug,
     locale: t.locale as 'ar' | 'en',
     timezone: t.timezone,
-    logoUrl: (s.logoUrl as string) ?? null,
+    logoUrl: branding.logoUrl,
     welcomeMessage: (s.welcomeMessage as string) ?? null,
     welcomeMessageEn: (s.welcomeMessageEn as string) ?? null,
     prayerTimes: (s.prayerTimes as Record<string, string>) ?? null,
     languages: t.languages.filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
+    branding,
   };
 }

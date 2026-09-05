@@ -5,6 +5,7 @@ import { tenantLanguagesSchema, tenantSettingsSchema, updateTenantSchema, type T
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
+import { BrandingCard } from '../components/BrandingCard';
 import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../components/Field';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { Card, PageHeader } from '../components/PageHeader';
@@ -171,6 +172,8 @@ export function SettingsPage() {
             <Checkbox label={t('settings.publicDisplay')} checked={draft.publicDisplayEnabled} onChange={(v) => set({ publicDisplayEnabled: v })} />
           </div>
         </Card>
+
+        <BrandingCard tenant={tenant.data} />
 
         <Card
           title={t('settings.languages')}

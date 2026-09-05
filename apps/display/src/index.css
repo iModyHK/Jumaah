@@ -460,3 +460,205 @@ html.j-kiosk body {
 .j-mobile-body .j-ended {
   min-height: 60vh;
 }
+
+/* ---------- Branding: Jumaah mark, mobile logo ---------- */
+.j-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.8em;
+  letter-spacing: 0.02em;
+  color: var(--j-fg-muted);
+  opacity: 0.8;
+  white-space: nowrap;
+}
+.j-mobile-logo {
+  height: 1.6rem;
+  width: auto;
+  max-width: 4rem;
+  object-fit: contain;
+}
+
+/* ---------- Printable QR poster ---------- */
+.j-poster {
+  min-height: 100vh;
+  background: #e9ecef;
+  color: #16211c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+.j-poster-toolbar {
+  display: flex;
+  gap: 0.5rem;
+}
+.j-poster-btn {
+  border: 1.5px solid #1e6b58;
+  background: #1e6b58;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+}
+.j-poster-btn-ghost {
+  background: transparent;
+  color: #1e6b58;
+}
+.j-poster-page {
+  background: #fff;
+  width: 210mm;
+  min-height: 297mm;
+  padding: 18mm 16mm;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8mm;
+}
+.j-poster-a3 .j-poster-page {
+  width: 297mm;
+  min-height: 420mm;
+  padding: 24mm 22mm;
+  font-size: 1.35em;
+}
+.j-poster-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4mm;
+}
+.j-poster-logo {
+  max-height: 32mm;
+  max-width: 70mm;
+  object-fit: contain;
+}
+.j-poster-name {
+  font-size: 2em;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.25;
+}
+.j-poster-title-ar {
+  font-size: 2.6em;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--j-accent);
+}
+.j-poster-title-en {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #4b5a53;
+}
+.j-poster-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3mm;
+  padding: 6mm;
+  border: 3px solid var(--j-accent);
+  border-radius: 14px;
+}
+.j-poster-qr-img {
+  width: 90mm;
+  height: 90mm;
+  image-rendering: pixelated;
+}
+.j-poster-a3 .j-poster-qr-img {
+  width: 140mm;
+  height: 140mm;
+}
+.j-poster-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #16211c;
+}
+.j-poster-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 4mm;
+  width: 100%;
+  max-width: 150mm;
+  text-align: start;
+}
+.j-poster-steps {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: none;
+  text-align: center;
+}
+.j-poster-steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3mm;
+  font-size: 1.05em;
+  line-height: 1.5;
+}
+.j-poster-step-text > * {
+  display: block;
+  text-align: center;
+}
+.j-poster-step-n {
+  flex: 0 0 auto;
+  width: 9mm;
+  height: 9mm;
+  border-radius: 999px;
+  background: var(--j-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+.j-poster-step-text {
+  display: flex;
+  flex-direction: column;
+}
+.j-poster-step-en {
+  color: #4b5a53;
+  font-size: 0.85em;
+}
+.j-poster-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2mm;
+  font-weight: 600;
+  color: #4b5a53;
+}
+.j-poster-mark {
+  margin-top: 3mm;
+  color: #7d8a84;
+}
+@media print {
+  html.j-print,
+  html.j-print body {
+    background: #fff;
+  }
+  .j-poster {
+    background: #fff;
+    padding: 0;
+    min-height: 0;
+  }
+  .j-poster-toolbar {
+    display: none;
+  }
+  .j-poster-page {
+    box-shadow: none;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+  }
+  @page {
+    margin: 16mm;
+  }
+}

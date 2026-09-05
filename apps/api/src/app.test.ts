@@ -498,3 +498,44 @@ describe('hosted plans: trial defaults and platform overview', () => {
     expect(asAdmin.statusCode).toBe(403);
   });
 });
+
+describe('branding: gated by plan, filtered on public info', () => {
+  const setPlan = (plan: string) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+  let originalSettings: unknown;
+  beforeAll(async () => {
+    originalSettings = (await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).settings;
+  });
+  afterAll(async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', settings: originalSettings as never } });
+  });
+
+  it('lists features by plan', async () => {
+    await setPlan('STANDARD');
+    const res = await app.inject({ method: 'GET', url: '/api/tenant/features', headers: auth(adminToken) });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ plan: 'STANDARD', state: 'active', features: { colours: true, css: false, poster: true } });
+  });
+
+  it('rejects branding above the plan and accepts what the plan includes', async () => {
+    await setPlan('BASIC');
+    const denied = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { branding: { primary: '#123456' } } } });
+    expect(denied.statusCode, denied.body).toBe(403);
+    expect(denied.json().error.code).toBe('FEATURE_NOT_IN_PLAN');
+    const ok = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { branding: { logoDataUrl: 'data:image/png;base64,iVBORw0KGgo=' } } } });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(ok.json().settings.branding.logoDataUrl).toBe('data:image/png;base64,iVBORw0KGgo=');
+  });
+
+  it('public info shows only what the plan allows and keeps stored values for later', async () => {
+    await setPlan('PRO');
+    const saved = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { branding: { primary: '#123456', css: '.j-idle-name{opacity:.9}', hideMark: true } } } });
+    expect(saved.statusCode, saved.body).toBe(200);
+    let pub = await app.inject({ method: 'GET', url: '/api/public/tenant/demo' });
+    expect(pub.json().tenant.branding).toMatchObject({ logoUrl: 'data:image/png;base64,iVBORw0KGgo=', primary: '#123456', css: '.j-idle-name{opacity:.9}', hideMark: true });
+    await setPlan('BASIC');
+    pub = await app.inject({ method: 'GET', url: '/api/public/tenant/demo' });
+    expect(pub.json().tenant.branding).toMatchObject({ logoUrl: 'data:image/png;base64,iVBORw0KGgo=', primary: null, css: null, hideMark: false });
+    const stored = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    expect((stored.settings as { branding: { primary: string } }).branding.primary).toBe('#123456');
+  });
+});

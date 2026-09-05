@@ -39,7 +39,27 @@ export const changePasswordSchema = z.object({
 });
 
 // ---------- Tenants ----------
+const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a #RRGGBB colour');
+/** Paid-edition branding, stored in tenant.settings.branding. Each field is gated by the plan on the server. */
+export const brandingSchema = z
+  .object({
+    /** Small raster or SVG logo as a data URL (the admin resizes to 512px before upload). */
+    logoDataUrl: z
+      .string()
+      .regex(/^data:image\/(png|jpeg|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/, 'Unsupported image')
+      .max(300_000, 'Logo must be under about 200 KB')
+      .nullable()
+      .optional(),
+    primary: hexColour.nullable().optional(),
+    accent: hexColour.nullable().optional(),
+    css: z.string().max(20_000).nullable().optional(),
+    hideMark: z.boolean().optional(),
+  })
+  .strict();
+export type Branding = z.infer<typeof brandingSchema>;
+
 export const tenantSettingsSchema = z.object({
+  branding: brandingSchema.optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),
   prayerTimes: z

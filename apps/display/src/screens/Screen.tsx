@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ConnectionDot, LangText } from '@jumaah/ui';
 import { useKiosk, useTheme } from '../kiosk';
 import { activeKhutbah, currentParagraphs, useLiveStore } from '../store';
+import { Branded, JumaahMark } from '../components/Branding';
 import { Clock } from '../components/Clock';
 import { EndedScreen } from '../components/EndedScreen';
 import { IdleScreen } from '../components/IdleScreen';
@@ -47,7 +48,7 @@ export function Screen({ token }: { token: string }) {
   }
 
   return (
-    <div className="j-wall">
+    <Branded branding={tenant.branding} className="j-wall">
       {!live.connected && <ReconnectBanner />}
       {state === 'PAUSED' && <PausedPill languages={languages} />}
       {content}
@@ -64,10 +65,11 @@ export function Screen({ token }: { token: string }) {
           <span />
         )}
         <span className="inline-flex items-center gap-4">
+          <JumaahMark branding={tenant.branding} />
           <ConnectionDot connected={live.connected} />
           <Clock offsetMs={live.offsetMs} timeZone={tenant.timezone} className="font-semibold tabular-nums" />
         </span>
       </footer>
-    </div>
+    </Branded>
   );
 }

@@ -62,6 +62,43 @@ export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
   PRO: { ai: true, maxLanguages: null, monthlyParagraphs: 150 * PARAGRAPHS_PER_KHUTBAH_UNIT },
   ENTERPRISE: { ai: true, maxLanguages: null, monthlyParagraphs: 1500 * PARAGRAPHS_PER_KHUTBAH_UNIT },
 };
+/**
+ * Paid-edition features by plan (the feature matrix of the plan document). The core — preparation, review, imam
+ * control, screens, phones, offline, backups — is never listed here because it is always available.
+ */
+export interface PlanFeatures {
+  /** Upload a logo file (stored with the mosque) instead of hosting an image URL yourself. */
+  logoUpload: boolean;
+  /** Primary and accent colours on screens and the phone page. */
+  colours: boolean;
+  /** Free-form CSS applied to screens and the phone page. */
+  css: boolean;
+  /** Remove the small Jumaah mark from screens and the phone page. */
+  hideMark: boolean;
+  /** Printable QR poster with the mosque's branding. */
+  poster: boolean;
+  /** Prayer times, dates and announcements on screens between khutbahs. */
+  signage: boolean;
+  /** Public archive page of past khutbahs. */
+  archive: boolean;
+  /** Printable handouts per language. */
+  handouts: boolean;
+  /** Aggregated attendance insight. */
+  insight: boolean;
+  /** Shared translation network: read others' reviewed translations / publish your own. */
+  networkRead: boolean;
+  networkPublish: boolean;
+  /** API access and webhooks. */
+  api: boolean;
+}
+const NO_FEATURES: PlanFeatures = { logoUpload: false, colours: false, css: false, hideMark: false, poster: false, signage: false, archive: false, handouts: false, insight: false, networkRead: false, networkPublish: false, api: false };
+export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
+  FREE: NO_FEATURES,
+  BASIC: { ...NO_FEATURES, logoUpload: true, poster: true },
+  STANDARD: { ...NO_FEATURES, logoUpload: true, colours: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true },
+  PRO: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true },
+  ENTERPRISE: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true },
+};
 /** Days after subscriptionEndsAt during which platform AI keeps working, so a late payment never blanks a Friday. */
 export const AI_GRACE_DAYS = 7;
 /** Length of the trial a new hosted mosque starts with. */

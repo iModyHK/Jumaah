@@ -55,7 +55,8 @@
     "unsavedChanges": "You have unsaved changes",
     "areYouSure": "Are you sure?",
     "seconds": "sec",
-    "minutes": "min"
+    "minutes": "min",
+    "reset": "Reset"
   },
   "auth": {
     "login": "Log in",
@@ -291,7 +292,8 @@
     "online": "Online",
     "offline": "Offline",
     "regenerateToken": "Regenerate token",
-    "publicUrl": "Public mobile URL"
+    "publicUrl": "Public mobile URL",
+    "poster": "Print QR poster"
   },
   "users": {
     "resetPassword": "New password (leave empty to keep)",
@@ -469,6 +471,14 @@
       "maghrib": "Maghrib",
       "isha": "Isha",
       "jumuah": "Jumuah"
+    },
+    "poster": {
+      "print": "Print",
+      "title": "Follow the khutbah in your language",
+      "scan": "Scan the code with your phone camera",
+      "pick": "Choose your language",
+      "follow": "Follow the khutbah live, paragraph by paragraph",
+      "noApp": "No app needed. It opens in the browser."
     }
   },
   "errors": {
@@ -510,5 +520,21 @@
       "QUOTA": "This month's machine translation allowance is used up.",
       "LANGUAGES": "The plan allows up to {{count}} AI languages per job."
     }
+  },
+  "branding": {
+    "title": "Branding",
+    "hint": "How the mosque appears on screens, on worshippers' phones and on the printed poster. Locked fields belong to a higher plan.",
+    "logo": "Logo",
+    "noLogo": "No logo uploaded",
+    "upload": "Upload logo",
+    "tooLarge": "The logo is too large; use a simpler image.",
+    "primary": "Highlight colour",
+    "primaryHint": "Live indicator, QR frame and accents.",
+    "background": "Background colour",
+    "backgroundHint": "Screen and phone page background. Leave unset to keep the chosen theme.",
+    "css": "Custom CSS",
+    "cssHint": "Applied to the screens and the phone page. For designers; leave empty otherwise.",
+    "hideMark": "Hide the Jumaah mark on screens and phones",
+    "locked": "requires the plan above {{plan}}"
   }
 }

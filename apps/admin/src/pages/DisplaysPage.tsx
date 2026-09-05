@@ -33,7 +33,7 @@ const EMPTY: Draft = { name: '', location: '', languages: [], layout: 'single', 
 
 export function DisplaysPage() {
   const { t } = useTranslation();
-  const { tenantId, isAdmin } = useAuth();
+  const { tenantId, isAdmin, session } = useAuth();
   const toast = useToast();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<{ id: string | null; draft: Draft } | null>(null);
@@ -61,17 +61,25 @@ export function DisplaysPage() {
   });
 
   const items = list.data ?? [];
+  // Printable QR poster (paid editions): opens the public poster page of this mosque in a new tab.
+  const features = useQuery({ queryKey: ['tenant', 'features', tenantId], queryFn: () => api.get<{ features: { poster: boolean } }>('/tenant/features'), staleTime: 60_000 });
+  const posterUrl = items[0]?.publicUrl ? items[0].publicUrl.replace('/display/m/', '/display/poster/') : session?.user.tenantSlug ? `${window.location.origin}/display/poster/${session.user.tenantSlug}` : null;
 
   return (
     <div>
       <PageHeader
         title={t('displays.title')}
         actions={
-          isAdmin && (
-            <Button variant="primary" onClick={() => setEditing({ id: null, draft: EMPTY })}>
-              {t('displays.add')}
-            </Button>
-          )
+          <>
+            {features.data?.features.poster && posterUrl && (
+              <Button onClick={() => window.open(posterUrl, '_blank', 'noopener')}>{t('displays.poster')}</Button>
+            )}
+            {isAdmin && (
+              <Button variant="primary" onClick={() => setEditing({ id: null, draft: EMPTY })}>
+                {t('displays.add')}
+              </Button>
+            )}
+          </>
         }
       />
       {list.isLoading && <Spinner />}

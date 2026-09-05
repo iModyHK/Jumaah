@@ -9,6 +9,8 @@ import { idParam, parse } from '../lib/validate.js';
 import { actorOf } from './auth.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
 import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.js';
+import { assertBrandingAllowed, tenantFeatures } from '../services/features.service.js';
+import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { TRIAL_DAYS } from '@jumaah/shared';
 
 /** Super-admin tenant management + current-tenant settings. */
@@ -124,22 +126,26 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(updateTenantSchema.omit({ plan: true, subscriptionStatus: true, subscriptionEndsAt: true, librarySharingAllowed: true }), request.body);
     const before = await db.tenant.findUnique({ where: { id: request.tenantId } });
     if (!before) throw notFound('Tenant');
+    // Paid-edition branding fields are only accepted when the plan includes them (clearing is always fine).
+    assertBrandingAllowed(body.settings?.branding, before);
+    const mergedBranding = body.settings?.branding ? { ...(((before.settings as { branding?: object }).branding) ?? {}), ...body.settings.branding } : undefined;
+    const settings = body.settings ? { ...(before.settings as object), ...body.settings, ...(mergedBranding ? { branding: mergedBranding } : {}) } : undefined;
     const t = await db.tenant.update({
       where: { id: request.tenantId },
-      data: { name: body.name, timezone: body.timezone, locale: body.locale, settings: body.settings ? { ...(before.settings as object), ...body.settings } : undefined },
+      data: { name: body.name, timezone: body.timezone, locale: body.locale, settings },
       include: { languages: true },
     });
     await audit(db, t.id, actorOf(request), 'tenant.settings.update', 'Tenant', t.id, before.settings, t.settings);
     await outbox(db, t.id, 'Tenant', t.id, 'UPSERT', t);
-    app.ctx.io.to(`t:${t.id}`).emit('tenant:info', {
-      id: t.id, name: t.name, slug: t.slug, locale: t.locale as 'ar' | 'en', timezone: t.timezone,
-      logoUrl: ((t.settings as { logoUrl?: string }).logoUrl) ?? null,
-      welcomeMessage: ((t.settings as { welcomeMessage?: string }).welcomeMessage) ?? null,
-      welcomeMessageEn: ((t.settings as { welcomeMessageEn?: string }).welcomeMessageEn) ?? null,
-      prayerTimes: ((t.settings as { prayerTimes?: Record<string, string> }).prayerTimes) ?? null,
-      languages: t.languages.filter((l) => l.enabled).map((l) => l.code),
-    });
+    const info = await buildTenantPublicInfo(db, t.id);
+    if (info) app.ctx.io.to(`t:${t.id}`).emit('tenant:info', info);
     return tenantDto(t);
+  });
+
+  /** Paid-edition features the mosque may use right now, by plan and subscription state. */
+  app.get('/tenant/features', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
+    const t = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } });
+    return tenantFeatures(t);
   });
 
   /** Hosted edition: the mosque's platform-AI allowance and usage this month (self-hosted servers report applies=false). */

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getLanguage } from '@jumaah/shared';
 import { Button, ConnectionDot, LangText, useLocalStorage, useWakeLock } from '@jumaah/ui';
 import { useTheme } from '../kiosk';
+import { Branded, JumaahMark } from '../components/Branding';
 import { activeKhutbah, currentParagraphs, useLiveStore } from '../store';
 import { EndedScreen } from '../components/EndedScreen';
 import { IdleScreen } from '../components/IdleScreen';
@@ -71,15 +72,21 @@ export function Mobile({ slug }: { slug: string }) {
   else body = <Panels languages={selected} layout="column" fontScale={prefs.scale} showPrevious showArabic={showArabic} state={state} current={current} previous={previous} mode="mobile" />;
 
   return (
-    <div className="j-mobile">
+    <Branded branding={tenant.branding} className="j-mobile">
       {!live.connected && <ReconnectBanner />}
       {state === 'PAUSED' && <PausedPill languages={selected} />}
       <header className="j-mobile-header">
         <div className="flex items-center justify-between gap-3">
-          <LangText lang={tenant.locale} as="span" style={{ fontWeight: 700, fontSize: '1.1rem', lineHeight: 1.3 }}>
-            {tenant.name}
-          </LangText>
-          <ConnectionDot connected={live.connected} />
+          <span className="flex items-center gap-2">
+            {tenant.branding?.logoUrl && <img src={tenant.branding.logoUrl} alt="" className="j-mobile-logo" draggable={false} />}
+            <LangText lang={tenant.locale} as="span" style={{ fontWeight: 700, fontSize: '1.1rem', lineHeight: 1.3 }}>
+              {tenant.name}
+            </LangText>
+          </span>
+          <span className="flex items-center gap-3">
+            <JumaahMark branding={tenant.branding} />
+            <ConnectionDot connected={live.connected} />
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <div className="j-chips flex-1" role="group" aria-label={t('display.chooseLanguage')}>
@@ -103,6 +110,6 @@ export function Mobile({ slug }: { slug: string }) {
         </div>
       </header>
       <main className="j-mobile-body">{body}</main>
-    </div>
+    </Branded>
   );
 }

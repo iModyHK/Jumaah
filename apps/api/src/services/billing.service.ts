@@ -175,7 +175,7 @@ export async function ensurePaymentUrl(ctx: AppContext, inv: Invoice): Promise<I
   return ctx.db.invoice.update({ where: { id: inv.id }, data: { paymentProvider: p.provider, paymentRef: p.ref, paymentUrl: p.url } });
 }
 
-function subscriptionLines(plan: SubscriptionPlan, cycle: BillingCycle, start: Date, end: Date, mosques = 1): InvoiceLine[] {
+export function subscriptionLines(plan: SubscriptionPlan, cycle: BillingCycle, start: Date, end: Date, mosques = 1): InvoiceLine[] {
   const period = `${start.toISOString().slice(0, 10)} → ${end.toISOString().slice(0, 10)}`;
   const label = plan === 'ENTERPRISE' ? 'Organisation' : plan.charAt(0) + plan.slice(1).toLowerCase();
   const labelAr = { BASIC: 'الأساسية', STANDARD: 'القياسية', PRO: 'الاحترافية', ENTERPRISE: 'المؤسسة', FREE: 'المجانية' }[plan];
@@ -191,7 +191,7 @@ function subscriptionLines(plan: SubscriptionPlan, cycle: BillingCycle, start: D
   ];
 }
 
-function billToOf(t: { name: string; billingName: string | null; billingVatNumber: string | null; billingAddress: string | null; billingEmail: string | null }): InvoiceDto['billTo'] {
+export function billToOf(t: { name: string; billingName: string | null; billingVatNumber: string | null; billingAddress: string | null; billingEmail: string | null }): InvoiceDto['billTo'] {
   return { name: t.billingName || t.name, vatNumber: t.billingVatNumber, address: t.billingAddress, email: t.billingEmail };
 }
 
@@ -309,6 +309,25 @@ export async function applySponsorship(ctx: AppContext, sponsorshipId: string, t
   const updated = await ctx.db.sponsorship.update({ where: { id: s.id }, data: { applied: next as unknown as Prisma.InputJsonValue, status: next.length >= s.mosques ? 'APPLIED' : 'PAID' } });
   await audit(ctx.db, t.id, actor, 'sponsorship.apply', 'Sponsorship', s.id, null, { tenantId: t.id, seat: next.length, of: s.mosques });
   return updated;
+}
+
+/**
+ * The mosque subscribes (or changes plan) by itself: one invoice for the coming period, starting when the current paid
+ * period ends or now (trial, lapsed). Any earlier open subscription invoice is replaced. The plan applies when paid.
+ */
+export async function subscribeNow(ctx: AppContext, tenantId: string, plan: SubscriptionPlan, cycle: BillingCycle, actor: Actor): Promise<Invoice> {
+  const t = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
+  if (!t) throw notFound('Tenant');
+  if (t.organisationId) throw conflict('This mosque is billed through its organisation');
+  const now = new Date();
+  const start = t.subscriptionStatus === 'ACTIVE' && t.subscriptionEndsAt && t.subscriptionEndsAt > now ? t.subscriptionEndsAt : now;
+  const end = addCycle(start, cycle);
+  const open = await ctx.db.invoice.findMany({ where: { tenantId, kind: 'SUBSCRIPTION', status: 'OPEN' } });
+  for (const o of open) await ctx.db.invoice.update({ where: { id: o.id }, data: { status: 'VOID' } });
+  await ctx.db.tenant.update({ where: { id: tenantId }, data: { billingCycle: cycle } });
+  const inv = await createInvoice(ctx, { kind: 'SUBSCRIPTION', tenantId, plan, cycle, periodStart: start, periodEnd: end, lines: subscriptionLines(plan, cycle, start, end), billTo: billToOf(t), dueAt: new Date(Math.max(start.getTime(), now.getTime() + INVOICE_DUE_DAYS * DAY)) });
+  await audit(ctx.db, tenantId, actor, 'billing.subscribe', 'Invoice', inv.id, { plan: t.plan, replaced: open.length }, { plan, cycle, number: inv.number });
+  return inv;
 }
 
 export async function runBilling(ctx: AppContext, now: Date = new Date()): Promise<{ issued: number; overdue: number }> {

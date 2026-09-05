@@ -524,3 +524,22 @@ export interface PublicInvoiceDto {
   /** ZATCA phase-one QR payload (base64 TLV) once the seller has a VAT number. */
   qr: string | null;
 }
+
+/** GET /public/signup/slug — can this address be used for a new mosque? */
+export interface SlugCheckDto {
+  slug: string;
+  available: boolean;
+  reason: 'invalid' | 'reserved' | 'taken' | null;
+  /** The full host the mosque would get, e.g. alnoor.jumaah.net (null on servers without hostname tenancy). */
+  address: string | null;
+}
+
+/** POST /public/signup — the mosque was created and its trial started. */
+export interface SignupResultDto {
+  slug: string;
+  name: string;
+  plan: SubscriptionPlan;
+  trialEndsAt: string | null;
+  adminUrl: string;
+  phoneUrl: string;
+}

@@ -24,6 +24,7 @@ import { khutbahRoutes } from './routes/khutbahs.js';
 import { libraryRoutes } from './routes/library.js';
 import { apiKeyRoutes } from './routes/api-keys.js';
 import { billingRoutes } from './routes/billing.js';
+import { signupRoutes } from './routes/signup.js';
 import { networkRoutes } from './routes/network.js';
 import { organisationRoutes } from './routes/organisations.js';
 import { paragraphRoutes } from './routes/paragraphs.js';
@@ -128,6 +129,7 @@ export async function buildApp(deps: BuildDeps): Promise<FastifyInstance> {
       await api.register(networkRoutes);
       await api.register(apiKeyRoutes);
       await api.register(billingRoutes);
+      await api.register(signupRoutes);
       await api.register(userRoutes);
       await api.register(khutbahRoutes);
       await api.register(paragraphRoutes);

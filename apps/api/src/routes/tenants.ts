@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { hashPassword, randomToken, sha256 } from '@jumaah/db';
+import { randomToken, sha256 } from '@jumaah/db';
 import { createTenantSchema, paginationSchema, tenantLanguagesSchema, updateTenantSchema } from '@jumaah/shared';
 import { audit, outbox } from '../lib/audit.js';
 import { conflict, notFound } from '../lib/errors.js';
@@ -11,7 +11,7 @@ import { ADMIN_ROLES } from '../plugins/auth.js';
 import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.js';
 import { assertArchiveAllowed, assertBrandingAllowed, assertNetworkAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
-import { TRIAL_DAYS } from '@jumaah/shared';
+import { createTenantWithAdmin } from '../services/tenant.service.js';
 
 /** Super-admin tenant management + current-tenant settings. */
 export async function tenantRoutes(app: FastifyInstance): Promise<void> {
@@ -30,32 +30,8 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/tenants', { preHandler: superOnly }, async (request, reply) => {
     const body = parse(createTenantSchema, request.body);
-    if (await db.tenant.findUnique({ where: { slug: body.slug } })) throw conflict('Slug already used');
-    const syncKey = randomToken(24);
-    const password = body.adminPassword ?? randomToken(9);
-    const tenant = await db.$transaction(async (tx) => {
-      const t = await tx.tenant.create({
-        data: {
-          name: body.name,
-          slug: body.slug,
-          timezone: body.timezone,
-          locale: body.locale,
-          // Hosted edition: every new mosque gets a 30-day trial of the chosen plan (Standard by default); the super
-          // admin then sets the paid-until date by hand until billing is automated. Self-hosted servers ignore all of it.
-          plan: body.plan,
-          subscriptionStatus: 'TRIAL',
-          subscriptionEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000),
-          syncKeyHash: sha256(syncKey),
-          languages: { create: body.languages.map((code, i) => ({ code, order: i })) },
-        },
-        include: { languages: true },
-      });
-      await tx.user.create({ data: { tenantId: t.id, email: body.adminEmail.toLowerCase(), name: body.adminName, role: 'MOSQUE_ADMIN', passwordHash: await hashPassword(password) } });
-      await tx.syncState.create({ data: { tenantId: t.id, deviceId: 'cloud' } });
-      return t;
-    });
-    await audit(db, tenant.id, actorOf(request), 'tenant.create', 'Tenant', tenant.id, null, { name: tenant.name, slug: tenant.slug });
-    return reply.code(201).send({ tenant: tenantDto(tenant), syncKey, adminPassword: body.adminPassword ? undefined : password });
+    const { tenant, syncKey, password, generatedPassword } = await createTenantWithAdmin(app.ctx, { ...body, adminPassword: body.adminPassword }, actorOf(request));
+    return reply.code(201).send({ tenant: tenantDto(tenant), syncKey, adminPassword: generatedPassword ? password : undefined });
   });
 
   app.get('/tenants/:id', { preHandler: superOnly }, async (request) => {

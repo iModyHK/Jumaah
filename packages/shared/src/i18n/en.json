@@ -775,6 +775,15 @@
     },
     "chooseMosque": "Choose a mosque…",
     "apply": "Apply a year",
-    "recentPaid": "Recent payments"
+    "recentPaid": "Recent payments",
+    "subscribe": "Subscribe or change plan",
+    "subscribeHint": "An invoice for the coming period is issued at once; the new plan applies as soon as it is paid. During the trial the period starts today.",
+    "subscribeNow": "Subscribe · SAR {{total}}",
+    "subscribed": "Invoice {{number}} is ready.",
+    "perMonth": "a month",
+    "cycleNames": {
+      "MONTHLY": "Monthly",
+      "YEARLY": "Yearly (two months free)"
+    }
   }
 }

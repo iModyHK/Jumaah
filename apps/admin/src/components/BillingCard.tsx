@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BILLING_CYCLES, billingSettingsSchema, formatSar, type BillingCycle, type BillingOverviewDto, type InvoiceDto, type TenantDto } from '@jumaah/shared';
+import { BILLING_CYCLES, SELF_SERVICE_PLANS, billingSettingsSchema, formatSar, type BillingCycle, type BillingOverviewDto, type InvoiceDto, type SubscriptionPlan, type TenantDto } from '@jumaah/shared';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
@@ -29,6 +29,17 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bank, setBank] = useState<string | null>(null);
+  const [plan, setPlan] = useState<SubscriptionPlan>(SELF_SERVICE_PLANS.includes(tenant.plan as never) ? tenant.plan : 'STANDARD');
+  const subscribe = useMutation({
+    mutationFn: (body: { plan: SubscriptionPlan; cycle: BillingCycle }) => api.post<{ invoice: InvoiceDto; seller: BillingOverviewDto['seller'] }>('/billing/subscribe', body),
+    onSuccess: ({ invoice }) => {
+      toast.success(t('billing.subscribed', { number: invoice.number }));
+      if (invoice.paymentUrl) window.open(invoice.paymentUrl, '_blank', 'noopener');
+      else setBank(invoice.id);
+      void qc.invalidateQueries({ queryKey: ['billing'] });
+    },
+    onError: (e) => toast.error(e),
+  });
   useEffect(() => {
     const s = billing.data?.settings;
     if (!s) return;
@@ -129,6 +140,35 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
             </Field>
             <div className="j-muted mt-1 text-xs">{d.seller.vatRate > 0 ? t('billing.vatHint', { rate: Math.round(d.seller.vatRate * 100) }) : t('billing.noVatHint')}</div>
           </div>
+          {!d.organisation && (
+            <div className="rounded-lg p-3" style={{ border: '1px solid var(--j-border)' }}>
+              <div className="j-label">{t('billing.subscribe')}</div>
+              <div className="j-muted mb-2 text-xs">{t('billing.subscribeHint')}</div>
+              <div className="flex flex-wrap items-end gap-2">
+                <Field label={t('settings.plan')}>
+                  <Select value={plan} onChange={(e) => setPlan(e.target.value as SubscriptionPlan)}>
+                    {SELF_SERVICE_PLANS.map((p) => (
+                      <option key={p} value={p}>
+                        {t(`tenants.plans.${p}`)} · {formatSar(d.prices[p] * 100, ar ? 'ar' : 'en')} {t('billing.sar')} {t('billing.perMonth')}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={t('billing.cycle')}>
+                  <Select value={cycle} onChange={(e) => setCycle(e.target.value as BillingCycle)}>
+                    {BILLING_CYCLES.map((c) => (
+                      <option key={c} value={c}>
+                        {t(`billing.cycleNames.${c}`)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                <Button variant="primary" onClick={() => subscribe.mutate({ plan, cycle })} disabled={subscribe.isPending}>
+                  {subscribe.isPending ? <Spinner /> : t('billing.subscribeNow', { total: formatSar(d.prices[plan] * (cycle === 'YEARLY' ? 10 : 1) * 100, ar ? 'ar' : 'en') })}
+                </Button>
+              </div>
+            </div>
+          )}
           <div>
             <div className="j-label">{t('billing.invoices')}</div>
             {d.invoices.length === 0 && <div className="j-muted text-sm">{t('billing.noInvoices')}</div>}

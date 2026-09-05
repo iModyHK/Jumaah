@@ -1054,3 +1054,72 @@ describe('billing: renewal invoices, payments, sponsorships (hosted edition)', (
     expect((await app.inject({ method: 'GET', url: '/api/public/billing/moyasar/callback?invoice=nope' })).statusCode).toBe(404);
   });
 });
+
+describe('storefront: public sign-up and online subscription (hosted edition)', () => {
+  const slug = `signup-${Date.now().toString(36)}`;
+  let newTenantId = '';
+  let newAdminToken = '';
+
+  afterAll(async () => {
+    if (newTenantId) {
+      await app.ctx.db.invoice.deleteMany({ where: { tenantId: newTenantId } });
+      await app.ctx.db.tenant.delete({ where: { id: newTenantId } });
+    }
+  });
+
+  it('checks addresses: invalid, reserved, taken, available', async () => {
+    const q = (s: string) => app.inject({ method: 'GET', url: `/api/public/signup/slug?slug=${s}` });
+    expect((await q('ab')).json()).toMatchObject({ available: false, reason: 'invalid' });
+    expect((await q('Bad_Name')).json()).toMatchObject({ available: false, reason: 'invalid' });
+    expect((await q('www')).json()).toMatchObject({ available: false, reason: 'reserved' });
+    expect((await q('demo')).json()).toMatchObject({ available: false, reason: 'taken' });
+    expect((await q(slug)).json()).toMatchObject({ available: true, reason: null, address: `${slug}.jumaah.test` });
+  });
+
+  it('creates the mosque with a 30-day trial of the chosen plan, and the admin can sign in', async () => {
+    const bad = await app.inject({ method: 'POST', url: '/api/public/signup', payload: { mosqueName: 'x', slug, adminName: 'A', adminEmail: 'nope', password: 'short' } });
+    expect(bad.statusCode).toBe(400);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/public/signup',
+      payload: { mosqueName: 'مسجد التجربة الذاتية', slug: slug.toUpperCase(), adminName: 'Fatimah', adminEmail: `admin@${slug}.test`, password: 'Signup12345!', plan: 'PRO', cycle: 'YEARLY', locale: 'en', languages: ['en', 'bn'] },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+    expect(res.json()).toMatchObject({ slug, plan: 'PRO', adminUrl: `https://${slug}.jumaah.test/admin/`, phoneUrl: `https://${slug}.jumaah.test/display/m/${slug}` });
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { slug }, include: { languages: true } });
+    newTenantId = t.id;
+    expect(t.subscriptionStatus).toBe('TRIAL');
+    expect(t.billingCycle).toBe('YEARLY');
+    expect(t.languages.map((l) => l.code)).toEqual(['en', 'bn']);
+    const days = (t.subscriptionEndsAt!.getTime() - Date.now()) / 86_400_000;
+    expect(days).toBeGreaterThan(29);
+    expect(days).toBeLessThanOrEqual(30);
+    // the same address cannot be taken twice
+    expect((await app.inject({ method: 'POST', url: '/api/public/signup', payload: { mosqueName: 'Another mosque', slug, adminName: 'A', adminEmail: 'a@b.test', password: 'Signup12345!' } })).statusCode).toBe(409);
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', headers: { host: `${slug}.jumaah.test` }, payload: { email: `admin@${slug}.test`, password: 'Signup12345!' } });
+    expect(login.statusCode, login.body).toBe(200);
+    expect(login.json().user).toMatchObject({ role: 'MOSQUE_ADMIN', tenantSlug: slug });
+    newAdminToken = login.json().accessToken;
+  });
+
+  it('subscribing during the trial issues an invoice from today; paying it applies the plan', async () => {
+    const sub = await app.inject({ method: 'POST', url: '/api/billing/subscribe', headers: auth(newAdminToken), payload: { plan: 'STANDARD', cycle: 'MONTHLY' } });
+    expect(sub.statusCode, sub.body).toBe(201);
+    const inv = sub.json().invoice as { id: string; plan: string; cycle: string; total: number; periodStart: string; periodEnd: string; status: string };
+    expect(inv).toMatchObject({ plan: 'STANDARD', cycle: 'MONTHLY', total: 19900, status: 'OPEN' });
+    expect(new Date(inv.periodStart).toISOString().slice(0, 10)).toBe(new Date().toISOString().slice(0, 10));
+    // choosing again replaces the open invoice instead of stacking a second one
+    const again = await app.inject({ method: 'POST', url: '/api/billing/subscribe', headers: auth(newAdminToken), payload: { plan: 'PRO', cycle: 'YEARLY' } });
+    expect(again.statusCode).toBe(201);
+    const open = await app.ctx.db.invoice.findMany({ where: { tenantId: newTenantId, status: 'OPEN' } });
+    expect(open).toHaveLength(1);
+    expect(open[0].plan).toBe('PRO');
+    expect(open[0].total).toBe(399000);
+    const paid = await app.inject({ method: 'POST', url: `/api/platform/invoices/${open[0].id}/mark-paid`, headers: auth(superToken), payload: { reference: 'CARD-1' } });
+    expect(paid.statusCode, paid.body).toBe(200);
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: newTenantId } });
+    expect(t.plan).toBe('PRO');
+    expect(t.subscriptionStatus).toBe('ACTIVE');
+    expect(t.subscriptionEndsAt?.toISOString()).toBe(open[0].periodEnd?.toISOString());
+  });
+});

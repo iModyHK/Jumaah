@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { applySponsorshipSchema, billingSettingsSchema, markPaidSchema, sponsorSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
+import { applySponsorshipSchema, billingSettingsSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
-import { applySponsorship, createSponsorship, ensurePaymentUrl, invoiceDto, invoiceQr, markPaid, runBilling, sellerInfo, sponsorshipDto, verifyTurnstile, voidInvoice } from '../services/billing.service.js';
+import { applySponsorship, createSponsorship, ensurePaymentUrl, invoiceDto, invoiceQr, markPaid, runBilling, sellerInfo, sponsorshipDto, subscribeNow, verifyTurnstile, voidInvoice } from '../services/billing.service.js';
 import { verifyPayment } from '../services/payment.service.js';
 import { actorOf } from './auth.js';
 import { PLAN_PRICES_SAR } from '@jumaah/shared';
@@ -36,6 +36,15 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     if (!before) throw notFound('Tenant');
     const t = await db.tenant.update({ where: { id: request.tenantId }, data: { billingCycle: body.cycle, billingName: body.billingName ?? null, billingVatNumber: body.billingVatNumber ?? null, billingAddress: body.billingAddress ?? null, billingEmail: body.billingEmail ?? null } });
     return { cycle: t.billingCycle, billingName: t.billingName, billingVatNumber: t.billingVatNumber, billingAddress: t.billingAddress, billingEmail: t.billingEmail };
+  });
+
+  /** Subscribe or change plan online: the invoice for the coming period, with a pay link when a gateway is configured. */
+  app.post('/billing/subscribe', { preHandler: admin }, async (request, reply) => {
+    if (!config.isCloud) throw forbidden('Subscriptions are handled by Jumaah Cloud');
+    const body = parse(subscribeSchema, request.body);
+    const inv = await subscribeNow(app.ctx, request.tenantId, body.plan, body.cycle, actorOf(request));
+    reply.code(201);
+    return { invoice: invoiceDto(config, inv), seller: sellerInfo(config) };
   });
 
   /** A pay link for one of the mosque's open invoices (or the bank details when payment is by transfer). */
@@ -91,7 +100,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
 
   // ---- Public ----
   /** The sponsor page (www.jumaah.net) posts here: a sponsorship and its invoice, with a pay link or bank details. */
-  app.post('/public/sponsor', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply): Promise<SponsorResultDto> => {
+  app.post('/public/sponsor', { config: { rateLimit: { max: config.RATE_LIMIT_AUTH, timeWindow: '1 minute' } } }, async (request, reply): Promise<SponsorResultDto> => {
     if (!config.isCloud) throw forbidden('Sponsorships are handled by Jumaah Cloud');
     const body = parse(sponsorSchema, request.body);
     if (!(await verifyTurnstile(config, body.turnstileToken, request.ip))) throw badRequest('Verification failed', { code: 'captcha' });

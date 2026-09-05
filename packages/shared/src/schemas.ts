@@ -202,6 +202,28 @@ export const sponsorSchema = z.object({
   turnstileToken: z.string().max(4096).optional(),
 });
 export const markPaidSchema = z.object({ reference: z.string().max(200).optional() });
+/** Plans a mosque can start or buy by itself (Organisation accounts are set up with us). */
+export const SELF_SERVICE_PLANS = ['BASIC', 'STANDARD', 'PRO'] as const;
+export const signupSchema = z.object({
+  mosqueName: z.string().min(2).max(160),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(3)
+    .max(40)
+    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/),
+  adminName: z.string().min(1).max(120),
+  adminEmail: z.string().email().max(200),
+  password: z.string().min(8).max(200),
+  plan: z.enum(SELF_SERVICE_PLANS).default('STANDARD'),
+  cycle: z.enum(BILLING_CYCLES).default('MONTHLY'),
+  locale: z.enum(['ar', 'en']).default('ar'),
+  languages: z.array(langCode).min(1).max(30).default(['en', 'ur']),
+  timezone: z.string().max(64).default('Asia/Riyadh'),
+  turnstileToken: z.string().max(4096).optional(),
+});
+export const subscribeSchema = z.object({ plan: z.enum(SELF_SERVICE_PLANS), cycle: z.enum(BILLING_CYCLES) });
 export const applySponsorshipSchema = z.object({ tenantId: idSchema });
 
 export const tenantLanguagesSchema = z.object({

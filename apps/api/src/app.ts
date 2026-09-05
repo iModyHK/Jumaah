@@ -9,17 +9,20 @@ import { ZodError } from 'zod';
 import type { Config } from './config.js';
 import { HttpError } from './lib/errors.js';
 import type { AppContext } from './lib/context.js';
-import { isAllowedOrigin, tenantSlugFromHost } from './lib/host.js';
+import { customDomainCandidate, isAllowedOrigin, tenantSlugFromHost } from './lib/host.js';
+import { tenantByCustomDomain } from './services/domain.service.js';
 import { authPlugin } from './plugins/auth.js';
 import { attachSocketHandlers, createSocketServer } from './realtime/socket.js';
 import { auditRoutes } from './routes/audit.js';
 import { authRoutes } from './routes/auth.js';
 import { backupRoutes } from './routes/backups.js';
 import { displayRoutes } from './routes/displays.js';
+import { domainRoutes } from './routes/domains.js';
 import { glossaryRoutes } from './routes/glossary.js';
 import { healthRoutes } from './routes/health.js';
 import { khutbahRoutes } from './routes/khutbahs.js';
 import { libraryRoutes } from './routes/library.js';
+import { organisationRoutes } from './routes/organisations.js';
 import { paragraphRoutes } from './routes/paragraphs.js';
 import { providerRoutes } from './routes/providers.js';
 import { publicRoutes } from './routes/public.js';
@@ -49,14 +52,33 @@ export async function buildApp(deps: BuildDeps): Promise<FastifyInstance> {
     disableRequestLogging: process.env.NODE_ENV === 'test',
   });
 
-  // Browser origins: the configured list, plus every mosque host under TENANT_BASE_DOMAIN in the hosted edition.
-  const corsOrigin = (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => cb(null, isAllowedOrigin(origin, config));
+  // Browser origins: the configured list, every mosque host under TENANT_BASE_DOMAIN in the hosted edition, and the
+  // verified custom domain of a Pro mosque (looked up, cached a minute).
+  const corsOrigin = (origin: string | undefined, cb: (err: Error | null, allow: boolean) => void) => {
+    if (isAllowedOrigin(origin, config)) return cb(null, true);
+    let host: string | null = null;
+    try {
+      host = origin ? customDomainCandidate(new URL(origin).host, config) : null;
+    } catch {
+      host = null;
+    }
+    if (!host) return cb(null, false);
+    tenantByCustomDomain(ctx, host).then(
+      (t) => cb(null, !!t),
+      () => cb(null, false),
+    );
+  };
   const io = createSocketServer(app.server, { redisUrl: config.REDIS_URL, corsOrigin, pub: deps.pub, sub: deps.sub });
   const ctx: AppContext = { db: deps.db, redis: deps.redis, config, log: app.log, io };
   app.decorate('ctx', ctx);
   app.decorateRequest('hostSlug', null);
   app.addHook('onRequest', async (request) => {
     request.hostSlug = tenantSlugFromHost(request.headers.host, config.tenantBaseDomain);
+    if (!request.hostSlug) {
+      // A Pro mosque's own domain names the mosque just like <slug>.<base domain> does.
+      const candidate = customDomainCandidate(request.headers.host, config);
+      if (candidate) request.hostSlug = (await tenantByCustomDomain(ctx, candidate))?.slug ?? null;
+    }
   });
 
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } });
@@ -98,6 +120,8 @@ export async function buildApp(deps: BuildDeps): Promise<FastifyInstance> {
       await api.register(healthRoutes);
       await api.register(authRoutes, { prefix: '/auth' });
       await api.register(tenantRoutes);
+      await api.register(domainRoutes);
+      await api.register(organisationRoutes);
       await api.register(userRoutes);
       await api.register(khutbahRoutes);
       await api.register(paragraphRoutes);

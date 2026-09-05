@@ -68,16 +68,21 @@ export function allowanceOf(t: SubscriptionLike, usedParagraphs: number, applies
   };
 }
 
-export async function usedThisMonth(db: Db, tenantId: string, month = monthKey()): Promise<number> {
-  const agg = await db.aiUsage.aggregate({ where: { tenantId, month }, _sum: { paragraphs: true } });
+/**
+ * Paragraphs translated by platform AI this month. For a mosque inside an organisation the allowance is pooled, so
+ * the usage of every member mosque counts.
+ */
+export async function usedThisMonth(db: Db, tenantId: string, month = monthKey(), organisationId: string | null = null): Promise<number> {
+  const where = organisationId ? { month, tenant: { organisationId } } : { tenantId, month };
+  const agg = await db.aiUsage.aggregate({ where, _sum: { paragraphs: true } });
   return agg._sum.paragraphs ?? 0;
 }
 
 /** The mosque's allowance right now. On self-hosted servers `applies` is false and everything is allowed. */
 export async function getAiAllowance(ctx: AppContext, tenantId: string): Promise<AiAllowanceDto> {
-  const tenant = await ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } });
+  const tenant = await ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, organisationId: true } });
   const applies = ctx.config.isCloud;
-  const used = applies ? await usedThisMonth(ctx.db, tenantId) : 0;
+  const used = applies ? await usedThisMonth(ctx.db, tenantId, monthKey(), tenant.organisationId) : 0;
   return allowanceOf(tenant, used, applies);
 }
 

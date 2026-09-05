@@ -53,6 +53,36 @@ export function tenantPublicBaseUrl(config: Pick<Config, 'PUBLIC_BASE_URL' | 'te
   return config.PUBLIC_BASE_URL.replace(/\/$/, '');
 }
 
+/** The address fields of a mosque that decide its base URL. */
+export interface TenantAddress {
+  slug: string;
+  customDomain?: string | null;
+  customDomainVerifiedAt?: Date | string | null;
+}
+
+/** Base URL for a mosque's links: its verified custom domain when it has one, else the tenant host / PUBLIC_BASE_URL. */
+export function tenantBaseUrlFor(config: Pick<Config, 'PUBLIC_BASE_URL' | 'tenantBaseDomain'>, t: TenantAddress): string {
+  if (config.tenantBaseDomain && t.customDomain && t.customDomainVerifiedAt) return `${schemeOf(config.PUBLIC_BASE_URL)}://${t.customDomain}`;
+  return tenantPublicBaseUrl(config, t.slug);
+}
+
+/**
+ * A host that might be a mosque's custom domain: in the hosted edition, any name that is neither the platform, nor
+ * under the base domain, nor a local address. Returns the host, or null when it cannot be a custom domain.
+ */
+export function customDomainCandidate(hostHeader: string | string[] | undefined, config: Pick<Config, 'PUBLIC_BASE_URL' | 'tenantBaseDomain'>): string | null {
+  if (!config.tenantBaseDomain) return null;
+  const host = hostnameOf(hostHeader);
+  if (!host || host === 'localhost' || /^\d+(\.\d+){3}$/.test(host) || !host.includes('.')) return null;
+  if (host === config.tenantBaseDomain || host.endsWith('.' + config.tenantBaseDomain)) return null;
+  try {
+    if (host === new URL(config.PUBLIC_BASE_URL).hostname.toLowerCase()) return null;
+  } catch {
+    /* ignore */
+  }
+  return host;
+}
+
 /**
  * CORS origin check. Explicitly configured origins are always allowed; with a base domain, the platform host and every
  * tenant host under it are allowed too. Requests without an Origin header (curl, same-origin) pass as before.

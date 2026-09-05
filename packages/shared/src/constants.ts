@@ -90,15 +90,19 @@ export interface PlanFeatures {
   networkPublish: boolean;
   /** API access and webhooks. */
   api: boolean;
+  /** The mosque's own address (khutbah.alnoor.org.sa) instead of <slug>.jumaah.net. */
+  customDomain: boolean;
 }
-const NO_FEATURES: PlanFeatures = { logoUpload: false, colours: false, css: false, hideMark: false, poster: false, signage: false, archive: false, handouts: false, insight: false, networkRead: false, networkPublish: false, api: false };
+const NO_FEATURES: PlanFeatures = { logoUpload: false, colours: false, css: false, hideMark: false, poster: false, signage: false, archive: false, handouts: false, insight: false, networkRead: false, networkPublish: false, api: false, customDomain: false };
 export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
   FREE: NO_FEATURES,
   BASIC: { ...NO_FEATURES, logoUpload: true, poster: true },
   STANDARD: { ...NO_FEATURES, logoUpload: true, colours: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true },
-  PRO: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true },
-  ENTERPRISE: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true },
+  PRO: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true, customDomain: true },
+  ENTERPRISE: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true, customDomain: true },
 };
+/** Organisation account (ENTERPRISE plan): mosques one organisation may manage by default. */
+export const ORG_MAX_TENANTS = 10;
 /** Days after subscriptionEndsAt during which platform AI keeps working, so a late payment never blanks a Friday. */
 export const AI_GRACE_DAYS = 7;
 /** Length of the trial a new hosted mosque starts with. */

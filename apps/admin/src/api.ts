@@ -36,8 +36,8 @@ export function useApi(): ApiClient {
   return api;
 }
 
-/** Tenant the current session operates on (own tenant, or the one a super admin picked). */
+/** Tenant the current session operates on: the mosque a super admin or organisation admin picked, else the user's own. */
 export function activeTenantId(s: StoredSession | null = current): string | null {
   if (!s) return null;
-  return s.user.tenantId ?? s.tenantId ?? null;
+  return s.tenantId ?? s.user.tenantId ?? null;
 }

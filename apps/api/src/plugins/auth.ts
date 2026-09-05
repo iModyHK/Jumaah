@@ -1,7 +1,21 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { forbidden, unauthorized } from '../lib/errors.js';
 import { verifyAccessToken } from '../lib/jwt.js';
-import type { RequestUser } from '../lib/context.js';
+import type { AppContext, RequestUser } from '../lib/context.js';
+import { tenantInOrganisation } from '../services/organisation.service.js';
+
+/** What the liveness cache remembers about a user for a minute: still allowed in, and which organisation they administer. */
+interface Liveness {
+  ok: boolean;
+  oid: string | null;
+}
+
+const livenessKey = (userId: string) => `auth:user:${userId}`;
+
+/** Drop the cached liveness of users whose rights just changed (organisation admin added/removed, account disabled). */
+export async function forgetUserAuth(ctx: AppContext, userIds: string[]): Promise<void> {
+  if (userIds.length) await ctx.redis.del(...userIds.map(livenessKey)).catch(() => undefined);
+}
 
 export async function authPlugin(app: FastifyInstance): Promise<void> {
   app.decorateRequest('user', null);
@@ -17,28 +31,42 @@ export async function authPlugin(app: FastifyInstance): Promise<void> {
     } catch {
       throw unauthorized('Invalid or expired token');
     }
-    const user: RequestUser = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tid, impersonating: !!claims.imp };
+    const user: RequestUser = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tid, impersonating: !!claims.imp, organisationId: claims.oid ?? null };
     request.user = user;
 
-    // Tenant resolution: regular users are bound to their tenant; super admins may target any tenant.
+    // Cheap liveness check (suspended user / tenant) cached in Redis for 60s. The same lookup tells us which
+    // organisation the user administers right now, so organisation rights follow the database, not the token.
+    const cacheKey = livenessKey(user.id);
+    const cached = await app.ctx.redis.get(cacheKey);
+    let live: Liveness;
+    if (cached === null) {
+      const dbUser = await app.ctx.db.user.findUnique({ where: { id: user.id }, select: { isActive: true, organisationId: true, tenant: { select: { isActive: true, subscriptionStatus: true } } } });
+      const ok = !!dbUser?.isActive && (dbUser.tenant ? dbUser.tenant.isActive && dbUser.tenant.subscriptionStatus !== 'SUSPENDED' : true);
+      live = { ok, oid: ok ? (dbUser?.organisationId ?? null) : null };
+      await app.ctx.redis.set(cacheKey, JSON.stringify(live), 'EX', 60);
+    } else if (cached === '0' || cached === '1') {
+      // value written by an older API build
+      live = { ok: cached === '1', oid: user.organisationId ?? null };
+    } else {
+      live = JSON.parse(cached) as Liveness;
+    }
+    if (!live.ok) throw unauthorized('Account disabled');
+    user.organisationId = live.oid;
+
+    // Tenant resolution: regular users are bound to their tenant; super admins may target any tenant; organisation
+    // admins may target any mosque of their organisation (hosted edition).
+    const hdr = request.headers['x-tenant-id'];
     if (user.role === 'SUPER_ADMIN') {
-      const hdr = request.headers['x-tenant-id'];
       const q = (request.query as { tenantId?: string })?.tenantId;
       request.tenantId = (typeof hdr === 'string' && hdr) || q || user.tenantId || '';
     } else {
       if (!user.tenantId) throw forbidden('User has no tenant');
-      request.tenantId = user.tenantId;
-    }
-
-    // Cheap liveness check (suspended user / tenant) cached in Redis for 60s.
-    const cacheKey = `auth:user:${user.id}`;
-    const cached = await app.ctx.redis.get(cacheKey);
-    if (cached === '0') throw unauthorized('Account disabled');
-    if (cached === null) {
-      const dbUser = await app.ctx.db.user.findUnique({ where: { id: user.id }, select: { isActive: true, tenant: { select: { isActive: true, subscriptionStatus: true } } } });
-      const ok = !!dbUser?.isActive && (dbUser.tenant ? dbUser.tenant.isActive && dbUser.tenant.subscriptionStatus !== 'SUSPENDED' : true);
-      await app.ctx.redis.set(cacheKey, ok ? '1' : '0', 'EX', 60);
-      if (!ok) throw unauthorized('Account disabled');
+      if (user.organisationId && typeof hdr === 'string' && hdr && hdr !== user.tenantId) {
+        if (!(await tenantInOrganisation(app.ctx, hdr, user.organisationId))) throw forbidden('Mosque is not in your organisation');
+        request.tenantId = hdr;
+      } else {
+        request.tenantId = user.tenantId;
+      }
     }
   });
 

@@ -1,6 +1,11 @@
 {
 	admin off
 	email {$ACME_EMAIL:admin@jumaah.net}
+	# Custom domains (Pro): before fetching a certificate for an unknown host name, ask the API whether a mosque has
+	# verified that domain. Anything else is refused, so strangers cannot make us request certificates.
+	on_demand_tls {
+		ask http://{$API_UPSTREAM:api:4000}/api/public/domain-check
+	}
 }
 
 # Hosted edition: the platform address plus one wildcard for every mosque (alnoor.jumaah.net).
@@ -21,4 +26,13 @@
 		resolvers 1.1.1.1
 	}
 	redir https://www.jumaah.net{uri} permanent
+}
+
+# Custom domains (Pro): every other host name. The mosque points a CNAME at <slug>.<base domain>, verifies it in
+# settings, and the certificate is issued on the first visit (see on_demand_tls above).
+https:// {
+	tls {
+		on_demand
+	}
+	import /etc/caddy/common.caddy
 }

@@ -21,6 +21,8 @@ export interface RequestUser {
   role: 'SUPER_ADMIN' | 'MOSQUE_ADMIN' | 'TRANSLATOR' | 'IMAM' | 'DISPLAY';
   tenantId: string | null;
   impersonating?: boolean;
+  /** Organisation admins may target any mosque of their organisation with x-tenant-id. */
+  organisationId?: string | null;
 }
 
 declare module 'fastify' {

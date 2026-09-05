@@ -2,9 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import type { ArchiveKhutbahDto, ArchiveListDto, HostInfoDto } from '@jumaah/shared';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { notFound } from '../lib/errors.js';
-import { tenantPublicBaseUrl } from '../lib/host.js';
+import { tenantBaseUrlFor } from '../lib/host.js';
 import { idParam } from '../lib/validate.js';
 import { displayConfigOf } from '../realtime/socket.js';
+import { tenantByCustomDomain } from '../services/domain.service.js';
 import { archiveEnabled } from '../services/features.service.js';
 import { getLiveKhutbah, getSnapshot } from '../services/session.service.js';
 
@@ -17,11 +18,22 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/public/display/:token', async (request) => {
     const token = idParam(request.params, 'token');
-    const d = await db.display.findUnique({ where: { token }, include: { tenant: { select: { slug: true, isActive: true } } } });
+    const d = await db.display.findUnique({ where: { token }, include: { tenant: { select: { slug: true, isActive: true, customDomain: true, customDomainVerifiedAt: true } } } });
     if (!d || !d.tenant.isActive) throw notFound('Display');
     const [tenant, session] = await Promise.all([buildTenantPublicInfo(db, d.tenantId), getSnapshot(app.ctx, d.tenantId)]);
     const khutbah = session.khutbahId ? await getLiveKhutbah(app.ctx, d.tenantId, session.khutbahId) : null;
-    return { display: displayConfigOf(d, tenantPublicBaseUrl(config, d.tenant.slug), d.tenant.slug), tenant, session, khutbah, serverTime: Date.now() };
+    return { display: displayConfigOf(d, tenantBaseUrlFor(config, d.tenant), d.tenant.slug), tenant, session, khutbah, serverTime: Date.now() };
+  });
+
+  /**
+   * Caddy's on-demand TLS "ask" endpoint: 200 when a mosque has verified this custom domain, 404 otherwise, so a
+   * certificate is only ever requested for domains their owners pointed at us.
+   */
+  app.get('/public/domain-check', async (request, reply) => {
+    const domain = (request.query as { domain?: string }).domain?.trim().toLowerCase();
+    const t = domain ? await tenantByCustomDomain(app.ctx, domain) : null;
+    if (!t) return reply.code(404).send({ ok: false });
+    return { ok: true, slug: t.slug };
   });
 
   app.get('/public/tenant/:slug', async (request) => {

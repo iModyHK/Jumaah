@@ -91,7 +91,9 @@
     "tenants": "Mosques",
     "sync": "Sync",
     "live": "Live",
-    "imamView": "Imam view"
+    "imamView": "Imam view",
+    "organisation": "My organisation",
+    "organisations": "Organisations"
   },
   "dashboard": {
     "currentSection": "Current section",
@@ -399,7 +401,7 @@
       "FREE": "Free",
       "BASIC": "Basic",
       "PRO": "Pro",
-      "ENTERPRISE": "Enterprise",
+      "ENTERPRISE": "Organisation",
       "STANDARD": "Standard"
     },
     "subscriptionStatus": {
@@ -622,5 +624,48 @@
     "colPhones": "Phones (peak)",
     "colUnique": "Phones (distinct)",
     "empty": "No completed sessions yet. Numbers appear after the first live khutbah."
+  },
+  "domain": {
+    "title": "Custom domain",
+    "hint": "Pro mosques can use their own address (khutbah.alnoor.org.sa) for screens, phones and the admin instead of the Jumaah address.",
+    "notCloud": "Custom domains are available on Jumaah Cloud.",
+    "domain": "Domain",
+    "verify": "Verify DNS",
+    "clear": "Remove domain",
+    "statusVerified": "Verified · live",
+    "statusPending": "Waiting for DNS",
+    "verifiedToast": "Domain verified. HTTPS is set up automatically on the first visit.",
+    "dnsTitle": "DNS record to create at your domain provider",
+    "instructions": "Create a CNAME record for {{domain}} pointing to {{target}}, then press \"Verify DNS\". DNS changes can take up to an hour to spread.",
+    "tlsHint": "Once verified, the HTTPS certificate is issued automatically on the first visit, and all links switch to the new address.",
+    "errors": {
+      "NO_RECORD": "No DNS record found for this name yet.",
+      "WRONG_TARGET": "The record points to {{value}} instead of {{target}}.",
+      "DNS_ERROR": "DNS lookup failed ({{value}}). Try again in a few minutes.",
+      "INVALID_HOSTNAME": "Not a valid host name.",
+      "PLATFORM_DOMAIN": "Choose a domain you own, not a Jumaah address."
+    }
+  },
+  "organisation": {
+    "title": "Organisation",
+    "plural": "Organisations",
+    "pluralHint": "One account managing several mosques. Member mosques move to the Organisation plan and share its AI allowance.",
+    "notMember": "You are not an organisation admin.",
+    "mosques": "Mosques",
+    "ofMax": "{{count}} of {{max}} mosques",
+    "manage": "Manage",
+    "current": "Current",
+    "admins": "Organisation admins",
+    "addMosque": "Add a mosque…",
+    "addAdmin": "Email of a mosque admin",
+    "add": "Add",
+    "remove": "Remove",
+    "create": "New organisation",
+    "name": "Name",
+    "maxTenants": "Mosque limit",
+    "empty": "No organisations yet.",
+    "adminHint": "Only admins of member mosques can be added. They sign in again to see the organisation.",
+    "delete": "Delete",
+    "deleteHint": "Remove all mosques first."
   }
 }

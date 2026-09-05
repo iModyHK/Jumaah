@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PRAYER_METHODS } from './prayer-times.js';
 import {
+  ORG_MAX_TENANTS,
   DISPLAY_LAYOUTS,
   DISPLAY_THEMES,
   GLOSSARY_MODES,
@@ -139,6 +140,28 @@ export const updateTenantSchema = z.object({
   settings: tenantSettingsSchema.optional(),
   librarySharingAllowed: z.boolean().optional(),
 });
+
+/** A public host name: at least two labels of letters, digits and hyphens, ending in a TLD of letters. */
+export const HOSTNAME_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+/** Custom domain of a mosque (Pro, hosted edition); null clears it. */
+export const customDomainSchema = z.object({
+  domain: z.string().trim().toLowerCase().max(253).regex(HOSTNAME_RE, 'Not a valid host name').nullable(),
+});
+
+// ---------- Organisations (hosted edition) ----------
+export const createOrganisationSchema = z.object({
+  name: z.string().min(2).max(160),
+  slug: z
+    .string()
+    .min(2)
+    .max(64)
+    .regex(/^[a-z0-9-]+$/),
+  maxTenants: z.number().int().min(1).max(100).default(ORG_MAX_TENANTS),
+});
+export const updateOrganisationSchema = createOrganisationSchema.partial();
+export const organisationTenantSchema = z.object({ tenantId: idSchema });
+export const organisationAdminSchema = z.object({ email: z.string().email().max(200) });
 
 export const tenantLanguagesSchema = z.object({
   languages: z.array(z.object({ code: langCode, enabled: z.boolean().default(true) })).max(30),

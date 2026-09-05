@@ -13,9 +13,9 @@ export function actorOf(request: FastifyRequest) {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const { db, config } = app.ctx;
 
-  async function issueTokens(user: { id: string; email: string; role: AuthUser['role']; tenantId: string | null; locale: string; name: string }, request: FastifyRequest, imp?: string): Promise<AuthResponse> {
+  async function issueTokens(user: { id: string; email: string; role: AuthUser['role']; tenantId: string | null; locale: string; name: string; organisationId?: string | null }, request: FastifyRequest, imp?: string): Promise<AuthResponse> {
     const tenant = user.tenantId ? await db.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true, name: true } }) : null;
-    const accessToken = await signAccessToken(config.JWT_SECRET, { sub: user.id, email: user.email, role: user.role, tid: user.tenantId, imp }, config.accessTokenTtlSeconds);
+    const accessToken = await signAccessToken(config.JWT_SECRET, { sub: user.id, email: user.email, role: user.role, tid: user.tenantId, imp, oid: user.organisationId ?? null }, config.accessTokenTtlSeconds);
     const refresh = randomToken(48);
     await db.refreshToken.create({
       data: {
@@ -39,6 +39,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         tenantSlug: tenant?.slug ?? null,
         tenantName: tenant?.name ?? null,
         locale: user.locale as 'ar' | 'en',
+        organisationId: user.organisationId ?? null,
       },
     };
   }
@@ -93,6 +94,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       tenantSlug: u.tenant?.slug ?? null,
       tenantName: u.tenant?.name ?? null,
       locale: u.locale as 'ar' | 'en',
+      organisationId: u.organisationId,
     };
     return me;
   });

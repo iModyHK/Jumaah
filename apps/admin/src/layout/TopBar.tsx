@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import type { Paginated, TenantDto } from '@jumaah/shared';
+import type { OrganisationDto, Paginated, TenantDto } from '@jumaah/shared';
 import { Button, Spinner, currentLocale, setLocale } from '@jumaah/ui';
 import { changePasswordSchema } from '@jumaah/shared';
 import { api } from '../api';
@@ -29,13 +29,22 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
     staleTime: 60_000,
   });
 
+  // Organisation admins (hosted edition) switch between the mosques of their organisation.
+  const organisation = useQuery({
+    queryKey: ['organisation', user?.organisationId],
+    queryFn: () => api.get<OrganisationDto>('/organisation'),
+    enabled: !isSuper && !!user?.organisationId,
+    staleTime: 60_000,
+  });
+
   const toggleLocale = () => {
     const next = locale === 'ar' ? 'en' : 'ar';
     setLocale(next);
     if (session) void api.patch('/auth/locale', { locale: next }).catch(() => undefined);
   };
 
-  const tenantName = user?.tenantName ?? tenants.data?.items.find((x) => x.id === tenantId)?.name ?? null;
+  const orgTenants = organisation.data?.tenants ?? [];
+  const tenantName = orgTenants.find((x) => x.id === tenantId)?.name ?? user?.tenantName ?? tenants.data?.items.find((x) => x.id === tenantId)?.name ?? null;
 
   return (
     <header className="flex h-14 items-center gap-3 border-b px-4" style={{ borderColor: 'var(--j-border)', background: 'var(--j-bg-soft)' }}>
@@ -57,6 +66,24 @@ export function TopBar({ onMenu }: { onMenu: () => void }) {
             {tenants.data?.items.map((x) => (
               <option key={x.id} value={x.id}>
                 {x.name} ({x.slug})
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : orgTenants.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <span className="j-muted hidden text-xs sm:inline">{organisation.data?.name}</span>
+          <select
+            className="j-input w-56 py-1 text-sm"
+            value={tenantId ?? ''}
+            onChange={(e) => {
+              setTenantId(e.target.value || null);
+              navigate('/');
+            }}
+          >
+            {orgTenants.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
               </option>
             ))}
           </select>

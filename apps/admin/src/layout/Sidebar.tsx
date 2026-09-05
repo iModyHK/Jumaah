@@ -9,6 +9,8 @@ interface NavItem {
   admin?: boolean;
   superOnly?: boolean;
   needsTenant?: boolean;
+  /** Only organisation admins (hosted edition). */
+  orgOnly?: boolean;
 }
 
 const ITEMS: NavItem[] = [
@@ -23,14 +25,16 @@ const ITEMS: NavItem[] = [
   { to: '/audit', key: 'nav.audit', icon: '≡', admin: true },
   { to: '/backups', key: 'nav.backups', icon: '⬇', admin: true, needsTenant: true },
   { to: '/sync', key: 'nav.sync', icon: '☁', admin: true, needsTenant: true },
+  { to: '/organisation', key: 'nav.organisation', icon: '🏛', orgOnly: true },
   { to: '/tenants', key: 'nav.tenants', icon: '🕌', superOnly: true },
+  { to: '/organisations', key: 'nav.organisations', icon: '🏛', superOnly: true },
   { to: '/platform', key: 'tenants.platform', icon: '◎', superOnly: true },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
-  const { isAdmin, isSuper, tenantId } = useAuth();
-  const visible = ITEMS.filter((i) => (!i.admin || isAdmin) && (!i.superOnly || isSuper) && (!i.needsTenant || tenantId || !isSuper));
+  const { isAdmin, isSuper, tenantId, user } = useAuth();
+  const visible = ITEMS.filter((i) => (!i.admin || isAdmin) && (!i.superOnly || isSuper) && (!i.orgOnly || !!user?.organisationId) && (!i.needsTenant || tenantId || !isSuper));
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">

@@ -41,6 +41,9 @@ export function tenantDto(t: Tenant & { languages?: TenantLanguage[]; _count?: T
     settings: (t.settings as Record<string, unknown>) ?? {},
     languages: (t.languages ?? []).filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     createdAt: t.createdAt.toISOString(),
+    organisationId: t.organisationId,
+    customDomain: t.customDomain,
+    customDomainVerifiedAt: iso(t.customDomainVerifiedAt),
     _count: t._count,
   };
 }

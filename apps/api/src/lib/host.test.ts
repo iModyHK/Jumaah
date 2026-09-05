@@ -70,3 +70,20 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://anything.example', { PUBLIC_BASE_URL: 'http://localhost:8080', corsOrigins: ['http://a'], tenantBaseDomain: null })).toBe(false);
   });
 });
+
+import { customDomainCandidate, tenantBaseUrlFor } from './host.js';
+
+describe('custom domains: tenantBaseUrlFor / customDomainCandidate', () => {
+  const cfg = { PUBLIC_BASE_URL: 'https://cloud.jumaah.test', tenantBaseDomain: 'jumaah.test', corsOrigins: [] as string[] };
+  it('prefers a verified custom domain, else the tenant host, else PUBLIC_BASE_URL', () => {
+    expect(tenantBaseUrlFor(cfg, { slug: 'demo', customDomain: 'khutbah.alnoor.org', customDomainVerifiedAt: new Date() })).toBe('https://khutbah.alnoor.org');
+    expect(tenantBaseUrlFor(cfg, { slug: 'demo', customDomain: 'khutbah.alnoor.org', customDomainVerifiedAt: null })).toBe('https://demo.jumaah.test');
+    expect(tenantBaseUrlFor(cfg, { slug: 'demo' })).toBe('https://demo.jumaah.test');
+    expect(tenantBaseUrlFor({ ...cfg, tenantBaseDomain: null }, { slug: 'demo', customDomain: 'khutbah.alnoor.org', customDomainVerifiedAt: new Date() })).toBe('https://cloud.jumaah.test');
+  });
+  it('spots hosts that could be a custom domain and ignores platform, base-domain and local hosts', () => {
+    expect(customDomainCandidate('Khutbah.AlNoor.org:443', cfg)).toBe('khutbah.alnoor.org');
+    for (const h of ['demo.jumaah.test', 'jumaah.test', 'cloud.jumaah.test', 'localhost:4000', '127.0.0.1', 'api', undefined]) expect(customDomainCandidate(h, cfg)).toBeNull();
+    expect(customDomainCandidate('khutbah.alnoor.org', { ...cfg, tenantBaseDomain: null })).toBeNull();
+  });
+});

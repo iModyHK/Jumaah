@@ -119,10 +119,16 @@ model Tenant {
   settings              Json               @default("{}")
   /// Shared secret used by this tenant's edge server to authenticate against the cloud.
   syncKeyHash           String?
+  /// Hosted edition (Pro): the mosque's own address, e.g. khutbah.alnoor.org.sa, and when its DNS was last verified.
+  customDomain           String?   @unique
+  customDomainVerifiedAt DateTime?
+  /// Hosted edition: the organisation account this mosque belongs to (one login managing several mosques).
+  organisationId        String?
   isActive              Boolean            @default(true)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
+  organisation    Organisation?  @relation(fields: [organisationId], references: [id], onDelete: SetNull)
   users           User[]
   invitations     Invitation[]
   languages       TenantLanguage[]
@@ -139,6 +145,22 @@ model Tenant {
   libraryItems    LibraryKhutbah[]
   cache           TranslationCache[]
   aiUsage         AiUsage[]
+
+  @@index([organisationId])
+}
+
+/// Hosted edition: an organisation (charity, awqaf office, chain of mosques) whose admins manage several mosques
+/// from one login. Member mosques carry the ENTERPRISE plan; the AI allowance is pooled across them.
+model Organisation {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  maxTenants Int      @default(10)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenants Tenant[]
+  admins  User[]
 }
 
 /// Platform-AI metering for the hosted edition: one row per job or relay call and language.
@@ -170,12 +192,15 @@ model User {
   passwordHash String
   role         Role
   locale       String    @default("ar")
+  /// Set for organisation admins: they may manage every mosque of that organisation.
+  organisationId String?
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  organisation  Organisation?  @relation(fields: [organisationId], references: [id], onDelete: SetNull)
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
 

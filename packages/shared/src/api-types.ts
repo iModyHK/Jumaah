@@ -31,6 +31,8 @@ export interface AuthUser {
   tenantSlug: string | null;
   tenantName: string | null;
   locale: 'ar' | 'en';
+  /** Organisation admins manage every mosque of this organisation (hosted edition). */
+  organisationId: string | null;
 }
 
 export interface AuthResponse {
@@ -60,7 +62,45 @@ export interface TenantDto {
   settings: Record<string, unknown>;
   languages: string[];
   createdAt: string;
+  organisationId: string | null;
+  customDomain: string | null;
+  customDomainVerifiedAt: string | null;
   _count?: { users: number; khutbahs: number; displays: number };
+}
+
+/** Custom domain of the current mosque (hosted edition, Pro). */
+export interface DomainStatusDto {
+  /** False on servers without hostname tenancy or on plans without the feature (`reason` says which). */
+  available: boolean;
+  reason: 'NO_BASE_DOMAIN' | 'NOT_IN_PLAN' | null;
+  domain: string | null;
+  verified: boolean;
+  verifiedAt: string | null;
+  /** What the mosque's DNS record must point at (CNAME), e.g. alnoor.jumaah.net. */
+  target: string | null;
+  /** Last verification error, if any. */
+  error: string | null;
+}
+
+export interface OrganisationTenantDto {
+  id: string;
+  name: string;
+  slug: string;
+  plan: SubscriptionPlan;
+  subscriptionStatus: SubscriptionStatus;
+  subscriptionEndsAt: string | null;
+  customDomain: string | null;
+  isActive: boolean;
+}
+
+export interface OrganisationDto {
+  id: string;
+  name: string;
+  slug: string;
+  maxTenants: number;
+  createdAt: string;
+  tenants: OrganisationTenantDto[];
+  admins: Array<{ id: string; email: string; name: string; tenantId: string | null }>;
 }
 
 export interface UserDto {

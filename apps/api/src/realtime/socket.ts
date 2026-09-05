@@ -4,7 +4,7 @@ import type { Server as HttpServer } from 'node:http';
 import { ROOMS, sessionCommandSchema, type DisplayConfig, type SessionCommand } from '@jumaah/shared';
 import type { Redis } from 'ioredis';
 import type { AppContext, IO } from '../lib/context.js';
-import { tenantPublicBaseUrl } from '../lib/host.js';
+import { tenantBaseUrlFor } from '../lib/host.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { viewerConnected, viewerDisconnected, viewerTotal } from '../services/insight.service.js';
@@ -122,8 +122,8 @@ export function attachSocketHandlers(ctx: AppContext): void {
       const info = await buildTenantPublicInfo(db, tenantId);
       if (info) socket.emit('tenant:info', info);
       if (role === 'DISPLAY' && socket.data.displayId) {
-        const d = await db.display.findUnique({ where: { id: socket.data.displayId }, include: { tenant: { select: { slug: true } } } });
-        if (d) socket.emit('display:config', displayConfigOf(d, tenantPublicBaseUrl(config, d.tenant.slug), d.tenant.slug));
+        const d = await db.display.findUnique({ where: { id: socket.data.displayId }, include: { tenant: { select: { slug: true, customDomain: true, customDomainVerifiedAt: true } } } });
+        if (d) socket.emit('display:config', displayConfigOf(d, tenantBaseUrlFor(config, d.tenant), d.tenant.slug));
         touchDisplay(ctx, socket.data.displayId);
       }
       await sendState();

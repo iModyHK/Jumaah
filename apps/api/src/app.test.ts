@@ -666,3 +666,120 @@ describe('paid-edition extras: public archive, handouts and insight by plan', ()
     expect((await app.inject({ method: 'GET', url: '/api/public/archive/demo' })).statusCode).toBe(404);
   });
 });
+
+describe('custom domains (Pro) and organisation accounts (hosted edition)', () => {
+  const setPlan = (plan: string) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+  const domain = `khutbah-${Date.now().toString(36)}.example.org`;
+  const secondSlug = `org-second-${Date.now().toString(36)}`;
+  let orgId = '';
+  let secondTenantId = '';
+
+  afterAll(async () => {
+    await app.ctx.db.user.updateMany({ where: { tenantId }, data: { organisationId: null } });
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', customDomain: null, customDomainVerifiedAt: null, organisationId: null } });
+    if (secondTenantId) await app.ctx.db.tenant.delete({ where: { id: secondTenantId } });
+    if (orgId) await app.ctx.db.organisation.deleteMany({ where: { id: orgId } });
+    await app.ctx.redis.del(`host:custom:${domain}`);
+  });
+
+  it('Standard cannot set a domain; Pro can, and Jumaah addresses are refused', async () => {
+    await setPlan('STANDARD');
+    const st = await app.inject({ method: 'GET', url: '/api/tenant/domain', headers: auth(adminToken) });
+    expect(st.statusCode).toBe(200);
+    expect(st.json()).toMatchObject({ available: false, reason: 'NOT_IN_PLAN', domain: null, target: 'demo.jumaah.test' });
+    expect((await app.inject({ method: 'PUT', url: '/api/tenant/domain', headers: auth(adminToken), payload: { domain } })).statusCode).toBe(400);
+    await setPlan('PRO');
+    expect((await app.inject({ method: 'PUT', url: '/api/tenant/domain', headers: auth(adminToken), payload: { domain: 'evil.jumaah.test' } })).statusCode).toBe(400);
+    const ok = await app.inject({ method: 'PUT', url: '/api/tenant/domain', headers: auth(adminToken), payload: { domain: domain.toUpperCase() } });
+    expect(ok.statusCode, ok.body).toBe(200);
+    expect(ok.json()).toMatchObject({ available: true, domain, verified: false, target: 'demo.jumaah.test' });
+  });
+
+  it('an unverified domain is not served; a verified one names the mosque for hosts, links, login and CORS', async () => {
+    expect((await app.inject({ method: 'GET', url: `/api/public/domain-check?domain=${domain}` })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: '/api/public/host', headers: { host: domain } })).json().tenant).toBeNull();
+    // real DNS knows nothing about this made-up name
+    const v = await app.inject({ method: 'POST', url: '/api/tenant/domain/verify', headers: auth(adminToken) });
+    expect(v.statusCode, v.body).toBe(200);
+    expect(v.json().verified).toBe(false);
+    expect(v.json().error).toBeTruthy();
+    // pretend the CNAME check passed (tests have no DNS to point at the platform)
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { customDomainVerifiedAt: new Date() } });
+    await app.ctx.redis.del(`host:custom:${domain}`);
+    expect((await app.inject({ method: 'GET', url: `/api/public/domain-check?domain=${domain}` })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/public/host', headers: { host: domain } })).json()).toMatchObject({ slug: 'demo', tenant: { slug: 'demo' } });
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', headers: { host: domain }, payload: { email: 'admin@demo.mosque', password: 'Demo12345!' } });
+    expect(login.statusCode, login.body).toBe(200);
+    expect(login.json().user.tenantSlug).toBe('demo');
+    const list = await app.inject({ method: 'GET', url: '/api/displays', headers: auth(adminToken) });
+    for (const d of list.json() as Array<{ url: string; publicUrl: string }>) {
+      expect(d.url.startsWith(`https://${domain}/display/`)).toBe(true);
+      expect(d.publicUrl).toBe(`https://${domain}/display/m/demo`);
+    }
+    const cors = await app.inject({ method: 'OPTIONS', url: '/api/health', headers: { origin: `https://${domain}`, 'access-control-request-method': 'GET' } });
+    expect(cors.headers['access-control-allow-origin']).toBe(`https://${domain}`);
+    // a plan without the feature switches the domain off without deleting it
+    await setPlan('STANDARD');
+    await app.ctx.redis.del(`host:custom:${domain}`);
+    expect((await app.inject({ method: 'GET', url: `/api/public/domain-check?domain=${domain}` })).statusCode).toBe(404);
+    await setPlan('PRO');
+    await app.ctx.redis.del(`host:custom:${domain}`);
+  });
+
+  it('the super admin creates an organisation, attaches mosques within its limit and names an admin', async () => {
+    const created = await app.inject({ method: 'POST', url: '/api/organisations', headers: auth(superToken), payload: { name: 'Awqaf Test', slug: `awqaf-${Date.now().toString(36)}`, maxTenants: 2 } });
+    expect(created.statusCode, created.body).toBe(201);
+    orgId = created.json().id;
+    const add1 = await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/tenants`, headers: auth(superToken), payload: { tenantId } });
+    expect(add1.statusCode, add1.body).toBe(200);
+    expect(add1.json().tenants).toHaveLength(1);
+    expect(add1.json().tenants[0]).toMatchObject({ id: tenantId, plan: 'ENTERPRISE' });
+
+    const t2 = await app.inject({ method: 'POST', url: '/api/tenants', headers: auth(superToken), payload: { name: 'Second Mosque', slug: secondSlug, adminEmail: `admin@${secondSlug}.test`, adminName: 'Second Admin', adminPassword: 'Second12345!', languages: ['en'] } });
+    expect(t2.statusCode, t2.body).toBe(201);
+    secondTenantId = t2.json().tenant.id;
+    const add2 = await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/tenants`, headers: auth(superToken), payload: { tenantId: secondTenantId } });
+    expect(add2.statusCode, add2.body).toBe(200);
+    expect(add2.json().tenants).toHaveLength(2);
+
+    // the limit: shrink it to one and try to re-attach a detached mosque
+    expect((await app.inject({ method: 'DELETE', url: `/api/organisations/${orgId}/tenants/${secondTenantId}`, headers: auth(superToken) })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'PATCH', url: `/api/organisations/${orgId}`, headers: auth(superToken), payload: { maxTenants: 1 } })).statusCode).toBe(200);
+    const full = await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/tenants`, headers: auth(superToken), payload: { tenantId: secondTenantId } });
+    expect(full.statusCode).toBe(409);
+    expect((await app.inject({ method: 'PATCH', url: `/api/organisations/${orgId}`, headers: auth(superToken), payload: { maxTenants: 2 } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/tenants`, headers: auth(superToken), payload: { tenantId: secondTenantId } })).statusCode).toBe(200);
+
+    const admin = await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/admins`, headers: auth(superToken), payload: { email: 'admin@demo.mosque' } });
+    expect(admin.statusCode, admin.body).toBe(200);
+    expect(admin.json().admins).toHaveLength(1);
+    expect((await app.inject({ method: 'POST', url: `/api/organisations/${orgId}/admins`, headers: auth(superToken), payload: { email: 'nobody@example.org' } })).statusCode).toBe(404);
+    // a mosque admin cannot touch organisations
+    expect((await app.inject({ method: 'GET', url: '/api/organisations', headers: auth(adminToken) })).statusCode).toBe(403);
+  });
+
+  it('an organisation admin switches between member mosques, shares the AI pool, and not beyond', async () => {
+    const l = await login('admin@demo.mosque', 'Demo12345!');
+    expect(l.user).toMatchObject({ organisationId: orgId });
+    const orgTok = l.accessToken;
+    const mine = await app.inject({ method: 'GET', url: '/api/organisation', headers: auth(orgTok) });
+    expect(mine.statusCode, mine.body).toBe(200);
+    expect(mine.json().tenants.map((t: { id: string }) => t.id).sort()).toEqual([tenantId, secondTenantId].sort());
+    const other = await app.inject({ method: 'GET', url: '/api/tenant', headers: { ...auth(orgTok), 'x-tenant-id': secondTenantId } });
+    expect(other.statusCode, other.body).toBe(200);
+    expect(other.json().id).toBe(secondTenantId);
+    expect((await app.inject({ method: 'GET', url: '/api/tenant', headers: { ...auth(orgTok), 'x-tenant-id': 'not-a-member' } })).statusCode).toBe(403);
+    // a staff member who is not an organisation admin stays pinned to their own mosque
+    const pinned = await app.inject({ method: 'GET', url: '/api/tenant', headers: { ...auth(translatorToken), 'x-tenant-id': secondTenantId } });
+    expect(pinned.statusCode, pinned.body).toBe(200);
+    expect(pinned.json().id).toBe(tenantId);
+    // the allowance of a member mosque is the organisation's pool
+    const usage = await app.inject({ method: 'GET', url: '/api/tenant/ai-usage', headers: { ...auth(orgTok), 'x-tenant-id': secondTenantId } });
+    expect(usage.statusCode, usage.body).toBe(200);
+    expect(usage.json()).toMatchObject({ plan: 'ENTERPRISE', monthlyParagraphs: 22500 });
+    // detaching the mosque takes the right away
+    expect((await app.inject({ method: 'DELETE', url: `/api/organisations/${orgId}/tenants/${tenantId}`, headers: auth(superToken) })).statusCode).toBe(200);
+    expect((await login('admin@demo.mosque', 'Demo12345!')).user.organisationId).toBeNull();
+    expect((await app.inject({ method: 'GET', url: '/api/organisation', headers: auth(orgTok) })).statusCode).toBe(403);
+  });
+});

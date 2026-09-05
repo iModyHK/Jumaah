@@ -9,6 +9,7 @@ import type {
   TranslationStatus,
   GlossaryMode,
 } from './constants.js';
+import type { LiveKhutbah, TenantPublicInfo } from './socket-events.js';
 
 export interface ApiError {
   error: { code: string; message: string; details?: unknown };
@@ -267,4 +268,54 @@ export interface SyncStatusDto {
   lastError: string | null;
   imageTag: string;
   latestImageTag: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Paid-edition extras: public archive, printable handouts, attendance insight
+// ---------------------------------------------------------------------------
+
+/** One past khutbah on the public archive page. */
+export interface ArchiveItemDto {
+  id: string;
+  title: string;
+  hijriDate: string | null;
+  gregorianDate: string;
+  imamName: string | null;
+  languages: string[];
+}
+
+export interface ArchiveListDto {
+  tenant: TenantPublicInfo;
+  items: ArchiveItemDto[];
+}
+
+export interface ArchiveKhutbahDto {
+  tenant: TenantPublicInfo;
+  khutbah: LiveKhutbah;
+}
+
+/** What the admin's printable handout page needs: the khutbah with approved translations, plus the mosque header. */
+export interface HandoutDto {
+  tenant: { name: string; locale: 'ar' | 'en'; logoUrl: string | null };
+  khutbah: LiveKhutbah;
+}
+
+export interface InsightSessionDto {
+  id: string;
+  khutbahId: string;
+  title: string;
+  gregorianDate: string;
+  hijriDate: string | null;
+  imamName: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  durationSec: number;
+  peakDisplays: number;
+  peakPhones: number;
+  uniquePhones: number;
+}
+
+export interface InsightDto {
+  sessions: InsightSessionDto[];
+  summary: { sessions: number; avgPhones: number; maxPhones: number; avgDisplays: number; avgDurationSec: number };
 }

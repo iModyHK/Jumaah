@@ -90,9 +90,14 @@ export const prayerLocationSchema = z.object({
   adjustments: z.object({ fajr: z.number().int().min(-60).max(60), dhuhr: z.number().int().min(-60).max(60), asr: z.number().int().min(-60).max(60), maghrib: z.number().int().min(-60).max(60), isha: z.number().int().min(-60).max(60) }).partial().optional(),
 });
 
+/** Public archive of delivered khutbahs (paid editions): the mosque switches it on; the plan must include it. */
+export const archiveSchema = z.object({ enabled: z.boolean().optional() });
+export type ArchiveSettings = z.infer<typeof archiveSchema>;
+
 export const tenantSettingsSchema = z.object({
   branding: brandingSchema.optional(),
   signage: signageSchema.optional(),
+  archive: archiveSchema.optional(),
   prayerLocation: prayerLocationSchema.nullable().optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),

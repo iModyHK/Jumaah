@@ -477,6 +477,10 @@ model LiveSession {
   startedAt          DateTime?
   sectionStartedAt   DateTime?
   endedAt            DateTime?
+  /// Attendance insight (paid editions): most screens and phones connected at once, and distinct phones seen.
+  peakDisplays       Int          @default(0)
+  peakPhones         Int          @default(0)
+  uniquePhones       Int          @default(0)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 

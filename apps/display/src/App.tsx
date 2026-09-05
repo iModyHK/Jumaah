@@ -4,6 +4,7 @@ import { apiBaseUrl } from '@jumaah/ui';
 import { parseRoute } from './routes';
 import { Screen } from './screens/Screen';
 import { Mobile } from './screens/Mobile';
+import { Archive } from './screens/Archive';
 import { Poster } from './screens/Poster';
 import { TokenEntry } from './screens/TokenEntry';
 import { CenterMessage } from './components/Overlays';
@@ -24,6 +25,8 @@ export function App() {
       return route.slug ? <Mobile key={route.slug} slug={route.slug} /> : <HostMobile />;
     case 'poster':
       return <Poster key={`${route.slug}-${route.size}`} slug={route.slug} size={route.size} />;
+    case 'archive':
+      return <Archive key={`${route.slug}-${route.khutbahId ?? ''}`} slug={route.slug} khutbahId={route.khutbahId} />;
     default:
       return <TokenEntry />;
   }

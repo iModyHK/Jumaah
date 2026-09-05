@@ -9,6 +9,7 @@ import { EndedScreen } from '../components/EndedScreen';
 import { IdleScreen } from '../components/IdleScreen';
 import { CenterMessage, PausedPill, ReconnectBanner } from '../components/Overlays';
 import { Panels } from '../components/Panels';
+import { archiveUrl } from '../routes';
 
 interface MobilePrefs {
   langs: string[];
@@ -84,6 +85,11 @@ export function Mobile({ slug }: { slug: string }) {
             </LangText>
           </span>
           <span className="flex items-center gap-3">
+            {tenant.archiveEnabled && (
+              <a className="j-mobile-archive" href={archiveUrl(slug)}>
+                {t('display.archive.title')}
+              </a>
+            )}
             <JumaahMark branding={tenant.branding} />
             <ConnectionDot connected={live.connected} />
           </span>

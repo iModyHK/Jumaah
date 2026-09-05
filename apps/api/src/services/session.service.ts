@@ -3,6 +3,7 @@ import { ROOMS, SESSION_STALE_MS } from '@jumaah/shared';
 import type { AppContext } from '../lib/context.js';
 import { buildLiveKhutbah } from '../lib/live-payload.js';
 import { conflict, notFound, badRequest } from '../lib/errors.js';
+import { readSessionStats, seedSessionStats } from './insight.service.js';
 
 const SESSION_KEY = (t: string) => `session:${t}`;
 const KHUTBAH_KEY = (t: string, k: string) => `livekhutbah:${t}:${k}`;
@@ -87,10 +88,13 @@ export async function getSnapshot(ctx: AppContext, tenantId: string): Promise<Li
 async function persist(ctx: AppContext, snap: LiveSessionSnapshot, extra: { deviceId?: string; heartbeat?: boolean } = {}): Promise<void> {
   await ctx.redis.set(SESSION_KEY(snap.tenantId), JSON.stringify(snap));
   if (snap.sessionId) {
+    // The session is over: freeze its attendance numbers on the row (insight page).
+    const stats = snap.state === 'ENDED' ? await readSessionStats(ctx, snap.tenantId, snap.sessionId) : null;
     await ctx.db.liveSession
       .update({
         where: { id: snap.sessionId },
         data: {
+          ...(stats ?? {}),
           state: snap.state,
           currentParagraphId: snap.currentParagraphId,
           currentIndex: snap.currentIndex,
@@ -161,6 +165,7 @@ export async function startSession(ctx: AppContext, tenantId: string, input: Sta
     },
   });
   await ctx.db.khutbah.updateMany({ where: { id: input.khutbahId, tenantId }, data: { status: 'DELIVERED' } });
+  seedSessionStats(ctx, tenantId, row.id);
   const snap: LiveSessionSnapshot = {
     sessionId: row.id,
     tenantId,

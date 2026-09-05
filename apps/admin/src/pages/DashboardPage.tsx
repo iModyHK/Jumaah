@@ -6,6 +6,7 @@ import { getLanguage, type KhutbahDto, type LiveKhutbah, type LiveSessionSnapsho
 import { EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
+import { InsightCard } from '../components/InsightCard';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
 import { ProgressBar } from '../components/ProgressBar';
 import { KhutbahStatusBadge } from '../components/StatusBadge';
@@ -123,6 +124,10 @@ export function DashboardPage() {
             </div>
           </Card>
         </div>
+      </div>
+
+      <div className="mt-4">
+        <InsightCard />
       </div>
     </div>
   );

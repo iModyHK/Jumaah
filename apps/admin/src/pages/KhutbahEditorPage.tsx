@@ -145,6 +145,9 @@ export function KhutbahEditorPage() {
             <Button className="px-3 py-1 text-sm" onClick={() => setVersionsOpen(true)}>
               {t('khutbah.versions')}
             </Button>
+            <a href={`${import.meta.env.BASE_URL}khutbahs/${id}/handout`} target="_blank" rel="noreferrer" className="j-btn px-3 py-1 text-sm">
+              {t('handout.open')}
+            </a>
             {canEdit && (
               <>
                 <Button className="px-3 py-1 text-sm" onClick={() => setShareOpen(true)}>

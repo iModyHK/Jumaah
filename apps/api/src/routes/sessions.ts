@@ -5,7 +5,10 @@ import { audit } from '../lib/audit.js';
 import { parse } from '../lib/validate.js';
 import { ALL_STAFF } from '../plugins/auth.js';
 import { displayCount } from '../realtime/socket.js';
+import { assertFeature } from '../services/features.service.js';
+import { listInsight } from '../services/insight.service.js';
 import { applyCommand, getLiveKhutbah, getSnapshot, startSession } from '../services/session.service.js';
+import { notFound } from '../lib/errors.js';
 import { actorOf } from './auth.js';
 
 const IMAM_ROLES = ['SUPER_ADMIN', 'MOSQUE_ADMIN', 'IMAM'] as const;
@@ -36,6 +39,14 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
     const snap = await applyCommand(app.ctx, request.tenantId, { type: 'end' });
     await audit(db, request.tenantId, actorOf(request), 'session.end', 'LiveSession', snap.sessionId);
     return snap;
+  });
+
+  /** Attendance insight (paid editions): past sessions with peak screens, peak phones and distinct phones. */
+  app.get('/insight', { preHandler: app.requireRole(...ALL_STAFF) }, async (request) => {
+    const t = await db.tenant.findUnique({ where: { id: request.tenantId } });
+    if (!t) throw notFound('Tenant');
+    assertFeature('insight', t);
+    return listInsight(db, request.tenantId);
   });
 
   app.get('/session/history', { preHandler: app.requireRole(...ALL_STAFF) }, async (request) => {

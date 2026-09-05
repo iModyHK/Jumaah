@@ -5,6 +5,7 @@ import { PRAYER_METHODS, computePrayerTimes, tenantLanguagesSchema, tenantSettin
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
+import { ArchiveCard } from '../components/ArchiveCard';
 import { BrandingCard } from '../components/BrandingCard';
 import { SignageCard } from '../components/SignageCard';
 import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../components/Field';
@@ -228,6 +229,7 @@ export function SettingsPage() {
 
         <BrandingCard tenant={tenant.data} />
         <SignageCard tenant={tenant.data} />
+        <ArchiveCard tenant={tenant.data} />
 
         <Card
           title={t('settings.languages')}

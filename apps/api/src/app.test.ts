@@ -594,3 +594,75 @@ describe('signage: date and announcements between khutbahs, by plan and by date'
     expect(bad.statusCode).toBe(400);
   });
 });
+
+describe('paid-edition extras: public archive, handouts and insight by plan', () => {
+  const setPlan = (plan: string) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+  let originalSettings: unknown;
+  let originalStatus = '';
+  beforeAll(async () => {
+    originalSettings = (await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).settings;
+    originalStatus = (await app.ctx.db.khutbah.findUniqueOrThrow({ where: { id: khutbahId } })).status;
+  });
+  afterAll(async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', settings: originalSettings as never } });
+    await app.ctx.db.khutbah.update({ where: { id: khutbahId }, data: { status: originalStatus as never } });
+  });
+
+  it('Basic cannot publish the archive, print handouts or read insight; the public archive stays hidden', async () => {
+    await setPlan('BASIC');
+    const on = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { archive: { enabled: true } } } });
+    expect(on.statusCode).toBe(403);
+    expect(on.json().error.code).toBe('FEATURE_NOT_IN_PLAN');
+    expect((await app.inject({ method: 'GET', url: `/api/khutbahs/${khutbahId}/handout`, headers: auth(adminToken) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/insight', headers: auth(adminToken) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/public/archive/demo' })).statusCode).toBe(404);
+  });
+
+  it('Standard publishes delivered khutbahs only, with approved translations only', async () => {
+    await setPlan('STANDARD');
+    const on = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { archive: { enabled: true } } } });
+    expect(on.statusCode, on.body).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/public/tenant/demo' })).json().tenant.archiveEnabled).toBe(true);
+
+    await app.ctx.db.khutbah.update({ where: { id: khutbahId }, data: { status: 'READY' } });
+    let list = await app.inject({ method: 'GET', url: '/api/public/archive/demo' });
+    expect(list.statusCode, list.body).toBe(200);
+    expect(list.json().items.some((k: { id: string }) => k.id === khutbahId)).toBe(false);
+    expect((await app.inject({ method: 'GET', url: `/api/public/archive/demo/${khutbahId}` })).statusCode).toBe(404);
+
+    await app.ctx.db.khutbah.update({ where: { id: khutbahId }, data: { status: 'DELIVERED' } });
+    list = await app.inject({ method: 'GET', url: '/api/public/archive/demo' });
+    expect(list.json().items.some((k: { id: string }) => k.id === khutbahId)).toBe(true);
+    const one = await app.inject({ method: 'GET', url: `/api/public/archive/demo/${khutbahId}` });
+    expect(one.statusCode, one.body).toBe(200);
+    expect(one.json().khutbah.id).toBe(khutbahId);
+    const paras = one.json().khutbah.paragraphs as Array<{ translations: Record<string, { text: string; status: string }> }>;
+    expect(paras.length).toBeGreaterThan(0);
+    for (const p of paras) for (const tr of Object.values(p.translations)) if (tr.status !== 'APPROVED') expect(tr.text).toBe('');
+  });
+
+  it('handout and insight answer on Standard, and a finished session shows up in insight', async () => {
+    const h = await app.inject({ method: 'GET', url: `/api/khutbahs/${khutbahId}/handout`, headers: auth(adminToken) });
+    expect(h.statusCode, h.body).toBe(200);
+    expect(h.json()).toMatchObject({ tenant: { name: expect.any(String) }, khutbah: { id: khutbahId } });
+
+    const start = await app.inject({ method: 'POST', url: '/api/session/start', headers: auth(imamToken), payload: { khutbahId, force: true, deviceId: 'insight-test' } });
+    expect(start.statusCode, start.body).toBe(200);
+    const end = await app.inject({ method: 'POST', url: '/api/session/end', headers: auth(imamToken) });
+    expect(end.statusCode, end.body).toBe(200);
+
+    const ins = await app.inject({ method: 'GET', url: '/api/insight', headers: auth(adminToken) });
+    expect(ins.statusCode, ins.body).toBe(200);
+    const body = ins.json() as { sessions: Array<{ id: string; khutbahId: string; peakDisplays: number; peakPhones: number; uniquePhones: number; endedAt: string | null }>; summary: { sessions: number } };
+    const mine = body.sessions.find((s) => s.id === start.json().sessionId);
+    expect(mine).toMatchObject({ khutbahId, peakDisplays: 0, peakPhones: 0, uniquePhones: 0 });
+    expect(mine?.endedAt).toBeTruthy();
+    expect(body.summary.sessions).toBeGreaterThan(0);
+  });
+
+  it('switching the archive off hides it again (always allowed)', async () => {
+    const off = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { archive: { enabled: false } } } });
+    expect(off.statusCode, off.body).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/public/archive/demo' })).statusCode).toBe(404);
+  });
+});

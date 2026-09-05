@@ -508,6 +508,20 @@
       "pick": "Choose your language",
       "follow": "Follow the khutbah live, paragraph by paragraph",
       "noApp": "No app needed. It opens in the browser."
+    },
+    "archive": {
+      "title": "Archive",
+      "subtitle": "Past khutbahs and their translations",
+      "empty": "Nothing here yet.",
+      "back": "All khutbahs",
+      "live": "Live translation",
+      "print": "Print",
+      "pending": "Translation not available",
+      "sections": {
+        "FIRST": "First khutbah",
+        "SECOND": "Second khutbah",
+        "DUA": "Du'a"
+      }
     }
   },
   "errors": {
@@ -577,5 +591,36 @@
     "textEn": "English text",
     "from": "From",
     "until": "Until"
+  },
+  "archive": {
+    "title": "Public archive",
+    "hint": "A public page where worshippers can read past khutbahs with their approved translations, at any time.",
+    "enabled": "Publish the archive",
+    "publicLink": "Public link",
+    "open": "Open"
+  },
+  "handout": {
+    "title": "Handout",
+    "open": "Print handout",
+    "print": "Print",
+    "language": "Language",
+    "includeArabic": "Include the Arabic",
+    "untranslated": "{{count}} paragraph(s) have no approved translation and are marked.",
+    "pending": "Translation not available"
+  },
+  "insight": {
+    "title": "Attendance insight",
+    "hint": "For each khutbah: the most screens and phones connected at once, and the distinct phones that followed. Nothing personal is stored.",
+    "sessions": "Sessions",
+    "avgPhones": "Phones on average",
+    "maxPhones": "Most phones",
+    "avgDuration": "Average length",
+    "colKhutbah": "Khutbah",
+    "colDate": "Date",
+    "colDuration": "Length",
+    "colDisplays": "Screens",
+    "colPhones": "Phones (peak)",
+    "colUnique": "Phones (distinct)",
+    "empty": "No completed sessions yet. Numbers appear after the first live khutbah."
   }
 }

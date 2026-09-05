@@ -3,7 +3,7 @@
  * (branding, signage, archive, …) are what distinguishes the paid edition from the free core. A community server
  * simply has the FREE plan; the core it needs is never listed in PLAN_FEATURES.
  */
-import { PLAN_FEATURES, type Branding, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
+import { PLAN_FEATURES, type ArchiveSettings, type Branding, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
 import { HttpError } from '../lib/errors.js';
 import { subscriptionState, type SubscriptionLike } from './plan.service.js';
 
@@ -45,6 +45,24 @@ export function assertSignageAllowed(signage: Signage | undefined, t: Subscripti
   const { plan, features } = tenantFeatures(t);
   const wantsSomething = !!signage.showDate || (signage.announcements ?? []).length > 0;
   if (wantsSomething && !features.signage) throw featureDenied('signage', plan);
+}
+
+/** The public archive may only be switched on by plans that include it (switching it off is always fine). */
+export function assertArchiveAllowed(archive: ArchiveSettings | undefined, t: SubscriptionLike): void {
+  if (!archive?.enabled) return;
+  const { plan, features } = tenantFeatures(t);
+  if (!features.archive) throw featureDenied('archive', plan);
+}
+
+/** Is the public archive page open right now: the plan includes it and the mosque switched it on. */
+export function archiveEnabled(settings: Record<string, unknown>, t: SubscriptionLike): boolean {
+  return tenantFeatures(t).features.archive && !!(settings.archive as ArchiveSettings | undefined)?.enabled;
+}
+
+/** Throws FEATURE_NOT_IN_PLAN unless the mosque's current plan includes the feature. */
+export function assertFeature(feature: keyof PlanFeatures, t: SubscriptionLike): void {
+  const { plan, features } = tenantFeatures(t);
+  if (!features[feature]) throw featureDenied(feature, plan);
 }
 
 /** Local calendar date (YYYY-MM-DD) in the mosque's timezone, for announcement windows. */

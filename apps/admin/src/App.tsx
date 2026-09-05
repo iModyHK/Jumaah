@@ -7,6 +7,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { KhutbahsPage } from './pages/KhutbahsPage';
 import { KhutbahNewPage } from './pages/KhutbahNewPage';
 import { KhutbahEditorPage } from './pages/KhutbahEditorPage';
+import { HandoutPage } from './pages/HandoutPage';
 import { GlossaryPage } from './pages/GlossaryPage';
 import { ProvidersPage } from './pages/ProvidersPage';
 import { DisplaysPage } from './pages/DisplaysPage';
@@ -27,6 +28,16 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
+      <Route
+        path="/khutbahs/:id/handout"
+        element={
+          <RequireAuth>
+            <RequireTenant>
+              <HandoutPage />
+            </RequireTenant>
+          </RequireAuth>
+        }
+      />
       <Route
         element={
           <RequireAuth>

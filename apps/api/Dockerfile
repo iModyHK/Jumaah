@@ -5,7 +5,7 @@
 # The runtime image carries no package manager, no compilers and no dev dependencies; Prisma's CLI is
 # a production dependency of @jumaah/db because `migrate deploy` runs on every start (also offline).
 # ---- base ---------------------------------------------------------------------
-FROM node:22-alpine AS base
+FROM node:26-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
@@ -45,7 +45,7 @@ COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/apps/sync-worker/dist apps/sync-worker/dist
 
 # ---- runtime ------------------------------------------------------------------
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 RUN apk upgrade --no-cache && apk add --no-cache tini && mkdir -p /app/backups && chown node:node /app/backups
 COPY --from=prod --chown=node:node /app /app

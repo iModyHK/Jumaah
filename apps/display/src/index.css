@@ -462,7 +462,7 @@ html.j-kiosk body {
 }
 
 /* ---------- Branding: Jumaah mark, mobile logo ---------- */
-.j-mark {
+.j-brandmark {
   display: inline-flex;
   align-items: center;
   gap: 0.35em;
@@ -661,4 +661,67 @@ html.j-kiosk body {
   @page {
     margin: 16mm;
   }
+}
+
+/* ---------- Signage between khutbahs: date line and announcements ---------- */
+.j-idle-date {
+  font-size: clamp(0.9rem, 2.6vmin, 2.4rem);
+  color: var(--j-fg-muted);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4em;
+  margin-top: -1vmin;
+}
+.j-idle-date-sep {
+  opacity: 0.5;
+}
+.j-announce {
+  max-width: 70vw;
+  padding: 1.6vmin 3vmin;
+  border-radius: 1.4vmin;
+  background: var(--j-accent-soft);
+  border-inline-start: 0.6vmin solid var(--j-accent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6vmin;
+  text-align: center;
+  animation: j-fade 220ms ease-out;
+}
+.j-announce-ar {
+  font-size: clamp(1.1rem, 3.4vmin, 3.2rem);
+  line-height: 1.6;
+}
+.j-announce-en {
+  font-size: clamp(0.9rem, 2.4vmin, 2.2rem);
+  color: var(--j-fg-muted);
+  line-height: 1.5;
+}
+.j-announce-compact {
+  max-width: 100%;
+}
+.j-announce-compact .j-announce-ar {
+  font-size: 1.15rem;
+}
+.j-announce-compact .j-announce-en {
+  font-size: 0.95rem;
+}
+.j-announce-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.6vmin;
+  margin-top: 0.4vmin;
+}
+.j-announce-dots span {
+  width: 1vmin;
+  height: 1vmin;
+  min-width: 6px;
+  min-height: 6px;
+  border-radius: 999px;
+  background: var(--j-fg-muted);
+  opacity: 0.35;
+}
+.j-announce-dots span[data-on='true'] {
+  background: var(--j-accent);
+  opacity: 1;
 }

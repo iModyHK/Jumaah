@@ -1,6 +1,6 @@
 import type { Db } from '@jumaah/db';
 import type { LiveKhutbah, LiveParagraph, TenantPublicInfo } from '@jumaah/shared';
-import { effectiveBranding } from '../services/features.service.js';
+import { effectiveBranding, effectiveSignage } from '../services/features.service.js';
 
 /** Build the payload displays/imam receive: full khutbah tree with translation statuses. */
 export async function buildLiveKhutbah(db: Db, tenantId: string, khutbahId: string): Promise<LiveKhutbah | null> {
@@ -71,5 +71,6 @@ export async function buildTenantPublicInfo(db: Db, tenantId: string): Promise<T
     prayerTimes: (s.prayerTimes as Record<string, string>) ?? null,
     languages: t.languages.filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     branding,
+    signage: effectiveSignage(s, t),
   };
 }

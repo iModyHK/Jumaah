@@ -43,7 +43,7 @@ export function useBrandingCss(css: string | null | undefined): void {
 export function JumaahMark({ branding, className = '' }: { branding: TenantPublicBranding | undefined; className?: string }) {
   if (branding?.hideMark) return null;
   return (
-    <span className={`j-mark ${className}`} dir="ltr" aria-label="Jumaah">
+    <span className={`j-brandmark ${className}`} dir="ltr" aria-label="Jumaah">
       <svg viewBox="0 0 100 100" width="14" height="14" aria-hidden="true">
         <polygon fill="currentColor" points="96,50 82.5,63.5 82.5,82.5 63.5,82.5 50,96 36.5,82.5 17.5,82.5 17.5,63.5 4,50 17.5,36.5 17.5,17.5 36.5,17.5 50,4 63.5,17.5 82.5,17.5 82.5,36.5" />
       </svg>

@@ -4,6 +4,7 @@ import { LangText } from '@jumaah/ui';
 import { phrase } from '../phrases';
 import { useClock } from './Clock';
 import { QrCode } from './QrCode';
+import { Announcements, DateLine } from './Signage';
 
 const PRAYER_ORDER = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumuah'] as const;
 
@@ -48,6 +49,8 @@ export function IdleScreen({
       <div className="j-idle-clock" dir="ltr">
         {time}
       </div>
+      {tenant.signage?.showDate && <DateLine offsetMs={offsetMs} timeZone={tenant.timezone} locale={tenant.locale} />}
+      {tenant.signage?.announcements?.length ? <Announcements items={tenant.signage.announcements} compact={compact} /> : null}
       {prayers.length > 0 && (
         <div className="j-prayers">
           {prayers.map((k) => (

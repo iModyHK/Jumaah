@@ -536,5 +536,17 @@
     "cssHint": "Applied to the screens and the phone page. For designers; leave empty otherwise.",
     "hideMark": "Hide the Jumaah mark on screens and phones",
     "locked": "requires the plan above {{plan}}"
+  },
+  "signage": {
+    "title": "Screens between khutbahs",
+    "hint": "When no khutbah is live, the screens show the clock and prayer times. Here you can add the date and announcements for the congregation.",
+    "showDate": "Show the Hijri and Gregorian date",
+    "announcements": "Announcements",
+    "add": "Add announcement",
+    "none": "No announcements",
+    "textAr": "Arabic text",
+    "textEn": "English text",
+    "from": "From",
+    "until": "Until"
   }
 }

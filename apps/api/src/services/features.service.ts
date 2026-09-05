@@ -3,7 +3,7 @@
  * (branding, signage, archive, …) are what distinguishes the paid edition from the free core. A community server
  * simply has the FREE plan; the core it needs is never listed in PLAN_FEATURES.
  */
-import { PLAN_FEATURES, type Branding, type PlanFeatures, type SubscriptionPlan, type TenantPublicBranding } from '@jumaah/shared';
+import { PLAN_FEATURES, type Branding, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
 import { HttpError } from '../lib/errors.js';
 import { subscriptionState, type SubscriptionLike } from './plan.service.js';
 
@@ -37,6 +37,35 @@ export function assertBrandingAllowed(branding: Branding | undefined, t: Subscri
     const f = BRANDING_FEATURE[key];
     if (!features[f]) throw featureDenied(f, plan);
   }
+}
+
+/** Signage settings may only be written by plans that include screens between khutbahs (clearing is always fine). */
+export function assertSignageAllowed(signage: Signage | undefined, t: SubscriptionLike): void {
+  if (!signage) return;
+  const { plan, features } = tenantFeatures(t);
+  const wantsSomething = !!signage.showDate || (signage.announcements ?? []).length > 0;
+  if (wantsSomething && !features.signage) throw featureDenied('signage', plan);
+}
+
+/** Local calendar date (YYYY-MM-DD) in the mosque's timezone, for announcement windows. */
+export function localDateKey(now: Date, timeZone: string): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+/** Screens between khutbahs: nothing on plans without signage; otherwise the date flag and today's active announcements. */
+export function effectiveSignage(settings: Record<string, unknown>, t: SubscriptionLike & { timezone?: string }, now: Date = new Date()): TenantPublicSignage {
+  const { features } = tenantFeatures(t, now);
+  if (!features.signage) return { showDate: false, announcements: [] };
+  const s = ((settings.signage as Signage | undefined) ?? {}) as Signage;
+  const today = localDateKey(now, t.timezone ?? 'Asia/Riyadh');
+  const announcements = (s.announcements ?? [])
+    .filter((a) => a.enabled !== false && (!a.from || a.from <= today) && (!a.until || a.until >= today) && (a.textAr.trim() || a.textEn.trim()))
+    .map((a) => ({ id: a.id, textAr: a.textAr.trim(), textEn: a.textEn.trim() }));
+  return { showDate: !!s.showDate, announcements };
 }
 
 /**

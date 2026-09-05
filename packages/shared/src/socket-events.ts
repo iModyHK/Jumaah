@@ -63,6 +63,14 @@ export interface TenantPublicBranding {
   hideMark: boolean;
 }
 
+/** What screens show between khutbahs (paid editions), already filtered by plan and by date. */
+export interface TenantPublicSignage {
+  /** Show the Hijri and Gregorian date under the clock. */
+  showDate: boolean;
+  /** Announcements active today, in display order. */
+  announcements: Array<{ id: string; textAr: string; textEn: string }>;
+}
+
 export interface TenantPublicInfo {
   id: string;
   name: string;
@@ -75,6 +83,7 @@ export interface TenantPublicInfo {
   prayerTimes: Record<string, string> | null;
   languages: string[];
   branding: TenantPublicBranding;
+  signage: TenantPublicSignage;
 }
 
 export interface DisplayConfig {

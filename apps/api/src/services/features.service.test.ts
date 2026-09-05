@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertBrandingAllowed, effectiveBranding, tenantFeatures } from './features.service.js';
+import { assertBrandingAllowed, effectiveBranding, effectiveSignage, tenantFeatures } from './features.service.js';
 
 const day = 86_400_000;
 const t = (plan: string, status = 'ACTIVE', endsAt: Date | null = null) => ({ plan, subscriptionStatus: status, subscriptionEndsAt: endsAt });
@@ -43,5 +43,30 @@ describe('effectiveBranding', () => {
   });
   it('a lapsed Pro falls back to the neutral look without editing settings', () => {
     expect(effectiveBranding(settings, t('PRO', 'ACTIVE', new Date(Date.now() - 30 * day))).css).toBeNull();
+  });
+});
+
+describe('effectiveSignage', () => {
+  const day = 86_400_000;
+  const now = new Date('2026-09-05T10:00:00Z');
+  const settings = {
+    signage: {
+      showDate: true,
+      announcements: [
+        { id: 'a', textAr: 'نص', textEn: 'text', enabled: true },
+        { id: 'b', textAr: 'قديم', textEn: '', until: '2026-09-04', enabled: true },
+        { id: 'c', textAr: '', textEn: 'future', from: '2026-09-06', enabled: true },
+        { id: 'd', textAr: 'x', textEn: '', enabled: false },
+        { id: 'e', textAr: 'اليوم', textEn: '', from: '2026-09-05', until: '2026-09-05', enabled: true },
+      ],
+    },
+  };
+  const t = (plan: string, endsAt: Date | null = null) => ({ plan, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: endsAt, timezone: 'Asia/Riyadh' });
+  it('keeps today\'s enabled announcements in order on plans with signage', () => {
+    expect(effectiveSignage(settings, t('STANDARD'), now)).toEqual({ showDate: true, announcements: [{ id: 'a', textAr: 'نص', textEn: 'text' }, { id: 'e', textAr: 'اليوم', textEn: '' }] });
+  });
+  it('is empty on plans without signage or after expiry', () => {
+    expect(effectiveSignage(settings, t('BASIC'), now)).toEqual({ showDate: false, announcements: [] });
+    expect(effectiveSignage(settings, t('PRO', new Date(now.getTime() - 30 * day)), now)).toEqual({ showDate: false, announcements: [] });
   });
 });

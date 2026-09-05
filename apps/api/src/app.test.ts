@@ -539,3 +539,58 @@ describe('branding: gated by plan, filtered on public info', () => {
     expect((stored.settings as { branding: { primary: string } }).branding.primary).toBe('#123456');
   });
 });
+
+describe('signage: date and announcements between khutbahs, by plan and by date', () => {
+  const setPlan = (plan: string) => app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: plan as never, subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+  let originalSettings: unknown;
+  beforeAll(async () => {
+    originalSettings = (await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).settings;
+  });
+  afterAll(async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', settings: originalSettings as never } });
+  });
+
+  it('Basic cannot switch on signage; Standard can', async () => {
+    await setPlan('BASIC');
+    const denied = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { signage: { showDate: true } } } });
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe('FEATURE_NOT_IN_PLAN');
+    await setPlan('STANDARD');
+    const today = new Date().toISOString().slice(0, 10);
+    const ok = await app.inject({
+      method: 'PATCH',
+      url: '/api/tenant',
+      headers: auth(adminToken),
+      payload: {
+        settings: {
+          signage: {
+            showDate: true,
+            announcements: [
+              { id: 'a1', textAr: 'درس بعد العشاء', textEn: 'Lesson after Isha', enabled: true },
+              { id: 'a2', textAr: 'انتهى', textEn: 'Expired', until: '2020-01-01', enabled: true },
+              { id: 'a3', textAr: 'مستقبلي', textEn: 'Future', from: '2999-01-01', enabled: true },
+              { id: 'a4', textAr: 'معطل', textEn: 'Disabled', enabled: false },
+              { id: 'a5', textAr: 'اليوم', textEn: 'Today only', from: today, until: today, enabled: true },
+            ],
+          },
+        },
+      },
+    });
+    expect(ok.statusCode, ok.body).toBe(200);
+  });
+
+  it('public info carries only active announcements, and nothing once the plan drops signage', async () => {
+    let pub = await app.inject({ method: 'GET', url: '/api/public/tenant/demo' });
+    expect(pub.json().tenant.signage.showDate).toBe(true);
+    expect(pub.json().tenant.signage.announcements.map((a: { id: string }) => a.id)).toEqual(['a1', 'a5']);
+    await setPlan('BASIC');
+    pub = await app.inject({ method: 'GET', url: '/api/public/tenant/demo' });
+    expect(pub.json().tenant.signage).toEqual({ showDate: false, announcements: [] });
+  });
+
+  it('rejects an announcement without any text', async () => {
+    await setPlan('STANDARD');
+    const bad = await app.inject({ method: 'PATCH', url: '/api/tenant', headers: auth(adminToken), payload: { settings: { signage: { announcements: [{ id: 'x', textAr: ' ', textEn: '' }] } } } });
+    expect(bad.statusCode).toBe(400);
+  });
+});

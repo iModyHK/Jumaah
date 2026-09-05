@@ -58,8 +58,31 @@ export const brandingSchema = z
   .strict();
 export type Branding = z.infer<typeof brandingSchema>;
 
+/** One announcement shown on screens between khutbahs; either text may be empty but not both. */
+export const announcementSchema = z
+  .object({
+    id: z.string().min(1).max(40),
+    textAr: z.string().max(300).default(''),
+    textEn: z.string().max(300).default(''),
+    /** ISO dates (YYYY-MM-DD) bounding when it shows; open-ended when missing. */
+    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+    until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+    enabled: z.boolean().default(true),
+  })
+  .refine((a) => a.textAr.trim() || a.textEn.trim(), { message: 'Announcement text is required' });
+/** Screens between khutbahs (paid editions): date line and announcements, stored in tenant.settings.signage. */
+export const signageSchema = z
+  .object({
+    showDate: z.boolean().optional(),
+    announcements: z.array(announcementSchema).max(20).optional(),
+  })
+  .strict();
+export type Signage = z.infer<typeof signageSchema>;
+export type Announcement = z.infer<typeof announcementSchema>;
+
 export const tenantSettingsSchema = z.object({
   branding: brandingSchema.optional(),
+  signage: signageSchema.optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),
   prayerTimes: z

@@ -6,6 +6,7 @@ import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 import { BrandingCard } from '../components/BrandingCard';
+import { SignageCard } from '../components/SignageCard';
 import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../components/Field';
 import { LanguagePicker } from '../components/LanguagePicker';
 import { Card, PageHeader } from '../components/PageHeader';
@@ -174,6 +175,7 @@ export function SettingsPage() {
         </Card>
 
         <BrandingCard tenant={tenant.data} />
+        <SignageCard tenant={tenant.data} />
 
         <Card
           title={t('settings.languages')}

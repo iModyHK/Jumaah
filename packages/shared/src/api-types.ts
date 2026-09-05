@@ -11,6 +11,7 @@ import type {
   WebhookEvent,
 } from './constants.js';
 import type { LiveKhutbah, TenantPublicInfo } from './socket-events.js';
+import type { BillingCycle, InvoiceKind, InvoiceStatus, SponsorshipStatus } from './billing.js';
 
 export interface ApiError {
   error: { code: string; message: string; details?: unknown };
@@ -404,4 +405,122 @@ export interface WebhookDto {
   lastDeliveredAt: string | null;
   failures: number;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Billing (hosted edition): invoices, sponsorships
+// ---------------------------------------------------------------------------
+
+export interface InvoiceLine {
+  description: string;
+  descriptionAr: string;
+  quantity: number;
+  /** halalas */
+  unitPrice: number;
+  /** halalas */
+  amount: number;
+}
+
+export interface InvoiceDto {
+  id: string;
+  number: string;
+  kind: InvoiceKind;
+  status: InvoiceStatus;
+  tenantId: string | null;
+  organisationId: string | null;
+  sponsorshipId: string | null;
+  plan: SubscriptionPlan | null;
+  cycle: BillingCycle | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  currency: string;
+  subtotal: number;
+  vatRate: number;
+  vat: number;
+  total: number;
+  lines: InvoiceLine[];
+  billTo: { name: string; vatNumber: string | null; address: string | null; email: string | null };
+  issuedAt: string;
+  dueAt: string;
+  paidAt: string | null;
+  paymentProvider: string | null;
+  /** Hosted payment page, when a gateway is configured and the invoice is open. */
+  paymentUrl: string | null;
+  /** Public, printable invoice page (number + secret token). */
+  viewUrl: string;
+  note: string | null;
+  customerName: string | null;
+  customerSlug: string | null;
+}
+
+export interface SellerInfoDto {
+  name: string;
+  vatNumber: string | null;
+  address: string | null;
+  iban: string | null;
+  bank: string | null;
+  vatRate: number;
+  currency: string;
+  provider: 'manual' | 'moyasar';
+}
+
+export interface BillingSettingsDto {
+  cycle: BillingCycle;
+  billingName: string | null;
+  billingVatNumber: string | null;
+  billingAddress: string | null;
+  billingEmail: string | null;
+}
+
+export interface BillingOverviewDto {
+  /** false on self-hosted servers: nothing is billed there. */
+  applies: boolean;
+  seller: SellerInfoDto;
+  /** Monthly list prices in SAR. */
+  prices: Record<SubscriptionPlan, number>;
+  subscription: { plan: SubscriptionPlan; status: SubscriptionStatus; endsAt: string | null };
+  organisation: { id: string; name: string } | null;
+  settings: BillingSettingsDto;
+  invoices: InvoiceDto[];
+}
+
+export interface SponsorshipDto {
+  id: string;
+  sponsorName: string;
+  sponsorEmail: string;
+  sponsorPhone: string | null;
+  mosqueName: string | null;
+  message: string | null;
+  mosques: number;
+  status: SponsorshipStatus;
+  applied: Array<{ tenantId: string; tenantName: string; at: string }>;
+  lang: 'ar' | 'en';
+  createdAt: string;
+  invoice: InvoiceDto | null;
+}
+
+export interface PlatformBillingDto {
+  applies: boolean;
+  seller: SellerInfoDto;
+  open: InvoiceDto[];
+  recentPaid: InvoiceDto[];
+  sponsorships: SponsorshipDto[];
+  totals: { openHalalas: number; paidThisMonthHalalas: number; month: string };
+}
+
+export interface SponsorResultDto {
+  invoiceNumber: string;
+  total: number;
+  vat: number;
+  currency: string;
+  viewUrl: string;
+  paymentUrl: string | null;
+  seller: SellerInfoDto;
+}
+
+export interface PublicInvoiceDto {
+  invoice: InvoiceDto;
+  seller: SellerInfoDto;
+  /** ZATCA phase-one QR payload (base64 TLV) once the seller has a VAT number. */
+  qr: string | null;
 }

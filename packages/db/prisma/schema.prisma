@@ -35,6 +35,28 @@ enum SubscriptionStatus {
   SUSPENDED
 }
 
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+enum InvoiceKind {
+  SUBSCRIPTION
+  SPONSORSHIP
+}
+
+enum SponsorshipStatus {
+  PENDING
+  PAID
+  APPLIED
+}
+
 enum KhutbahStatus {
   DRAFT
   TRANSLATING
@@ -124,6 +146,12 @@ model Tenant {
   customDomainVerifiedAt DateTime?
   /// Hosted edition: the organisation account this mosque belongs to (one login managing several mosques).
   organisationId        String?
+  /// Billing (hosted edition): the cycle and the details printed on invoices.
+  billingCycle          BillingCycle       @default(MONTHLY)
+  billingName           String?
+  billingVatNumber      String?
+  billingAddress        String?
+  billingEmail          String?
   isActive              Boolean            @default(true)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
@@ -148,6 +176,7 @@ model Tenant {
   apiKeys         ApiKey[]
   webhooks        Webhook[]
   networkTranslations NetworkTranslation[]
+  invoices        Invoice[]
 
   @@index([organisationId])
 }
@@ -218,11 +247,77 @@ model Organisation {
   name       String
   slug       String   @unique
   maxTenants Int      @default(10)
+  /// Billing: organisations are invoiced as one customer (yearly by default).
+  billingCycle     BillingCycle @default(YEARLY)
+  billingName      String?
+  billingVatNumber String?
+  billingAddress   String?
+  billingEmail     String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  tenants Tenant[]
-  admins  User[]
+  tenants  Tenant[]
+  admins   User[]
+  invoices Invoice[]
+}
+
+/// An invoice (hosted edition): a subscription renewal for a mosque or an organisation, or a sponsorship. Amounts are
+/// halalas. The access token makes the public invoice link (/display/invoice/<number>?t=…) unguessable.
+model Invoice {
+  id              String        @id @default(cuid())
+  number          String        @unique
+  kind            InvoiceKind
+  status          InvoiceStatus @default(OPEN)
+  tenantId        String?
+  organisationId  String?
+  sponsorshipId   String?       @unique
+  plan            SubscriptionPlan?
+  cycle           BillingCycle?
+  periodStart     DateTime?
+  periodEnd       DateTime?
+  currency        String        @default("SAR")
+  subtotal        Int
+  vatRate         Float         @default(0)
+  vat             Int
+  total           Int
+  lines           Json
+  billTo          Json
+  accessToken     String        @unique
+  issuedAt        DateTime      @default(now())
+  dueAt           DateTime
+  paidAt          DateTime?
+  paymentProvider String?
+  paymentRef      String?
+  paymentUrl      String?
+  note            String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant       Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  organisation Organisation? @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  sponsorship  Sponsorship?  @relation(fields: [sponsorshipId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([status, dueAt])
+}
+
+/// Sponsor a mosque: a donor pays a year of Standard for N mosques; each seat is applied to a mosque by the platform.
+model Sponsorship {
+  id           String            @id @default(cuid())
+  sponsorName  String
+  sponsorEmail String
+  sponsorPhone String?
+  mosqueName   String?
+  message      String?
+  mosques      Int               @default(1)
+  lang         String            @default("ar")
+  status       SponsorshipStatus @default(PENDING)
+  /// [{ tenantId, tenantName, at }] one entry per applied seat
+  applied      Json              @default("[]")
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  invoice Invoice?
 }
 
 /// Platform-AI metering for the hosted edition: one row per job or relay call and language.

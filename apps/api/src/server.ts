@@ -4,6 +4,7 @@ import { createPrisma, encryptSecret, apiKeyHint } from '@jumaah/db';
 import { loadConfig } from './config.js';
 import { buildApp } from './app.js';
 import { createRedis } from './lib/redis.js';
+import { startBillingScheduler } from './services/billing.service.js';
 
 /** Load the repository-root .env in development (Docker passes real env vars; nothing is overridden). */
 function loadDotEnv() {
@@ -36,6 +37,8 @@ async function main() {
   await bootstrapGlobalProviders(db, config, app.log);
 
   await app.listen({ port: config.API_PORT, host: config.API_HOST });
+  // Hosted edition: renewal invoices and overdue checks run in the background.
+  startBillingScheduler(app.ctx);
   app.log.info({ mode: config.DEPLOYMENT_MODE, version: config.IMAGE_TAG }, `Jumaah API listening on ${config.API_HOST}:${config.API_PORT}`);
 
   const shutdown = async (signal: string) => {

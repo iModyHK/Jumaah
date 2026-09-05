@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PRAYER_METHODS } from './prayer-times.js';
+import { BILLING_CYCLES } from './billing.js';
 import {
   ORG_MAX_TENANTS,
   WEBHOOK_EVENTS,
@@ -181,6 +182,27 @@ export const createWebhookSchema = z.object({
   enabled: z.boolean().default(true),
 });
 export const updateWebhookSchema = createWebhookSchema.partial();
+
+// ---------- Billing (hosted edition) ----------
+export const billingSettingsSchema = z.object({
+  cycle: z.enum(BILLING_CYCLES),
+  billingName: z.string().max(160).optional(),
+  billingVatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').optional(),
+  billingAddress: z.string().max(300).optional(),
+  billingEmail: z.string().email().max(200).optional(),
+});
+export const sponsorSchema = z.object({
+  sponsorName: z.string().min(2).max(160),
+  sponsorEmail: z.string().email().max(200),
+  sponsorPhone: z.string().max(40).optional(),
+  mosques: z.number().int().min(1).max(100).default(1),
+  mosqueName: z.string().max(160).optional(),
+  message: z.string().max(1000).optional(),
+  lang: z.enum(['ar', 'en']).default('ar'),
+  turnstileToken: z.string().max(4096).optional(),
+});
+export const markPaidSchema = z.object({ reference: z.string().max(200).optional() });
+export const applySponsorshipSchema = z.object({ tenantId: idSchema });
 
 export const tenantLanguagesSchema = z.object({
   languages: z.array(z.object({ code: langCode, enabled: z.boolean().default(true) })).max(30),

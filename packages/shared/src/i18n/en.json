@@ -716,5 +716,65 @@
     "docsAuth": "Send the key as a bearer token on the same address as this admin. Read-only keys accept GET requests only.",
     "docsEndpoints": "Common endpoints (every endpoint the admin uses is available):",
     "docsWebhooks": "Webhook deliveries look like this:"
+  },
+  "billing": {
+    "sar": "SAR",
+    "details": "Billing details",
+    "cycle": "Billing cycle",
+    "cycles": {
+      "MONTHLY": "Monthly · SAR {{price}} a month",
+      "YEARLY": "Yearly · SAR {{price}} a year (two months free)"
+    },
+    "billingName": "Name on invoices",
+    "vatNumber": "VAT number",
+    "address": "Address",
+    "email": "Billing email",
+    "vatHint": "VAT of {{rate}}% is added to invoices.",
+    "noVatHint": "No VAT is charged yet; it is added once the company is VAT-registered.",
+    "invoices": "Invoices",
+    "noInvoices": "No invoices yet.",
+    "number": "Number",
+    "period": "Period",
+    "total": "Total",
+    "due": "Due",
+    "view": "View",
+    "pay": "Pay",
+    "kinds": {
+      "SUBSCRIPTION": "Subscription",
+      "SPONSORSHIP": "Sponsorship"
+    },
+    "statuses": {
+      "OPEN": "Unpaid",
+      "PAID": "Paid",
+      "VOID": "Void"
+    },
+    "viaOrganisation": "This mosque is billed through its organisation ({{name}}).",
+    "bankTransfer": "Bank transfer",
+    "bankHint": "Quote the invoice number in the transfer; the invoice is marked paid within one working day.",
+    "noPaymentMethod": "No payment method is configured yet. Please contact us.",
+    "platformTitle": "Billing",
+    "notCloud": "Billing only applies to Jumaah Cloud.",
+    "runNow": "Run billing now",
+    "runDone": "Issued {{issued}} invoice(s), {{overdue}} mosque(s) marked past due.",
+    "openTotal": "Open invoices",
+    "paidThisMonth": "Paid this month",
+    "provider": "Payment method",
+    "notRegistered": "Not VAT-registered",
+    "openInvoices": "Open invoices",
+    "overdue": "Overdue",
+    "markPaid": "Mark paid",
+    "void": "Void",
+    "sponsorships": "Sponsorships",
+    "noSponsorships": "No sponsorships yet.",
+    "seats": "{{used}} of {{total}} mosques applied",
+    "requestedMosque": "Requested mosque",
+    "sponsorStatuses": {
+      "PENDING": "Awaiting payment",
+      "PAID": "Paid · to apply",
+      "APPLIED": "Applied"
+    },
+    "chooseMosque": "Choose a mosque…",
+    "apply": "Apply a year",
+    "recentPaid": "Recent payments"
   }
 }

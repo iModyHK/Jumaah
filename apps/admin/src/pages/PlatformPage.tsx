@@ -5,6 +5,7 @@ import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { Field, TextInput } from '../components/Field';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
+import { PlatformBillingCard } from '../components/PlatformBillingCard';
 import { useToast } from '../components/Toast';
 import { fmtDate } from '../lib/format';
 
@@ -70,6 +71,7 @@ export function PlatformPage() {
         </Field>
       </Card>
       <AiUsageOverview />
+      <PlatformBillingCard />
     </div>
   );
 }

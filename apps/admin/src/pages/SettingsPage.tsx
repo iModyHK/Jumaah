@@ -6,6 +6,7 @@ import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 import { ArchiveCard } from '../components/ArchiveCard';
+import { BillingCard } from '../components/BillingCard';
 import { BrandingCard } from '../components/BrandingCard';
 import { DomainCard } from '../components/DomainCard';
 import { NetworkCard } from '../components/NetworkCard';
@@ -14,7 +15,6 @@ import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../compon
 import { LanguagePicker } from '../components/LanguagePicker';
 import { Card, PageHeader } from '../components/PageHeader';
 import { useToast } from '../components/Toast';
-import { fmtDate } from '../lib/format';
 import { clean, validate } from '../lib/forms';
 
 const PRAYERS = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumuah'] as const;
@@ -247,28 +247,7 @@ export function SettingsPage() {
           <LanguagePicker value={enabledLangs} onChange={setLanguages} />
         </Card>
 
-        <Card title={t('settings.subscription')}>
-          <dl className="grid gap-3 text-sm md:grid-cols-4">
-            <div>
-              <dt className="j-muted text-xs">{t('settings.plan')}</dt>
-              <dd className="font-semibold">{t(`tenants.plans.${tenant.data.plan}`)}</dd>
-            </div>
-            <div>
-              <dt className="j-muted text-xs">{t('common.status')}</dt>
-              <dd className="font-semibold">{t(`tenants.subscriptionStatus.${tenant.data.subscriptionStatus}`)}</dd>
-            </div>
-            <div>
-              <dt className="j-muted text-xs">{t('tenants.subscriptionEndsAt')}</dt>
-              <dd>{fmtDate(tenant.data.subscriptionEndsAt)}</dd>
-            </div>
-            <div>
-              <dt className="j-muted text-xs">{t('tenants.slug')}</dt>
-              <dd>
-                <code className="j-kbd">{tenant.data.slug}</code>
-              </dd>
-            </div>
-          </dl>
-        </Card>
+        <BillingCard tenant={tenant.data} />
       </div>
     </div>
   );

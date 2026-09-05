@@ -919,3 +919,138 @@ describe('shared translation network, API keys and webhooks (Pro)', () => {
     hookId = '';
   });
 });
+
+describe('billing: renewal invoices, payments, sponsorships (hosted edition)', () => {
+  let originalEndsAt: Date | null = null;
+  let originalCycle = 'MONTHLY';
+  let renewalId = '';
+  let sponsorInvoiceNumber = '';
+  let sponsorToken = '';
+  let sponsorshipId = '';
+
+  beforeAll(async () => {
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    originalEndsAt = t.subscriptionEndsAt;
+    originalCycle = t.billingCycle;
+  });
+  afterAll(async () => {
+    await app.ctx.db.invoice.deleteMany({ where: { OR: [{ tenantId }, { kind: 'SPONSORSHIP' }] } });
+    await app.ctx.db.sponsorship.deleteMany({});
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: originalEndsAt, billingCycle: originalCycle as never, billingVatNumber: null } });
+  });
+
+  it('the mosque sets its billing details and cycle', async () => {
+    const before = await app.inject({ method: 'GET', url: '/api/billing', headers: auth(adminToken) });
+    expect(before.statusCode, before.body).toBe(200);
+    expect(before.json()).toMatchObject({ applies: true, seller: { currency: 'SAR' }, prices: { PRO: 399 } });
+    const put = await app.inject({ method: 'PUT', url: '/api/billing', headers: auth(adminToken), payload: { cycle: 'YEARLY', billingName: 'جمعية المسجد التجريبي', billingVatNumber: '300000000000003', billingEmail: 'finance@demo.mosque' } });
+    expect(put.statusCode, put.body).toBe(200);
+    expect(put.json()).toMatchObject({ cycle: 'YEARLY', billingVatNumber: '300000000000003' });
+    expect((await app.inject({ method: 'PUT', url: '/api/billing', headers: auth(adminToken), payload: { cycle: 'WEEKLY' } })).statusCode).toBe(400);
+  });
+
+  it('a renewal invoice is issued inside the lead window, once, for the next period at the yearly price', async () => {
+    const endsAt = new Date(Date.now() + 3 * 86_400_000);
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: endsAt } });
+    const run = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(run.statusCode, run.body).toBe(200);
+    expect(run.json().issued).toBeGreaterThanOrEqual(1);
+    const list = await app.inject({ method: 'GET', url: '/api/billing', headers: auth(adminToken) });
+    const open = (list.json().invoices as Array<{ id: string; status: string; kind: string; total: number; subtotal: number; vat: number; cycle: string; periodStart: string; periodEnd: string; number: string; viewUrl: string }>).find((i) => i.status === 'OPEN' && i.kind === 'SUBSCRIPTION');
+    expect(open).toBeTruthy();
+    renewalId = open!.id;
+    expect(open!.cycle).toBe('YEARLY');
+    expect(open!.subtotal).toBe(399000);
+    expect(open!.vat).toBe(0);
+    expect(open!.total).toBe(399000);
+    expect(open!.number).toMatch(/^JC-\d{4}-\d{5}$/);
+    expect(new Date(open!.periodStart).toISOString().slice(0, 10)).toBe(endsAt.toISOString().slice(0, 10));
+    expect(new Date(open!.periodEnd).getUTCFullYear()).toBe(endsAt.getUTCFullYear() + 1);
+    // running again does not duplicate
+    await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    const again = await app.inject({ method: 'GET', url: '/api/billing', headers: auth(adminToken) });
+    expect((again.json().invoices as Array<{ status: string; kind: string }>).filter((i) => i.status === 'OPEN' && i.kind === 'SUBSCRIPTION')).toHaveLength(1);
+    // the public invoice page needs the token
+    const url = new URL(open!.viewUrl);
+    const token = url.searchParams.get('t')!;
+    expect((await app.inject({ method: 'GET', url: `/api/public/invoices/${open!.number}` })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: `/api/public/invoices/${open!.number}?t=wrong` })).statusCode).toBe(404);
+    const pub = await app.inject({ method: 'GET', url: `/api/public/invoices/${open!.number}?t=${token}` });
+    expect(pub.statusCode, pub.body).toBe(200);
+    expect(pub.json().invoice.billTo).toMatchObject({ name: 'جمعية المسجد التجريبي', vatNumber: '300000000000003' });
+    // manual provider: the pay endpoint returns the invoice without a link and the bank details
+    const pay = await app.inject({ method: 'POST', url: `/api/billing/invoices/${renewalId}/pay`, headers: auth(adminToken) });
+    expect(pay.statusCode, pay.body).toBe(200);
+    expect(pay.json().invoice.paymentUrl).toBeNull();
+    expect(pay.json().seller.provider).toBe('manual');
+  });
+
+  it('marking the invoice paid extends the paid-until date to the end of the period and no further', async () => {
+    const paid = await app.inject({ method: 'POST', url: `/api/platform/invoices/${renewalId}/mark-paid`, headers: auth(superToken), payload: { reference: 'TRX-1' } });
+    expect(paid.statusCode, paid.body).toBe(200);
+    expect(paid.json()).toMatchObject({ status: 'PAID', paymentProvider: 'manual' });
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    const inv = await app.ctx.db.invoice.findUniqueOrThrow({ where: { id: renewalId } });
+    expect(t.subscriptionEndsAt?.toISOString()).toBe(inv.periodEnd?.toISOString());
+    expect(t.subscriptionStatus).toBe('ACTIVE');
+    // paying twice is harmless, voiding a paid invoice is refused
+    expect((await app.inject({ method: 'POST', url: `/api/platform/invoices/${renewalId}/mark-paid`, headers: auth(superToken), payload: {} })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/api/platform/invoices/${renewalId}/void`, headers: auth(superToken) })).statusCode).toBe(409);
+    // the overview lists it among the recent payments
+    const overview = await app.inject({ method: 'GET', url: '/api/platform/billing', headers: auth(superToken) });
+    expect(overview.statusCode).toBe(200);
+    expect((overview.json().recentPaid as Array<{ id: string }>).some((i) => i.id === renewalId)).toBe(true);
+    expect((await app.inject({ method: 'GET', url: '/api/platform/billing', headers: auth(adminToken) })).statusCode).toBe(403);
+  });
+
+  it('an invoice unpaid after the due date and grace marks the mosque past due', async () => {
+    const stale = await app.ctx.db.invoice.create({
+      data: { number: `JC-1999-99999`, kind: 'SUBSCRIPTION', tenantId, plan: 'PRO', cycle: 'MONTHLY', periodStart: new Date('1999-01-01'), periodEnd: new Date('1999-02-01'), subtotal: 1, vatRate: 0, vat: 0, total: 1, lines: [], billTo: { name: 'x' }, accessToken: 'stale-token', dueAt: new Date('1999-01-01') },
+    });
+    const run = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(run.json().overdue).toBeGreaterThanOrEqual(1);
+    expect((await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).subscriptionStatus).toBe('PAST_DUE');
+    const v = await app.inject({ method: 'POST', url: `/api/platform/invoices/${stale.id}/void`, headers: auth(superToken) });
+    expect(v.json().status).toBe('VOID');
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { subscriptionStatus: 'ACTIVE' } });
+  });
+
+  it('a sponsor pays for two mosques; the seats are applied one mosque at a time', async () => {
+    const bad = await app.inject({ method: 'POST', url: '/api/public/sponsor', payload: { sponsorName: 'A', sponsorEmail: 'not-an-email', mosques: 2 } });
+    expect(bad.statusCode).toBe(400);
+    const res = await app.inject({ method: 'POST', url: '/api/public/sponsor', payload: { sponsorName: 'Al Khair Foundation', sponsorEmail: 'giving@alkhair.example', sponsorPhone: '+966500000000', mosques: 2, mosqueName: 'مسجد النور', lang: 'en' } });
+    expect(res.statusCode, res.body).toBe(201);
+    expect(res.json()).toMatchObject({ total: 398000, vat: 0, currency: 'SAR', paymentUrl: null });
+    sponsorInvoiceNumber = res.json().invoiceNumber;
+    sponsorToken = new URL(res.json().viewUrl).searchParams.get('t')!;
+    const pub = await app.inject({ method: 'GET', url: `/api/public/invoices/${sponsorInvoiceNumber}?t=${sponsorToken}` });
+    expect(pub.statusCode).toBe(200);
+    expect(pub.json().invoice.lines[0].quantity).toBe(2);
+    expect(pub.json().qr).toBeNull();
+
+    const overview = await app.inject({ method: 'GET', url: '/api/platform/billing', headers: auth(superToken) });
+    const s = (overview.json().sponsorships as Array<{ id: string; status: string; invoice: { id: string } }>).find((x) => x.invoice?.id === pub.json().invoice.id)!;
+    expect(s.status).toBe('PENDING');
+    sponsorshipId = s.id;
+    // cannot apply before payment
+    expect((await app.inject({ method: 'POST', url: `/api/platform/sponsorships/${sponsorshipId}/apply`, headers: auth(superToken), payload: { tenantId } })).statusCode).toBe(409);
+    await app.inject({ method: 'POST', url: `/api/platform/invoices/${pub.json().invoice.id}/mark-paid`, headers: auth(superToken), payload: { reference: 'TRX-2' } });
+
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'BASIC', subscriptionEndsAt: null } });
+    const apply = await app.inject({ method: 'POST', url: `/api/platform/sponsorships/${sponsorshipId}/apply`, headers: auth(superToken), payload: { tenantId } });
+    expect(apply.statusCode, apply.body).toBe(200);
+    expect(apply.json()).toMatchObject({ status: 'PAID', applied: [{ tenantId }] });
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    expect(t.plan).toBe('STANDARD');
+    expect(t.subscriptionStatus).toBe('ACTIVE');
+    expect(t.subscriptionEndsAt!.getUTCFullYear()).toBe(new Date().getUTCFullYear() + 1);
+    // the second seat goes to the same mosque here (tests have one mosque); a third is refused
+    expect((await app.inject({ method: 'POST', url: `/api/platform/sponsorships/${sponsorshipId}/apply`, headers: auth(superToken), payload: { tenantId } })).json().status).toBe('APPLIED');
+    expect((await app.inject({ method: 'POST', url: `/api/platform/sponsorships/${sponsorshipId}/apply`, headers: auth(superToken), payload: { tenantId } })).statusCode).toBe(409);
+  });
+
+  it('gateway callbacks never change anything without confirmation from the gateway', async () => {
+    expect((await app.inject({ method: 'POST', url: '/api/public/billing/moyasar/webhook', payload: { secret_token: 'wrong', data: { id: 'x' } } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/public/billing/moyasar/callback?invoice=nope' })).statusCode).toBe(404);
+  });
+});

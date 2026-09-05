@@ -3,7 +3,8 @@ export type Route =
   | { name: 'screen'; token: string }
   | { name: 'mobile'; slug: string }
   | { name: 'poster'; slug: string; size: 'A4' | 'A3' }
-  | { name: 'archive'; slug: string; khutbahId: string | null };
+  | { name: 'archive'; slug: string; khutbahId: string | null }
+  | { name: 'invoice'; number: string; token: string; paid: boolean };
 
 /** Base path the app is served from (Vite `base`), without trailing slash. */
 export function basePath(): string {
@@ -21,6 +22,7 @@ export function basePath(): string {
  *   /display/poster/<slug>    -> printable QR poster (?size=A4|A3)
  *   /display/a/<slug>         -> public archive of past khutbahs (paid editions, switched on by the mosque)
  *   /display/a/<slug>/<id>    -> one archived khutbah, readable and printable in any of its languages
+ *   /display/invoice/<number> -> a printable invoice (?t=<token> is the secret that opens it)
  */
 export function parseRoute(pathname: string = window.location.pathname, search: string = window.location.search): Route {
   const base = basePath();
@@ -35,6 +37,10 @@ export function parseRoute(pathname: string = window.location.pathname, search: 
   if (parts[0] === 'poster' && parts[1]) {
     const size = new URLSearchParams(search).get('size') === 'A3' ? 'A3' : 'A4';
     return { name: 'poster', slug: safeDecode(parts[1]), size };
+  }
+  if (parts[0] === 'invoice' && parts[1]) {
+    const q = new URLSearchParams(search);
+    return { name: 'invoice', number: safeDecode(parts[1]), token: q.get('t') ?? '', paid: q.get('paid') === '1' };
   }
   if (parts[0] === 'a' && parts[1]) {
     return { name: 'archive', slug: safeDecode(parts[1]), khutbahId: parts[2] ? safeDecode(parts[2]) : null };

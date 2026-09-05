@@ -43,6 +43,21 @@ const schema = z.object({
   BACKUP_DIR: z.string().default('./backups'),
   BACKUP_KEEP: z.coerce.number().int().default(20),
   STATIC_DIR: z.string().optional(),
+  // ---- Billing (hosted edition) ----
+  /** 0 until the company is VAT-registered, then 0.15. */
+  BILLING_VAT_RATE: z.coerce.number().min(0).max(1).default(0),
+  BILLING_VAT_NUMBER: z.string().optional(),
+  BILLING_SELLER_NAME: z.string().default('Jumaah Cloud'),
+  BILLING_SELLER_ADDRESS: z.string().optional(),
+  BILLING_IBAN: z.string().optional(),
+  BILLING_BANK: z.string().optional(),
+  BILLING_INTERVAL_MINUTES: z.coerce.number().int().min(5).default(360),
+  /** manual = bank transfer, the super admin marks invoices paid; moyasar = hosted card / mada / Apple Pay page. */
+  PAYMENT_PROVIDER: z.enum(['manual', 'moyasar']).default('manual'),
+  MOYASAR_SECRET_KEY: z.string().optional(),
+  MOYASAR_WEBHOOK_SECRET: z.string().optional(),
+  /** Cloudflare Turnstile secret for the public sponsor form (www.jumaah.net posts to this API). */
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 export type Config = ReturnType<typeof loadConfig>;

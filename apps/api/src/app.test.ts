@@ -556,7 +556,8 @@ describe('signage: date and announcements between khutbahs, by plan and by date'
     expect(denied.statusCode).toBe(403);
     expect(denied.json().error.code).toBe('FEATURE_NOT_IN_PLAN');
     await setPlan('STANDARD');
-    const today = new Date().toISOString().slice(0, 10);
+    // "Today" as the mosque sees it (Asia/Riyadh), not UTC: the two differ for three hours every night.
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const ok = await app.inject({
       method: 'PATCH',
       url: '/api/tenant',

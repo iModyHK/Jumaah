@@ -12,6 +12,7 @@ import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.
 import { assertArchiveAllowed, assertBrandingAllowed, assertNetworkAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { createTenantWithAdmin } from '../services/tenant.service.js';
+import { forgetCustomDomain } from '../services/domain.service.js';
 
 /** Super-admin tenant management + current-tenant settings. */
 export async function tenantRoutes(app: FastifyInstance): Promise<void> {
@@ -68,8 +69,10 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     const id = idParam(request.params);
     const t = await db.tenant.findUnique({ where: { id } });
     if (!t) throw notFound('Tenant');
-    await db.tenant.update({ where: { id }, data: { isActive: false, subscriptionStatus: 'SUSPENDED' } });
-    await audit(db, id, actorOf(request), 'tenant.suspend', 'Tenant', id, { isActive: true }, { isActive: false });
+    // A suspended mosque releases its custom domain so another mosque can use it; keys and sockets stop through isActive.
+    await db.tenant.update({ where: { id }, data: { isActive: false, subscriptionStatus: 'SUSPENDED', customDomain: null, customDomainVerifiedAt: null } });
+    await forgetCustomDomain(app.ctx, t.customDomain);
+    await audit(db, id, actorOf(request), 'tenant.suspend', 'Tenant', id, { isActive: true, customDomain: t.customDomain }, { isActive: false, customDomain: null });
     return { ok: true };
   });
 

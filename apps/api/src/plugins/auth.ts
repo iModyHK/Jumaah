@@ -32,6 +32,8 @@ export async function authPlugin(app: FastifyInstance): Promise<void> {
     if (looksLikeApiKey(token)) {
       const key = await resolveApiKey(app.ctx, token);
       if (!key) throw unauthorized('Invalid or revoked API key');
+      // At a mosque address (or its custom domain) the key must belong to that mosque.
+      if (request.hostSlug && request.hostSlug !== key.slug) throw unauthorized('This API key belongs to another mosque');
       if (key.readOnly && request.method !== 'GET' && request.method !== 'HEAD') throw forbidden('This API key is read-only');
       if (API_KEY_FORBIDDEN.test(request.url)) throw forbidden('Not available to API keys');
       request.user = { id: `key:${key.id}`, email: `apikey:${key.name}`, role: 'MOSQUE_ADMIN', tenantId: key.tenantId, organisationId: null, apiKey: { id: key.id, readOnly: key.readOnly } };

@@ -12,13 +12,15 @@ export interface ResolvedApiKey {
   tenantId: string;
   name: string;
   readOnly: boolean;
+  /** The mosque's address label: a key only works at its own host. */
+  slug: string;
 }
 
 const CACHE_TTL_S = 60;
 const cacheKey = (hash: string) => `apikey:${hash}`;
 
 /** Paths an API key may never call, whatever its scope. */
-export const API_KEY_FORBIDDEN = /^\/api\/(api-keys|webhooks|users|auth|tenants|tenant\/domain|organisations?|platform|backups|sync|network)(\/|$|\?)/;
+export const API_KEY_FORBIDDEN = /^\/api\/(api-keys|webhooks|users|auth|tenants|tenant\/domain|organisations?|platform|backups|sync|network|billing)(\/|$|\?)/;
 
 export function looksLikeApiKey(token: string): boolean {
   return token.startsWith('jk_');
@@ -34,9 +36,9 @@ export async function resolveApiKey(ctx: AppContext, token: string): Promise<Res
   } catch {
     /* fall through */
   }
-  const row = await ctx.db.apiKey.findUnique({ where: { keyHash: hash }, include: { tenant: { select: { isActive: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true } } } });
+  const row = await ctx.db.apiKey.findUnique({ where: { keyHash: hash }, include: { tenant: { select: { slug: true, isActive: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true } } } });
   const ok = !!row && !row.revokedAt && row.tenant.isActive && row.tenant.subscriptionStatus !== 'SUSPENDED' && tenantFeatures(row.tenant).features.api;
-  const value = ok && row ? { id: row.id, tenantId: row.tenantId, name: row.name, readOnly: row.readOnly } : null;
+  const value = ok && row ? { id: row.id, tenantId: row.tenantId, slug: row.tenant.slug, name: row.name, readOnly: row.readOnly } : null;
   await ctx.redis.set(key, value ? JSON.stringify(value) : '', 'EX', CACHE_TTL_S).catch(() => undefined);
   return value;
 }

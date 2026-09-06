@@ -878,6 +878,10 @@ describe('shared translation network, API keys and webhooks (Pro)', () => {
     expect(write.statusCode).toBe(403);
     expect((await app.inject({ method: 'GET', url: '/api/api-keys', headers: keyAuth(readKey) })).statusCode).toBe(403);
     expect((await app.inject({ method: 'GET', url: '/api/users', headers: keyAuth(readKey) })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'GET', url: '/api/billing', headers: keyAuth(readKey) })).statusCode).toBe(403);
+    // A key works at its own mosque address only.
+    expect((await app.inject({ method: 'GET', url: '/api/khutbahs', headers: { ...keyAuth(readKey), host: 'demo.jumaah.test' } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: '/api/khutbahs', headers: { ...keyAuth(readKey), host: 'other.jumaah.test' } })).statusCode).toBe(401);
 
     const rw = await app.inject({ method: 'POST', url: '/api/api-keys', headers: auth(adminToken), payload: { name: 'Writer', readOnly: false } });
     expect(rw.statusCode, rw.body).toBe(201);

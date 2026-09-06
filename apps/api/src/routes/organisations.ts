@@ -43,9 +43,11 @@ export async function organisationRoutes(app: FastifyInstance): Promise<void> {
   /** Deleting detaches its mosques and admins (foreign keys are SET NULL); the mosques keep their plan. */
   app.delete('/organisations/:id', { preHandler: superOnly }, async (request) => {
     const id = idParam(request.params);
-    const before = await db.organisation.findUnique({ where: { id }, include: { _count: { select: { tenants: true } } } });
+    const before = await db.organisation.findUnique({ where: { id }, include: { _count: { select: { tenants: { where: { isActive: true } } } } } });
     if (!before) throw notFound('Organisation');
     if (before._count.tenants > 0) throw badRequest('Remove the mosques from the organisation first');
+    await db.user.updateMany({ where: { organisationId: id }, data: { organisationId: null } });
+    await db.tenant.updateMany({ where: { organisationId: id }, data: { organisationId: null } });
     await db.organisation.delete({ where: { id } });
     await forgetOrganisationMembers(app.ctx, id);
     await audit(db, null, actorOf(request), 'organisation.delete', 'Organisation', id, { name: before.name }, null);
@@ -56,7 +58,7 @@ export async function organisationRoutes(app: FastifyInstance): Promise<void> {
   app.post('/organisations/:id/tenants', { preHandler: superOnly }, async (request) => {
     const id = idParam(request.params);
     const { tenantId } = parse(organisationTenantSchema, request.body);
-    const [o, t] = await Promise.all([db.organisation.findUnique({ where: { id }, include: { _count: { select: { tenants: true } } } }), db.tenant.findUnique({ where: { id: tenantId } })]);
+    const [o, t] = await Promise.all([db.organisation.findUnique({ where: { id }, include: { _count: { select: { tenants: { where: { isActive: true } } } } } }), db.tenant.findUnique({ where: { id: tenantId } })]);
     if (!o) throw notFound('Organisation');
     if (!t) throw notFound('Tenant');
     if (t.organisationId && t.organisationId !== id) throw conflict('Mosque already belongs to another organisation');

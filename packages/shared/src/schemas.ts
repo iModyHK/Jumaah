@@ -169,7 +169,7 @@ export const createOrganisationSchema = z.object({
 export const updateOrganisationSchema = createOrganisationSchema.partial().extend({
   billingCycle: z.enum(BILLING_CYCLES).optional(),
   billingName: z.string().max(160).nullable().optional(),
-  billingVatNumber: z.string().regex(/^d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
+  billingVatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
   billingAddress: z.string().max(300).nullable().optional(),
   billingEmail: z.string().email().max(200).nullable().optional(),
 });

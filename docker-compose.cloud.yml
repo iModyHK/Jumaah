@@ -77,9 +77,23 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # The Caddy configuration comes from the checkout, so config changes need only a git pull and a restart.
+      - ./infra/caddy:/etc/caddy:ro
     depends_on:
       api:
         condition: service_healthy
+
+  # The marketing site (www.<TENANT_BASE_DOMAIN>), served through the same Caddy. Optional:
+  #   docker compose -f docker-compose.cloud.yml --profile site up -d
+  site:
+    image: malkurbi5/jumaah-site:${SITE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    profiles: [site]
+    environment:
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      TO_EMAIL: ${SITE_TO_EMAIL:-}
+      TRUST_PROXY: "1"
 
   api:
     image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.2.0}

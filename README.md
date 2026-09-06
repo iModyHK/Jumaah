@@ -117,6 +117,8 @@ Set `TENANT_BASE_DOMAIN=jumaah.net` and every mosque is reachable at `<slug>.jum
 
 Edge servers ignore all of this: without `TENANT_BASE_DOMAIN`, links keep using `PUBLIC_BASE_URL`.
 
+The marketing site can run in the same stack: set `RESEND_API_KEY`, `SITE_TO_EMAIL` and `TURNSTILE_SECRET_KEY`, point `www.<base domain>` and the bare domain at the server, and start with `--profile site`. Caddy serves `www` from the site container and redirects the bare domain to it.
+
 ### What the hosted edition adds
 
 Everything below is switched on per mosque by its plan (`PLAN_FEATURES` in `packages/shared/src/constants.ts`); a Community server simply has the free plan and the complete core.

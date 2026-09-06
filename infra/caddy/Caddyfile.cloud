@@ -19,13 +19,22 @@
 	import /etc/caddy/common.caddy
 }
 
-# The bare base domain and www redirect to the marketing site.
-{$TENANT_BASE_DOMAIN}, www.{$TENANT_BASE_DOMAIN} {
+# The bare base domain redirects to www; www is the marketing site (the "site" service of the cloud stack).
+# An exact host name wins over the wildcard above, so www never falls into the mosque site block.
+{$TENANT_BASE_DOMAIN} {
 	tls {
 		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 		resolvers 1.1.1.1
 	}
-	redir https://www.jumaah.net{uri} permanent
+	redir https://www.{$TENANT_BASE_DOMAIN}{uri} permanent
+}
+www.{$TENANT_BASE_DOMAIN} {
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers 1.1.1.1
+	}
+	encode zstd gzip
+	reverse_proxy {$SITE_UPSTREAM:site:8080}
 }
 
 # Custom domains (Pro): every other host name. The mosque points a CNAME at <slug>.<base domain>, verifies it in

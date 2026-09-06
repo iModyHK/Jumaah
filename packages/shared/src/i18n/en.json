@@ -868,6 +868,12 @@
       "SENT": "Sent",
       "SKIPPED": "Skipped",
       "FAILED": "Failed"
-    }
+    },
+    "payTest": "Check the gateway",
+    "payTestHint": "Moyasar test keys (sk_test_…) work against the same API with test cards, so the whole flow can be tried before going live. Live keys start with sk_live_.",
+    "payTestRun": "Check the Moyasar key",
+    "payOk": "The key works ({{mode}} mode).",
+    "payFailed": "Moyasar rejected the key",
+    "payNotConfigured": "No Moyasar key is set."
   }
 }

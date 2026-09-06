@@ -135,6 +135,12 @@ export function PlatformConfigCard() {
   const emails = useQuery({ queryKey: ['platform', 'emails'], queryFn: () => api.get<EmailLogDto[]>('/platform/emails', { limit: 10 }), refetchInterval: 60_000 });
   const [group, setGroup] = useState<PlatformConfigGroup>('billing');
   const [testTo, setTestTo] = useState('');
+  const [payResult, setPayResult] = useState<string | null>(null);
+  const payTest = useMutation({
+    mutationFn: () => api.post<{ configured: boolean; ok: boolean; status: number; mode: string; message: string | null }>('/platform/config/payment/test'),
+    onSuccess: (r) => setPayResult(!r.configured ? t('platformConfig.payNotConfigured') : r.ok ? t('platformConfig.payOk', { mode: r.mode }) : `${t('platformConfig.payFailed')} (${r.status}) ${r.message ?? ''}`),
+    onError: (e) => toast.error(e),
+  });
   const [testResult, setTestResult] = useState<string | null>(null);
   const test = useMutation({
     mutationFn: () => api.post<{ status: string; error: string | null; configured: boolean }>('/platform/config/email/test', { to: testTo.trim(), locale: 'ar' }),
@@ -161,6 +167,18 @@ export function PlatformConfigCard() {
             ))}
           </div>
           <GroupForm key={group} group={group} values={d.groups[group] as Values} fromPortal={d.fromPortal} secretFields={d.secretFields[group]} fields={FIELDS[group]} onSaved={(next) => qc.setQueryData(['platform', 'config'], next)} />
+          {group === 'payment' && (
+            <div className="rounded-lg p-3" style={{ border: '1px solid var(--j-border)' }}>
+              <div className="j-label">{t('platformConfig.payTest')}</div>
+              <div className="j-muted mb-2 text-xs">{t('platformConfig.payTestHint')}</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button onClick={() => payTest.mutate()} disabled={payTest.isPending}>
+                  {payTest.isPending ? <Spinner /> : t('platformConfig.payTestRun')}
+                </Button>
+                {payResult && <span className="text-sm">{payResult}</span>}
+              </div>
+            </div>
+          )}
           {group === 'email' && (
             <div className="rounded-lg p-3" style={{ border: '1px solid var(--j-border)' }}>
               <div className="j-label">{t('platformConfig.testEmail')}</div>

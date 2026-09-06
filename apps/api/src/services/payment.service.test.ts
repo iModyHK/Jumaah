@@ -37,3 +37,15 @@ describe('Moyasar integration', () => {
     expect(paymentProviderName({ provider: 'manual', moyasarSecretKey: 'sk' })).toBe('manual');
   });
 });
+
+describe('Moyasar key check', () => {
+  it('reports valid and invalid keys and the key mode', async () => {
+    const { moyasarCheckKey } = await import('./payment.service.js');
+    const ok = await moyasarCheckKey(async () => new Response('{"payments":[]}', { status: 200 }), 'sk_test_abc');
+    expect(ok).toMatchObject({ ok: true, status: 200, mode: 'test' });
+    const bad = await moyasarCheckKey(async () => new Response('{"message":"Invalid credentials"}', { status: 401 }), 'sk_live_abc');
+    expect(bad).toMatchObject({ ok: false, status: 401, mode: 'live' });
+    const down = await moyasarCheckKey(async () => { throw new Error('ECONNRESET'); }, 'weird');
+    expect(down).toMatchObject({ ok: false, status: 0, mode: 'unknown', message: 'ECONNRESET' });
+  });
+});

@@ -5,6 +5,7 @@ import { audit } from '../lib/audit.js';
 import { badRequest } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';
 import { sendEmail } from '../services/email.service.js';
+import { moyasarCheckKey } from '../services/payment.service.js';
 import { platformConfig, platformConfigDto, savePlatformGroup } from '../services/platform-config.service.js';
 import { actorOf } from './auth.js';
 
@@ -31,6 +32,13 @@ export async function platformConfigRoutes(app: FastifyInstance): Promise<void> 
     const status = await sendEmail(app.ctx, { to, locale, template: 'test', data: { sentBy: request.user!.email } });
     const last = await db.emailLog.findFirst({ where: { to: to.toLowerCase(), template: 'test' }, orderBy: { createdAt: 'desc' } });
     return { status, error: last?.error ?? null, configured: !!(await platformConfig(app.ctx)).email.host };
+  });
+
+  /** Check the Moyasar key saved in the portal (or the environment) against Moyasar's API. */
+  app.post('/platform/config/payment/test', { preHandler: superOnly }, async () => {
+    const { payment } = await platformConfig(app.ctx);
+    if (!payment.moyasarSecretKey) return { configured: false, ok: false, status: 0, mode: 'unknown', message: 'No Moyasar secret key is set' };
+    return { configured: true, ...(await moyasarCheckKey(fetch, payment.moyasarSecretKey)) };
   });
 
   /** Recent outgoing mail, newest first. */

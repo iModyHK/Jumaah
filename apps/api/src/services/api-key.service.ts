@@ -16,7 +16,6 @@ export interface ResolvedApiKey {
 
 const CACHE_TTL_S = 60;
 const cacheKey = (hash: string) => `apikey:${hash}`;
-const lastUsedWrite = new Map<string, number>();
 
 /** Paths an API key may never call, whatever its scope. */
 export const API_KEY_FORBIDDEN = /^\/api\/(api-keys|webhooks|users|auth|tenants|tenant\/domain|organisations?|platform|backups|sync|network)(\/|$|\?)/;
@@ -46,10 +45,10 @@ export async function forgetApiKey(ctx: AppContext, keyHash: string): Promise<vo
   await ctx.redis.del(cacheKey(keyHash)).catch(() => undefined);
 }
 
-/** Remember when a key was last used (at most once a minute per key). */
+/** Remember when a key was last used: at most one write a minute per key, across every API instance (Redis NX). */
 export function touchApiKey(ctx: AppContext, id: string): void {
-  const last = lastUsedWrite.get(id) ?? 0;
-  if (Date.now() - last < 60_000) return;
-  lastUsedWrite.set(id, Date.now());
-  void ctx.db.apiKey.update({ where: { id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
+  void ctx.redis
+    .set(`apikey:touch:${id}`, '1', 'EX', 60, 'NX')
+    .then((r) => (r === 'OK' ? ctx.db.apiKey.update({ where: { id }, data: { lastUsedAt: new Date() } }) : null))
+    .catch(() => undefined);
 }

@@ -56,6 +56,18 @@ export async function moyasarInvoiceState(fetchFn: FetchLike, secret: string, id
   return 'failed';
 }
 
+/** Does the secret key work? Lists one payment; 200 means the key is valid, 401 means it is not. */
+export async function moyasarCheckKey(fetchFn: FetchLike, secret: string): Promise<{ ok: boolean; status: number; mode: 'test' | 'live' | 'unknown'; message: string | null }> {
+  const mode = secret.startsWith('sk_test_') ? 'test' : secret.startsWith('sk_live_') ? 'live' : 'unknown';
+  try {
+    const res = await fetchFn(`${MOYASAR_API}/payments?per=1`, { headers: { authorization: basic(secret) } });
+    if (res.ok) return { ok: true, status: res.status, mode, message: null };
+    return { ok: false, status: res.status, mode, message: (await res.text()).slice(0, 200) };
+  } catch (err) {
+    return { ok: false, status: 0, mode, message: (err as Error).message.slice(0, 200) };
+  }
+}
+
 export function paymentProviderName(payment: Pick<PlatformConfig['payment'], 'provider' | 'moyasarSecretKey'>): 'manual' | 'moyasar' {
   return payment.provider === 'moyasar' && payment.moyasarSecretKey ? 'moyasar' : 'manual';
 }

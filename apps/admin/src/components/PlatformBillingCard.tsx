@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatSar, type Paginated, type PlatformBillingDto, type TenantDto } from '@jumaah/shared';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
-import { Select } from './Field';
+import { Field, Select, TextInput } from './Field';
 import { Card } from './PageHeader';
 import { useToast } from './Toast';
 import { fmtDate } from '../lib/format';
@@ -18,6 +18,19 @@ export function PlatformBillingCard() {
   const q = useQuery({ queryKey: ['platform', 'billing'], queryFn: () => api.get<PlatformBillingDto>('/platform/billing'), refetchInterval: 60_000 });
   const tenants = useQuery({ queryKey: ['tenants', 'switcher'], queryFn: () => api.get<Paginated<TenantDto>>('/tenants', { pageSize: 200 }), staleTime: 60_000 });
   const [pick, setPick] = useState<Record<string, string>>({});
+  const [custom, setCustom] = useState({ customer: '', description: '', amount: '', quantity: '1', dueDays: '14' });
+  const createCustom = useMutation({
+    mutationFn: () => {
+      const [kind, id] = custom.customer.split(':');
+      return api.post('/platform/invoices', { ...(kind === 'org' ? { organisationId: id } : { tenantId: id }), description: custom.description.trim(), quantity: Number(custom.quantity) || 1, unitPriceSar: Number(custom.amount), dueDays: Number(custom.dueDays) || 14 });
+    },
+    onSuccess: () => {
+      toast.success(t('common.success'));
+      setCustom({ customer: '', description: '', amount: '', quantity: '1', dueDays: '14' });
+      refresh();
+    },
+    onError: (e) => toast.error(e),
+  });
   const refresh = () => void qc.invalidateQueries({ queryKey: ['platform', 'billing'] });
   const run = <T,>(fn: () => Promise<T>) =>
     fn()
@@ -125,6 +138,38 @@ export function PlatformBillingCard() {
                 </div>
               );
             })}
+          </div>
+
+          <div className="rounded-lg p-3" style={{ border: '1px solid var(--j-border)' }}>
+            <div className="j-label">{t('billing.customInvoice')}</div>
+            <div className="j-muted mb-2 text-xs">{t('billing.customInvoiceHint')}</div>
+            <div className="grid gap-2 md:grid-cols-5">
+              <Field label={t('billing.customer')}>
+                <Select value={custom.customer} onChange={(e) => setCustom((c) => ({ ...c, customer: e.target.value }))}>
+                  <option value="">—</option>
+                  {tenants.data?.items.map((x) => (
+                    <option key={x.id} value={`tenant:${x.id}`}>
+                      {x.name} ({x.slug})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label={t('billing.description')}>
+                <TextInput value={custom.description} onChange={(e) => setCustom((c) => ({ ...c, description: e.target.value }))} placeholder="Bulk contract, 30 mosques, one year" />
+              </Field>
+              <Field label={t('billing.quantity')}>
+                <TextInput type="number" dir="ltr" value={custom.quantity} onChange={(e) => setCustom((c) => ({ ...c, quantity: e.target.value }))} />
+              </Field>
+              <Field label={t('billing.unitPrice')}>
+                <TextInput type="number" dir="ltr" value={custom.amount} onChange={(e) => setCustom((c) => ({ ...c, amount: e.target.value }))} placeholder="1788" />
+              </Field>
+              <Field label={t('billing.dueDays')}>
+                <TextInput type="number" dir="ltr" value={custom.dueDays} onChange={(e) => setCustom((c) => ({ ...c, dueDays: e.target.value }))} />
+              </Field>
+            </div>
+            <Button variant="primary" className="mt-2" onClick={() => createCustom.mutate()} disabled={createCustom.isPending || !custom.customer || !custom.description.trim() || !custom.amount}>
+              {createCustom.isPending ? <Spinner /> : t('billing.issue')}
+            </Button>
           </div>
 
           {d.recentPaid.length > 0 && (

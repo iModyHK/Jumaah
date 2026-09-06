@@ -70,7 +70,16 @@ export function attachSocketHandlers(ctx: AppContext): void {
       }
       if (auth.token) {
         const claims = await verifyAccessToken(config.JWT_SECRET, auth.token);
-        const tenantId = claims.tid ?? (socket.handshake.query.tenantId as string | undefined) ?? null;
+        const wanted = (socket.handshake.query.tenantId as string | undefined) || null;
+        let tenantId = claims.tid ?? wanted;
+        // Organisation admins (hosted edition) may follow a member mosque they switched to in the admin.
+        if (claims.tid && wanted && wanted !== claims.tid) {
+          const [me, target] = await Promise.all([
+            db.user.findUnique({ where: { id: claims.sub }, select: { organisationId: true } }),
+            db.tenant.findUnique({ where: { id: wanted }, select: { organisationId: true } }),
+          ]);
+          if (me?.organisationId && target?.organisationId === me.organisationId) tenantId = wanted;
+        }
         if (!tenantId) return next(new Error('NO_TENANT'));
         socket.data = {
           tenantId,

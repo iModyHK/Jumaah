@@ -1124,3 +1124,59 @@ describe('storefront: public sign-up and online subscription (hosted edition)', 
     expect(t.subscriptionEndsAt?.toISOString()).toBe(open[0].periodEnd?.toISOString());
   });
 });
+
+describe('billing review: cancellation at period end and custom invoices', () => {
+  let originalEndsAt: Date | null = null;
+  beforeAll(async () => {
+    originalEndsAt = (await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).subscriptionEndsAt;
+  });
+  afterAll(async () => {
+    await app.ctx.db.invoice.deleteMany({ where: { tenantId } });
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: originalEndsAt, cancelAtPeriodEnd: false } });
+  });
+
+  it('cancelling voids the open renewal invoice, skips new ones, and drops to the free plan when the period ends', async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: new Date(Date.now() + 2 * 86_400_000), cancelAtPeriodEnd: false } });
+    await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(await app.ctx.db.invoice.count({ where: { tenantId, kind: 'SUBSCRIPTION', status: 'OPEN' } })).toBe(1);
+    const c = await app.inject({ method: 'POST', url: '/api/billing/cancel', headers: auth(adminToken), payload: { cancel: true } });
+    expect(c.statusCode, c.body).toBe(200);
+    expect(await app.ctx.db.invoice.count({ where: { tenantId, kind: 'SUBSCRIPTION', status: 'OPEN' } })).toBe(0);
+    expect((await app.inject({ method: 'GET', url: '/api/billing', headers: auth(adminToken) })).json().settings.cancelAtPeriodEnd).toBe(true);
+    await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(await app.ctx.db.invoice.count({ where: { tenantId, kind: 'SUBSCRIPTION', status: 'OPEN' } })).toBe(0);
+    // still Pro until the paid period ends
+    expect((await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).plan).toBe('PRO');
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { subscriptionEndsAt: new Date(Date.now() - 1000) } });
+    const run = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(run.json().cancelled).toBeGreaterThanOrEqual(1);
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    expect(t).toMatchObject({ plan: 'FREE', subscriptionStatus: 'ACTIVE', cancelAtPeriodEnd: false });
+    // withdrawing a cancellation
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', cancelAtPeriodEnd: true } });
+    await app.inject({ method: 'POST', url: '/api/billing/cancel', headers: auth(adminToken), payload: { cancel: false } });
+    expect((await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).cancelAtPeriodEnd).toBe(false);
+  });
+
+  it('the super admin issues a custom invoice; with a plan and period, paying it renews the subscription', async () => {
+    const bad = await app.inject({ method: 'POST', url: '/api/platform/invoices', headers: auth(superToken), payload: { description: 'x', unitPriceSar: 10 } });
+    expect(bad.statusCode).toBe(400);
+    const start = new Date();
+    const end = new Date(start.getTime() + 365 * 86_400_000);
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/platform/invoices',
+      headers: auth(superToken),
+      payload: { tenantId, description: 'Bulk contract, Standard level, one year', descriptionAr: 'عقد جماعي، المستوى القياسي، سنة', quantity: 30, unitPriceSar: 1788, dueDays: 30, plan: 'STANDARD', periodStart: start.toISOString(), periodEnd: end.toISOString() },
+    });
+    expect(res.statusCode, res.body).toBe(201);
+    expect(res.json()).toMatchObject({ kind: 'CUSTOM', status: 'OPEN', subtotal: 30 * 178800, total: 30 * 178800, plan: 'STANDARD' });
+    expect((await app.inject({ method: 'POST', url: '/api/platform/invoices', headers: auth(adminToken), payload: { tenantId, description: 'nope', unitPriceSar: 1 } })).statusCode).toBe(403);
+    const paid = await app.inject({ method: 'POST', url: `/api/platform/invoices/${res.json().id}/mark-paid`, headers: auth(superToken), payload: { reference: 'BULK-1' } });
+    expect(paid.statusCode).toBe(200);
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    expect(t.plan).toBe('STANDARD');
+    expect(t.subscriptionEndsAt?.toISOString()).toBe(end.toISOString());
+    expect(t.subscriptionStatus).toBe('ACTIVE');
+  });
+});

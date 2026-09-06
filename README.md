@@ -117,6 +117,17 @@ Set `TENANT_BASE_DOMAIN=jumaah.net` and every mosque is reachable at `<slug>.jum
 
 Edge servers ignore all of this: without `TENANT_BASE_DOMAIN`, links keep using `PUBLIC_BASE_URL`.
 
+### What the hosted edition adds
+
+Everything below is switched on per mosque by its plan (`PLAN_FEATURES` in `packages/shared/src/constants.ts`); a Community server simply has the free plan and the complete core.
+
+- **Plans and AI**: Basic, Standard, Pro and Organisation with a 30-day trial; platform AI metered per mosque with a grace period. Admin → Settings shows the allowance.
+- **Branding and screens**: logo upload, colours, custom CSS, printable QR poster, date and announcements between khutbahs, prayer times computed from the mosque location.
+- **Archive, handouts, insight**: public archive at `/display/a/<slug>`, printable handouts per language, attendance per session.
+- **Custom domains and organisations**: a Pro mosque points a CNAME at its Jumaah address and verifies it in Settings (Caddy issues the certificate on demand); an organisation account manages up to ten mosques with a pooled AI allowance.
+- **Network, API and webhooks**: approved translations of identical Arabic paragraphs are shared and reused before any AI; API keys and signed webhooks are documented in [`docs/api.md`](docs/api.md).
+- **Billing**: renewal invoices with VAT, bank transfer or Moyasar, public sign-up and online subscription, sponsor-a-mosque. The billing variables in `.env.example` configure the seller, VAT and gateway.
+
 ## Setting up screens
 
 1. Admin → Displays → Add: name, languages (1–4), layout (single / split / grid), font scale, theme, previous-paragraph, Arabic strip, QR.

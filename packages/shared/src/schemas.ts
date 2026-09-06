@@ -166,7 +166,13 @@ export const createOrganisationSchema = z.object({
     .regex(/^[a-z0-9-]+$/),
   maxTenants: z.number().int().min(1).max(100).default(ORG_MAX_TENANTS),
 });
-export const updateOrganisationSchema = createOrganisationSchema.partial();
+export const updateOrganisationSchema = createOrganisationSchema.partial().extend({
+  billingCycle: z.enum(BILLING_CYCLES).optional(),
+  billingName: z.string().max(160).nullable().optional(),
+  billingVatNumber: z.string().regex(/^d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
+  billingAddress: z.string().max(300).nullable().optional(),
+  billingEmail: z.string().email().max(200).nullable().optional(),
+});
 export const organisationTenantSchema = z.object({ tenantId: idSchema });
 export const organisationAdminSchema = z.object({ email: z.string().email().max(200) });
 
@@ -224,6 +230,24 @@ export const signupSchema = z.object({
   turnstileToken: z.string().max(4096).optional(),
 });
 export const subscribeSchema = z.object({ plan: z.enum(SELF_SERVICE_PLANS), cycle: z.enum(BILLING_CYCLES) });
+/** Super admin: an invoice with its own wording and amount (bulk contracts, adjustments); a period + plan extends the subscription when paid. */
+export const customInvoiceSchema = z
+  .object({
+    tenantId: idSchema.optional(),
+    organisationId: idSchema.optional(),
+    description: z.string().min(2).max(300),
+    descriptionAr: z.string().max(300).optional(),
+    quantity: z.number().int().min(1).max(10000).default(1),
+    /** Unit price in SAR. */
+    unitPriceSar: z.number().min(0).max(10_000_000),
+    dueDays: z.number().int().min(0).max(365).default(14),
+    plan: z.enum(SUBSCRIPTION_PLANS).optional(),
+    periodStart: z.string().datetime().optional(),
+    periodEnd: z.string().datetime().optional(),
+    note: z.string().max(500).optional(),
+  })
+  .refine((v) => !!v.tenantId !== !!v.organisationId, { message: 'Exactly one of tenantId or organisationId' })
+  .refine((v) => !v.periodEnd || !!v.periodStart, { message: 'periodStart is required with periodEnd' });
 export const applySponsorshipSchema = z.object({ tenantId: idSchema });
 
 export const tenantLanguagesSchema = z.object({

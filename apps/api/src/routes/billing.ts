@@ -1,12 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { applySponsorshipSchema, billingSettingsSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
+import { applySponsorshipSchema, billingSettingsSchema, customInvoiceSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
-import { applySponsorship, createSponsorship, ensurePaymentUrl, invoiceDto, invoiceQr, markPaid, runBilling, sellerInfo, sponsorshipDto, subscribeNow, verifyTurnstile, voidInvoice } from '../services/billing.service.js';
+import { applySponsorship, createCustomInvoice, createSponsorship, ensurePaymentUrl, invoiceDto, invoiceQr, markPaid, runBilling, sellerInfo, setCancelAtPeriodEnd, sponsorshipDto, subscribeNow, verifyTurnstile, voidInvoice } from '../services/billing.service.js';
 import { verifyPayment } from '../services/payment.service.js';
 import { actorOf } from './auth.js';
 import { PLAN_PRICES_SAR } from '@jumaah/shared';
+import { z } from 'zod';
 
 /** Billing: the mosque's invoices and details, the super admin's overview, the sponsor form and gateway callbacks. */
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
@@ -25,7 +26,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
       prices: PLAN_PRICES_SAR,
       subscription: { plan: t.plan, status: t.subscriptionStatus, endsAt: t.subscriptionEndsAt?.toISOString() ?? null },
       organisation: t.organisation ? { id: t.organisation.id, name: t.organisation.name } : null,
-      settings: { cycle: t.billingCycle, billingName: t.billingName, billingVatNumber: t.billingVatNumber, billingAddress: t.billingAddress, billingEmail: t.billingEmail },
+      settings: { cycle: t.billingCycle, cancelAtPeriodEnd: t.cancelAtPeriodEnd, billingName: t.billingName, billingVatNumber: t.billingVatNumber, billingAddress: t.billingAddress, billingEmail: t.billingEmail },
       invoices: invoices.map((i) => invoiceDto(config, i)),
     };
   });
@@ -35,7 +36,14 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     const before = await db.tenant.findUnique({ where: { id: request.tenantId } });
     if (!before) throw notFound('Tenant');
     const t = await db.tenant.update({ where: { id: request.tenantId }, data: { billingCycle: body.cycle, billingName: body.billingName ?? null, billingVatNumber: body.billingVatNumber ?? null, billingAddress: body.billingAddress ?? null, billingEmail: body.billingEmail ?? null } });
-    return { cycle: t.billingCycle, billingName: t.billingName, billingVatNumber: t.billingVatNumber, billingAddress: t.billingAddress, billingEmail: t.billingEmail };
+    return { cycle: t.billingCycle, cancelAtPeriodEnd: t.cancelAtPeriodEnd, billingName: t.billingName, billingVatNumber: t.billingVatNumber, billingAddress: t.billingAddress, billingEmail: t.billingEmail };
+  });
+
+  /** Stop at the end of the paid period (or withdraw that request). Nothing is deleted; the plan falls back to free. */
+  app.post('/billing/cancel', { preHandler: admin }, async (request) => {
+    const { cancel } = parse(z.object({ cancel: z.boolean().default(true) }), request.body ?? {});
+    await setCancelAtPeriodEnd(app.ctx, request.tenantId, cancel, actorOf(request));
+    return { cancelAtPeriodEnd: cancel };
   });
 
   /** Subscribe or change plan online: the invoice for the coming period, with a pay link when a gateway is configured. */
@@ -82,6 +90,14 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/platform/billing/run', { preHandler: superOnly }, async () => runBilling(app.ctx));
+
+  /** A custom invoice for a mosque or an organisation (bulk contracts, adjustments). */
+  app.post('/platform/invoices', { preHandler: superOnly }, async (request, reply) => {
+    const body = parse(customInvoiceSchema, request.body);
+    const inv = await createCustomInvoice(app.ctx, body, actorOf(request));
+    reply.code(201);
+    return invoiceDto(config, inv);
+  });
 
   app.post('/platform/invoices/:id/mark-paid', { preHandler: superOnly }, async (request) => {
     const body = parse(markPaidSchema, request.body ?? {});

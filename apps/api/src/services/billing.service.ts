@@ -19,6 +19,7 @@ import {
   zatcaQr,
   type BillingCycle,
   type InvoiceDto,
+  type InvoiceKind,
   type InvoiceLine,
   type SellerInfoDto,
   type SponsorshipDto,
@@ -107,7 +108,7 @@ async function nextNumber(db: Db, year: number): Promise<string> {
 }
 
 export interface CreateInvoiceInput {
-  kind: 'SUBSCRIPTION' | 'SPONSORSHIP';
+  kind: InvoiceKind;
   tenantId?: string | null;
   organisationId?: string | null;
   sponsorshipId?: string | null;
@@ -204,7 +205,7 @@ export async function issueRenewals(ctx: AppContext, now: Date = new Date()): Pr
   const horizon = new Date(now.getTime() + RENEWAL_LEAD_DAYS * DAY);
   let issued = 0;
   const tenants = await ctx.db.tenant.findMany({
-    where: { isActive: true, organisationId: null, plan: { not: 'FREE' }, subscriptionStatus: { in: ['ACTIVE', 'TRIAL', 'PAST_DUE'] }, subscriptionEndsAt: { not: null, lte: horizon } },
+    where: { isActive: true, organisationId: null, cancelAtPeriodEnd: false, plan: { not: 'FREE' }, subscriptionStatus: { in: ['ACTIVE', 'TRIAL', 'PAST_DUE'] }, subscriptionEndsAt: { not: null, lte: horizon } },
   });
   for (const t of tenants) {
     const open = await ctx.db.invoice.findFirst({ where: { tenantId: t.id, kind: 'SUBSCRIPTION', status: 'OPEN' } });
@@ -231,6 +232,62 @@ export async function issueRenewals(ctx: AppContext, now: Date = new Date()): Pr
   return issued;
 }
 
+/**
+ * Mosques that asked to stop and whose paid period is over fall back to the free plan: nothing is deleted, the paid
+ * features simply switch off, and the mosque can subscribe again at any time.
+ */
+export async function applyCancellations(ctx: AppContext, now: Date = new Date()): Promise<number> {
+  const due = await ctx.db.tenant.findMany({ where: { cancelAtPeriodEnd: true, plan: { not: 'FREE' }, OR: [{ subscriptionEndsAt: null }, { subscriptionEndsAt: { lte: now } }] }, select: { id: true, plan: true } });
+  for (const t of due) {
+    await ctx.db.tenant.update({ where: { id: t.id }, data: { plan: 'FREE', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null, cancelAtPeriodEnd: false } });
+    await ctx.db.invoice.updateMany({ where: { tenantId: t.id, kind: 'SUBSCRIPTION', status: 'OPEN' }, data: { status: 'VOID' } });
+    await audit(ctx.db, t.id, { id: null, email: 'billing:scheduler' }, 'billing.cancelled', 'Tenant', t.id, { plan: t.plan }, { plan: 'FREE' });
+  }
+  return due.length;
+}
+
+/** The mosque asks to stop (or changes its mind). Cancelling voids the open renewal invoice; the paid period runs out. */
+export async function setCancelAtPeriodEnd(ctx: AppContext, tenantId: string, cancel: boolean, actor: Actor): Promise<void> {
+  const t = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
+  if (!t) throw notFound('Tenant');
+  if (t.organisationId) throw conflict('This mosque is billed through its organisation');
+  await ctx.db.tenant.update({ where: { id: tenantId }, data: { cancelAtPeriodEnd: cancel } });
+  if (cancel) await ctx.db.invoice.updateMany({ where: { tenantId, kind: 'SUBSCRIPTION', status: 'OPEN' }, data: { status: 'VOID' } });
+  await audit(ctx.db, tenantId, actor, cancel ? 'billing.cancelRequested' : 'billing.cancelWithdrawn', 'Tenant', tenantId, null, { endsAt: t.subscriptionEndsAt });
+}
+
+/** Super admin: an invoice with its own wording (bulk contracts and the like). With a plan and period it renews like a subscription. */
+export async function createCustomInvoice(
+  ctx: AppContext,
+  input: { tenantId?: string; organisationId?: string; description: string; descriptionAr?: string; quantity: number; unitPriceSar: number; dueDays: number; plan?: SubscriptionPlan; periodStart?: string; periodEnd?: string; note?: string },
+  actor: Actor,
+): Promise<Invoice> {
+  const customer = input.tenantId
+    ? await ctx.db.tenant.findUnique({ where: { id: input.tenantId } })
+    : input.organisationId
+      ? await ctx.db.organisation.findUnique({ where: { id: input.organisationId } })
+      : null;
+  if (!customer) throw notFound('Customer');
+  const unit = toHalalas(input.unitPriceSar);
+  const start = input.periodStart ? new Date(input.periodStart) : null;
+  const end = input.periodEnd ? new Date(input.periodEnd) : start && input.plan ? addCycle(start, 'YEARLY') : null;
+  const inv = await createInvoice(ctx, {
+    kind: 'CUSTOM',
+    tenantId: input.tenantId ?? null,
+    organisationId: input.organisationId ?? null,
+    plan: input.plan ?? null,
+    cycle: null,
+    periodStart: start,
+    periodEnd: end,
+    lines: [{ description: input.description, descriptionAr: input.descriptionAr || input.description, quantity: input.quantity, unitPrice: unit, amount: unit * input.quantity }],
+    billTo: billToOf(customer),
+    dueAt: new Date(Date.now() + input.dueDays * DAY),
+    note: input.note ?? null,
+  });
+  await audit(ctx.db, input.tenantId ?? null, actor, 'invoice.custom', 'Invoice', inv.id, null, { number: inv.number, total: inv.total, organisationId: input.organisationId ?? null });
+  return inv;
+}
+
 /** Open subscription invoices past due plus grace: the mosque (or every mosque of the organisation) becomes past due. */
 export async function markOverdue(ctx: AppContext, now: Date = new Date()): Promise<number> {
   const limit = new Date(now.getTime() - OVERDUE_GRACE_DAYS * DAY);
@@ -252,7 +309,7 @@ export async function markPaid(ctx: AppContext, invoiceId: string, payment: { pr
   if (inv.status === 'PAID') return inv;
   if (inv.status === 'VOID') throw conflict('Invoice is void');
   const paid = await ctx.db.invoice.update({ where: { id: inv.id }, data: { status: 'PAID', paidAt: new Date(), paymentProvider: payment.provider, paymentRef: payment.reference ?? inv.paymentRef } });
-  if (inv.kind === 'SUBSCRIPTION' && inv.periodEnd) {
+  if ((inv.kind === 'SUBSCRIPTION' || inv.kind === 'CUSTOM') && inv.periodEnd) {
     const where = inv.tenantId ? { id: inv.tenantId } : inv.organisationId ? { organisationId: inv.organisationId } : null;
     if (where) {
       const members = await ctx.db.tenant.findMany({ where, select: { id: true, subscriptionEndsAt: true } });
@@ -330,12 +387,13 @@ export async function subscribeNow(ctx: AppContext, tenantId: string, plan: Subs
   return inv;
 }
 
-export async function runBilling(ctx: AppContext, now: Date = new Date()): Promise<{ issued: number; overdue: number }> {
-  if (!ctx.config.isCloud) return { issued: 0, overdue: 0 };
+export async function runBilling(ctx: AppContext, now: Date = new Date()): Promise<{ issued: number; overdue: number; cancelled: number }> {
+  if (!ctx.config.isCloud) return { issued: 0, overdue: 0, cancelled: 0 };
+  const cancelled = await applyCancellations(ctx, now);
   const issued = await issueRenewals(ctx, now);
   const overdue = await markOverdue(ctx, now);
-  if (issued || overdue) ctx.log.info({ issued, overdue }, 'billing run');
-  return { issued, overdue };
+  if (issued || overdue || cancelled) ctx.log.info({ issued, overdue, cancelled }, 'billing run');
+  return { issued, overdue, cancelled };
 }
 
 /** Hosted edition: issue renewals and flag overdue invoices every few hours. */

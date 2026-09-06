@@ -49,6 +49,8 @@ enum InvoiceStatus {
 enum InvoiceKind {
   SUBSCRIPTION
   SPONSORSHIP
+  /// Written by the super admin: bulk contracts, adjustments, anything with its own wording and amount.
+  CUSTOM
 }
 
 enum SponsorshipStatus {
@@ -152,6 +154,8 @@ model Tenant {
   billingVatNumber      String?
   billingAddress        String?
   billingEmail          String?
+  /// The mosque asked to stop: no renewal invoice; at the paid-until date the plan falls back to FREE, nothing is deleted.
+  cancelAtPeriodEnd     Boolean            @default(false)
   isActive              Boolean            @default(true)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt

@@ -30,6 +30,14 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bank, setBank] = useState<string | null>(null);
   const [plan, setPlan] = useState<SubscriptionPlan>(SELF_SERVICE_PLANS.includes(tenant.plan as never) ? tenant.plan : 'STANDARD');
+  const cancel = useMutation({
+    mutationFn: (c: boolean) => api.post('/billing/cancel', { cancel: c }),
+    onSuccess: () => {
+      toast.success(t('common.success'));
+      void qc.invalidateQueries({ queryKey: ['billing'] });
+    },
+    onError: (e) => toast.error(e),
+  });
   const subscribe = useMutation({
     mutationFn: (body: { plan: SubscriptionPlan; cycle: BillingCycle }) => api.post<{ invoice: InvoiceDto; seller: BillingOverviewDto['seller'] }>('/billing/subscribe', body),
     onSuccess: ({ invoice }) => {
@@ -167,6 +175,25 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
                   {subscribe.isPending ? <Spinner /> : t('billing.subscribeNow', { total: formatSar(d.prices[plan] * (cycle === 'YEARLY' ? 10 : 1) * 100, ar ? 'ar' : 'en') })}
                 </Button>
               </div>
+              {tenant.plan !== 'FREE' && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  {d.settings.cancelAtPeriodEnd ? (
+                    <>
+                      <StatusPill tone="warn">{t('billing.cancelPending', { date: fmtDate(tenant.subscriptionEndsAt) })}</StatusPill>
+                      <Button className="px-2 py-0.5 text-xs" onClick={() => cancel.mutate(false)} disabled={cancel.isPending}>
+                        {t('billing.resume')}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="j-muted text-xs">{t('billing.cancelHint')}</span>
+                      <Button variant="danger" className="px-2 py-0.5 text-xs" onClick={() => cancel.mutate(true)} disabled={cancel.isPending}>
+                        {t('billing.cancel')}
+                      </Button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <div>

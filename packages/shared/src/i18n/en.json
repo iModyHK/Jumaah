@@ -741,7 +741,8 @@
     "pay": "Pay",
     "kinds": {
       "SUBSCRIPTION": "Subscription",
-      "SPONSORSHIP": "Sponsorship"
+      "SPONSORSHIP": "Sponsorship",
+      "CUSTOM": "Custom"
     },
     "statuses": {
       "OPEN": "Unpaid",
@@ -784,6 +785,18 @@
     "cycleNames": {
       "MONTHLY": "Monthly",
       "YEARLY": "Yearly (two months free)"
-    }
+    },
+    "cancel": "Cancel at period end",
+    "cancelHint": "Stops renewals; the mosque keeps everything and falls back to the free plan when the paid period ends.",
+    "cancelPending": "Ends on {{date}}",
+    "resume": "Keep the subscription",
+    "customInvoice": "Custom invoice",
+    "customInvoiceHint": "For bulk contracts and adjustments: your own wording, quantity and unit price in SAR. VAT is added as configured.",
+    "customer": "Customer",
+    "description": "Description",
+    "quantity": "Quantity",
+    "unitPrice": "Unit price (SAR)",
+    "dueDays": "Due in (days)",
+    "issue": "Issue invoice"
   }
 }

@@ -466,6 +466,8 @@ export interface SellerInfoDto {
 
 export interface BillingSettingsDto {
   cycle: BillingCycle;
+  /** The mosque asked to stop at the paid-until date (no renewal invoice; plan falls back to FREE). */
+  cancelAtPeriodEnd: boolean;
   billingName: string | null;
   billingVatNumber: string | null;
   billingAddress: string | null;

@@ -9,7 +9,7 @@ name: jumaah-cloud
 x-app-env: &app-env
   NODE_ENV: production
   DEPLOYMENT_MODE: cloud
-  IMAGE_TAG: ${IMAGE_TAG:-1.0.0}
+  IMAGE_TAG: ${IMAGE_TAG:-1.1.0}
   DATABASE_URL: postgresql://${POSTGRES_USER:-jumaah}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-jumaah}?schema=public
   REDIS_URL: redis://redis:6379
   JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
@@ -35,7 +35,7 @@ x-app-env: &app-env
 
 services:
   web:
-    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-web:${IMAGE_TAG:-1.0.0}
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-web:${IMAGE_TAG:-1.1.0}
     build:
       context: .
       dockerfile: infra/web.Dockerfile
@@ -60,7 +60,7 @@ services:
         condition: service_healthy
 
   api:
-    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.0.0}
+    image: ${REGISTRY:-ghcr.io/imodyhk}/jumaah-api:${IMAGE_TAG:-1.1.0}
     build:
       context: .
       dockerfile: apps/api/Dockerfile

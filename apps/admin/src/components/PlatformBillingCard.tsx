@@ -41,9 +41,9 @@ export function PlatformBillingCard() {
       })
       .catch((e) => toast.error(e));
   const billingRun = useMutation({
-    mutationFn: () => api.post<{ issued: number; overdue: number }>('/platform/billing/run'),
+    mutationFn: () => api.post<{ issued: number; overdue: number; cancelled?: number; trialsEnded?: number; trialNotices?: number }>('/platform/billing/run'),
     onSuccess: (r) => {
-      toast.success(t('billing.runDone', { issued: r.issued, overdue: r.overdue }));
+      toast.success(t('billing.runDone', { issued: r.issued, overdue: r.overdue, cancelled: r.cancelled ?? 0, trialsEnded: r.trialsEnded ?? 0, trialNotices: r.trialNotices ?? 0 }));
       refresh();
     },
     onError: (e) => toast.error(e),

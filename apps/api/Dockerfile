@@ -46,7 +46,8 @@ COPY --from=build /app/apps/sync-worker/dist apps/sync-worker/dist
 
 # ---- runtime ------------------------------------------------------------------
 FROM node:22-alpine AS runtime
-ENV NODE_ENV=production
+ARG APP_VERSION=dev
+ENV NODE_ENV=production APP_VERSION=$APP_VERSION
 RUN apk upgrade --no-cache && apk add --no-cache tini && mkdir -p /app/backups && chown node:node /app/backups
 COPY --from=prod --chown=node:node /app /app
 COPY --chmod=755 infra/scripts/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh

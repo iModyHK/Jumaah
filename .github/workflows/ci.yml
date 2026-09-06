@@ -72,6 +72,8 @@ jobs:
           context: .
           file: apps/api/Dockerfile
           push: true
+          build-args: |
+            APP_VERSION=git-${{ github.sha }}
           tags: |
             ghcr.io/imodyhk/jumaah-api:latest
             ghcr.io/imodyhk/jumaah-api:${{ github.sha }}

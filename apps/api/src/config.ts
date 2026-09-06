@@ -12,7 +12,8 @@ function durationToSeconds(v: string): number {
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   DEPLOYMENT_MODE: z.enum(['edge', 'cloud']).default('edge'),
-  IMAGE_TAG: z.string().default('dev'),
+  /** Shown in the portal and /api/health: the image tag from compose, else the version baked into the image. */
+  IMAGE_TAG: z.string().default(process.env.APP_VERSION || 'dev'),
   API_PORT: z.coerce.number().int().default(4000),
   API_HOST: z.string().default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),

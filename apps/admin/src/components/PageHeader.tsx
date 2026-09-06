@@ -12,9 +12,9 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
   );
 }
 
-export function Card({ title, children, className = '', actions }: { title?: ReactNode; children: ReactNode; className?: string; actions?: ReactNode }) {
+export function Card({ title, children, className = '', actions, id }: { title?: ReactNode; children: ReactNode; className?: string; actions?: ReactNode; id?: string }) {
   return (
-    <section className={`j-card p-4 ${className}`}>
+    <section id={id} className={`j-card p-4 scroll-mt-20 ${className}`}>
       {(title || actions) && (
         <div className="mb-3 flex items-center justify-between gap-2">
           {title && <h2 className="text-base font-semibold">{title}</h2>}

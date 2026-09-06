@@ -42,6 +42,17 @@ interface Draft {
   madhab: 'Shafi' | 'Hanafi';
 }
 
+const SECTIONS = [
+  { id: 'general', key: 'settings.general' },
+  { id: 'branding', key: 'branding.title' },
+  { id: 'signage', key: 'signage.title' },
+  { id: 'archive', key: 'archive.title' },
+  { id: 'domain', key: 'domain.title' },
+  { id: 'network', key: 'network.title' },
+  { id: 'languages', key: 'settings.languages' },
+  { id: 'billing', key: 'settings.subscription' },
+] as const;
+
 function draftFrom(t: TenantDto): Draft {
   const s = t.settings as TenantSettings;
   const pt = (s.prayerTimes ?? {}) as Partial<Record<Prayer, string>>;
@@ -125,14 +136,29 @@ export function SettingsPage() {
     saveLangs.mutate(enabledLangs);
   };
 
+  const ready = !!draft && !!tenant.data;
+  useEffect(() => {
+    if (!ready || !location.hash) return;
+    const el = document.getElementById(location.hash.slice(1));
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }, [ready]);
+
   if (!draft || !tenant.data) return <Spinner />;
   const set = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
 
   return (
     <div>
       <PageHeader title={t('settings.title')} />
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label={t('settings.sections')}>
+        {SECTIONS.map((s) => (
+          <a key={s.id} href={`#${s.id}`} className="j-btn px-3 py-1 text-xs" onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', `#${s.id}`); }}>
+            {t(s.key)}
+          </a>
+        ))}
+      </nav>
       <div className="flex flex-col gap-4">
         <Card
+          id="general"
           title={t('settings.general')}
           actions={
             <Button variant="primary" onClick={submit} disabled={save.isPending}>
@@ -229,13 +255,14 @@ export function SettingsPage() {
           </div>
         </Card>
 
-        <BrandingCard tenant={tenant.data} />
-        <SignageCard tenant={tenant.data} />
-        <ArchiveCard tenant={tenant.data} />
-        <DomainCard tenant={tenant.data} />
-        <NetworkCard />
+        <div id="branding" className="scroll-mt-20"><BrandingCard tenant={tenant.data} /></div>
+        <div id="signage" className="scroll-mt-20"><SignageCard tenant={tenant.data} /></div>
+        <div id="archive" className="scroll-mt-20"><ArchiveCard tenant={tenant.data} /></div>
+        <div id="domain" className="scroll-mt-20"><DomainCard tenant={tenant.data} /></div>
+        <div id="network" className="scroll-mt-20"><NetworkCard /></div>
 
         <Card
+          id="languages"
           title={t('settings.languages')}
           actions={
             <Button variant="primary" onClick={submitLangs} disabled={saveLangs.isPending || languages === null}>
@@ -247,7 +274,7 @@ export function SettingsPage() {
           <LanguagePicker value={enabledLangs} onChange={setLanguages} />
         </Card>
 
-        <BillingCard tenant={tenant.data} />
+        <div id="billing" className="scroll-mt-20"><BillingCard tenant={tenant.data} /></div>
       </div>
     </div>
   );

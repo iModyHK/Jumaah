@@ -128,7 +128,16 @@
     "noSession": "No active session",
     "quickActions": "Quick actions",
     "newKhutbah": "New khutbah",
-    "openImam": "Open imam view"
+    "openImam": "Open imam view",
+    "subscription": {
+      "trial": "Free trial · {{days}} day(s) left, ends {{date}}. Subscribe at any time; nothing is lost at the end.",
+      "pastDue": "Payment overdue for invoice {{number}}. Please pay within the grace period to keep your plan.",
+      "cancelling": "Renewal is stopped: the plan ends on {{date}} and the mosque falls back to the free plan.",
+      "keep": "Keep the plan",
+      "free": "This mosque is on the free plan. Subscribe to unlock automatic translation, branding and more.",
+      "subscribe": "Subscribe",
+      "pay": "Pay now"
+    }
   },
   "khutbah": {
     "includeTranslations": "Include translations",
@@ -368,7 +377,8 @@
     "madhabs": {
       "Shafi": "Shafi'i, Maliki, Hanbali",
       "Hanafi": "Hanafi"
-    }
+    },
+    "sections": "Sections"
   },
   "backup": {
     "restoreFromFile": "Restore from file",
@@ -766,7 +776,7 @@
     "platformTitle": "Billing",
     "notCloud": "Billing only applies to Jumaah Cloud.",
     "runNow": "Run billing now",
-    "runDone": "Issued {{issued}} invoice(s), {{overdue}} mosque(s) marked past due.",
+    "runDone": "Issued {{issued}} invoice(s), {{overdue}} past due, {{cancelled}} cancelled, {{trialsEnded}} trial(s) ended, {{trialNotices}} trial notice(s) sent.",
     "openTotal": "Open invoices",
     "paidThisMonth": "Paid this month",
     "provider": "Payment method",

@@ -7,6 +7,7 @@ import { EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 import { InsightCard } from '../components/InsightCard';
+import { SubscriptionBanner } from '../components/SubscriptionBanner';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
 import { ProgressBar } from '../components/ProgressBar';
 import { KhutbahStatusBadge } from '../components/StatusBadge';
@@ -53,6 +54,7 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader title={t('dashboard.welcome', { name: user?.name ?? '' })} />
+      <SubscriptionBanner />
       <div className="grid gap-4 md:grid-cols-3">
         <Stat label={t('dashboard.activeDisplays')} value={displayCount} />
         <Stat

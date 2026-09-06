@@ -5,6 +5,7 @@
  * on the webhook row so the admin can see what happened.
  */
 import { createHmac, randomUUID } from 'node:crypto';
+import { promises as dns } from 'node:dns';
 import type { Webhook } from '@jumaah/db';
 import type { WebhookEvent } from '@jumaah/shared';
 import type { AppContext } from '../lib/context.js';
@@ -42,6 +43,36 @@ export function webhookUrlError(url: string, production: boolean): string | null
   return null;
 }
 
+/** Loopback, private, link-local, CGNAT and IPv6-mapped equivalents: never a webhook destination. */
+export function isPrivateIp(ip: string): boolean {
+  const v4 = ip.startsWith('::ffff:') ? ip.slice(7) : ip;
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(v4);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    return a === 10 || a === 127 || a === 0 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 100 && b >= 64 && b <= 127);
+  }
+  const l = ip.toLowerCase();
+  return l === '::1' || l === '::' || l.startsWith('fe80:') || l.startsWith('fc') || l.startsWith('fd');
+}
+
+export type Lookup = (hostname: string) => Promise<Array<{ address: string }>>;
+
+/** Resolve the endpoint just before delivery and refuse it when any address is private (DNS rebinding guard). */
+export async function resolvesToPrivate(url: string, lookup: Lookup = (h) => dns.lookup(h, { all: true })): Promise<boolean> {
+  let host: string;
+  try {
+    host = new URL(url).hostname.replace(/^\[|\]$/g, '');
+  } catch {
+    return true;
+  }
+  try {
+    const addrs = await lookup(host);
+    return addrs.length === 0 || addrs.some((a) => isPrivateIp(a.address));
+  } catch {
+    return true;
+  }
+}
+
 export function buildPayload(tenantId: string, event: WebhookEvent, data: unknown): { id: string; body: string } {
   const id = randomUUID();
   const body = JSON.stringify({ id, event, createdAt: new Date().toISOString(), tenantId, data });
@@ -72,7 +103,9 @@ export async function deliver(ctx: AppContext, hook: Pick<Webhook, 'id' | 'url' 
     'x-jumaah-delivery': deliveryId,
     'x-jumaah-signature': signPayload(hook.secret, body),
   };
-  let result = await post(hook.url, headers, body);
+  let result: DeliveryResult;
+  if (await resolvesToPrivate(hook.url)) result = { ok: false, status: null, error: 'PRIVATE_HOST', durationMs: 0 };
+  else result = await post(hook.url, headers, body);
   if (!result.ok && (result.status === null || result.status >= 500)) {
     await new Promise((r) => setTimeout(r, 2000));
     result = await post(hook.url, headers, body);

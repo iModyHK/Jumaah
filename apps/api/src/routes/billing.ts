@@ -1,13 +1,13 @@
 import type { FastifyInstance } from 'fastify';
-import { applySponsorshipSchema, billingSettingsSchema, customInvoiceSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
+import { PLAN_PRICES_SAR, applySponsorshipSchema, billingSettingsSchema, customInvoiceSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
+import { z } from 'zod';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
 import { applySponsorship, createCustomInvoice, createSponsorship, ensurePaymentUrl, invoiceDto, invoiceQr, markPaid, runBilling, sellerInfo, setCancelAtPeriodEnd, sponsorshipDto, subscribeNow, verifyTurnstile, voidInvoice } from '../services/billing.service.js';
 import { verifyPayment } from '../services/payment.service.js';
+import { platformConfig } from '../services/platform-config.service.js';
 import { actorOf } from './auth.js';
-import { PLAN_PRICES_SAR } from '@jumaah/shared';
-import { z } from 'zod';
 
 /** Billing: the mosque's invoices and details, the super admin's overview, the sponsor form and gateway callbacks. */
 export async function billingRoutes(app: FastifyInstance): Promise<void> {
@@ -22,7 +22,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     const invoices = await db.invoice.findMany({ where: t.organisationId ? { OR: [{ tenantId: t.id }, { organisationId: t.organisationId }] } : { tenantId: t.id }, orderBy: { issuedAt: 'desc' }, take: 50 });
     return {
       applies: config.isCloud,
-      seller: sellerInfo(config),
+      seller: await sellerInfo(app.ctx),
       prices: PLAN_PRICES_SAR,
       subscription: { plan: t.plan, status: t.subscriptionStatus, endsAt: t.subscriptionEndsAt?.toISOString() ?? null },
       organisation: t.organisation ? { id: t.organisation.id, name: t.organisation.name } : null,
@@ -52,7 +52,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(subscribeSchema, request.body);
     const inv = await subscribeNow(app.ctx, request.tenantId, body.plan, body.cycle, actorOf(request));
     reply.code(201);
-    return { invoice: invoiceDto(config, inv), seller: sellerInfo(config) };
+    return { invoice: invoiceDto(config, inv), seller: await sellerInfo(app.ctx) };
   });
 
   /** A pay link for one of the mosque's open invoices (or the bank details when payment is by transfer). */
@@ -63,7 +63,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     if (!inv) throw notFound('Invoice');
     if (inv.status !== 'OPEN') throw badRequest('Invoice is not open');
     const withUrl = await ensurePaymentUrl(app.ctx, inv);
-    return { invoice: invoiceDto(config, withUrl), seller: sellerInfo(config) };
+    return { invoice: invoiceDto(config, withUrl), seller: await sellerInfo(app.ctx) };
   });
 
   // ---- Super admin ----
@@ -81,7 +81,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     ]);
     return {
       applies: config.isCloud,
-      seller: sellerInfo(config),
+      seller: await sellerInfo(app.ctx),
       open: open.map((i) => invoiceDto(config, i)),
       recentPaid: paid.map((i) => invoiceDto(config, i)),
       sponsorships: sponsorships.map((s) => sponsorshipDto(s, config)),
@@ -119,11 +119,11 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   app.post('/public/sponsor', { config: { rateLimit: { max: config.RATE_LIMIT_AUTH, timeWindow: '1 minute' } } }, async (request, reply): Promise<SponsorResultDto> => {
     if (!config.isCloud) throw forbidden('Sponsorships are handled by Jumaah Cloud');
     const body = parse(sponsorSchema, request.body);
-    if (!(await verifyTurnstile(config, body.turnstileToken, request.ip))) throw badRequest('Verification failed', { code: 'captcha' });
+    if (!(await verifyTurnstile(app.ctx, body.turnstileToken, request.ip))) throw badRequest('Verification failed', { code: 'captcha' });
     const { invoice } = await createSponsorship(app.ctx, body);
     const dto = invoiceDto(config, invoice);
     reply.code(201);
-    return { invoiceNumber: dto.number, total: dto.total, vat: dto.vat, currency: dto.currency, viewUrl: dto.viewUrl, paymentUrl: dto.paymentUrl, seller: sellerInfo(config) };
+    return { invoiceNumber: dto.number, total: dto.total, vat: dto.vat, currency: dto.currency, viewUrl: dto.viewUrl, paymentUrl: dto.paymentUrl, seller: await sellerInfo(app.ctx) };
   });
 
   /** Anyone holding the invoice link (number + token) can view and print it. */
@@ -132,7 +132,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
     const token = (request.query as { t?: string }).t;
     const inv = await db.invoice.findUnique({ where: { number }, include: { tenant: { select: { name: true, slug: true } }, organisation: { select: { name: true } } } });
     if (!inv || !token || token !== inv.accessToken) throw notFound('Invoice');
-    return { invoice: invoiceDto(config, inv), seller: sellerInfo(config), qr: invoiceQr(config, inv) };
+    return { invoice: invoiceDto(config, inv), seller: await sellerInfo(app.ctx), qr: await invoiceQr(app.ctx, inv) };
   });
 
   /** Moyasar sends the customer back here after paying; the state is confirmed with Moyasar before anything changes. */
@@ -151,7 +151,8 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   /** Moyasar webhook: authenticated by the shared secret, then re-checked against Moyasar's API. */
   app.post('/public/billing/moyasar/webhook', async (request, reply) => {
     const body = (request.body ?? {}) as { secret_token?: string; data?: { id?: string; invoice_id?: string; metadata?: { jumaah_invoice?: string } } };
-    if (!config.MOYASAR_WEBHOOK_SECRET || body.secret_token !== config.MOYASAR_WEBHOOK_SECRET) throw forbidden('Bad webhook secret');
+    const { payment } = await platformConfig(app.ctx);
+    if (!payment.moyasarWebhookSecret || body.secret_token !== payment.moyasarWebhookSecret) throw forbidden('Bad webhook secret');
     const ref = body.data?.invoice_id ?? body.data?.id;
     const ours = body.data?.metadata?.jumaah_invoice;
     const inv = ours ? await db.invoice.findUnique({ where: { id: ours } }) : ref ? await db.invoice.findFirst({ where: { paymentRef: ref } }) : null;

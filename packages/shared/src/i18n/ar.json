@@ -70,7 +70,17 @@
     "changePassword": "تغيير كلمة المرور",
     "currentPassword": "كلمة المرور الحالية",
     "newPassword": "كلمة المرور الجديدة",
-    "sessionExpired": "انتهت الجلسة، يرجى تسجيل الدخول مجدداً"
+    "sessionExpired": "انتهت الجلسة، يرجى تسجيل الدخول مجدداً",
+    "forgot": "نسيتم كلمة المرور؟",
+    "forgotTitle": "إعادة تعيين كلمة المرور",
+    "forgotHint": "أدخلوا بريد الدخول. إن وُجد حساب فسيصله رابط إعادة التعيين.",
+    "forgotSent": "إن وُجد حساب بهذا البريد فرابط إعادة التعيين في طريقه إليكم. الرابط صالح لساعة واحدة.",
+    "sendReset": "أرسل الرابط",
+    "backToLogin": "العودة إلى تسجيل الدخول",
+    "resetTitle": "اختاروا كلمة مرور جديدة",
+    "resetSubmit": "حفظ كلمة المرور",
+    "resetDone": "تغيّرت كلمة المرور. يمكنكم تسجيل الدخول الآن.",
+    "resetInvalid": "هذا الرابط غير صالح أو انتهت صلاحيته. اطلبوا رابطاً جديداً."
   },
   "roles": {
     "SUPER_ADMIN": "مدير المنصة",
@@ -798,5 +808,66 @@
     "unitPrice": "سعر الوحدة (ريال)",
     "dueDays": "الاستحقاق خلال (أيام)",
     "issue": "إصدار الفاتورة"
+  },
+  "platformConfig": {
+    "title": "إعدادات المنصة",
+    "hint": "الفوترة والدفع والبريد والأمان تُعدَّل هنا وتسري خلال دقيقة. قيم البيئة (.env) هي الافتراضية، وما يُحفظ هنا يتقدم عليها. تُحفظ الأسرار مشفّرة وتُعرض كتلميح فقط.",
+    "groups": {
+      "billing": "الفوترة والضريبة",
+      "payment": "الدفع",
+      "email": "البريد (SMTP)",
+      "security": "الأمان والموقع"
+    },
+    "fields": {
+      "billing": {
+        "sellerName": "اسم البائع على الفواتير",
+        "sellerAddress": "عنوان البائع",
+        "vatRate": "نسبة الضريبة (0 أو 0.15)",
+        "vatNumber": "الرقم الضريبي (15 رقماً)",
+        "bank": "البنك",
+        "iban": "IBAN"
+      },
+      "payment": {
+        "provider": "طريقة الدفع",
+        "moyasarSecretKey": "مفتاح Moyasar السري",
+        "moyasarWebhookSecret": "سر ويب هوك Moyasar"
+      },
+      "email": {
+        "host": "خادم SMTP",
+        "port": "منفذ SMTP",
+        "secure": "TLS عند الاتصال (المنفذ 465)",
+        "user": "مستخدم SMTP",
+        "pass": "كلمة مرور SMTP",
+        "fromName": "اسم المرسل",
+        "fromEmail": "عنوان المرسل",
+        "replyTo": "عنوان الرد",
+        "notifyEmail": "تنبيهات المنصة إلى"
+      },
+      "security": {
+        "turnstileSecret": "سر Cloudflare Turnstile",
+        "siteUrl": "عنوان الموقع التعريفي"
+      }
+    },
+    "options": {
+      "manual": "تحويل بنكي (تعلّمونه مدفوعاً بأنفسكم)",
+      "moyasar": "Moyasar (مدى، Apple Pay، البطاقات)"
+    },
+    "fromPortal": "مضبوط هنا",
+    "fromEnv": "من البيئة",
+    "secretSet": "مضبوط:",
+    "secretUnset": "غير مضبوط",
+    "clearSecret": "مسح",
+    "testEmail": "اختبار إعدادات البريد",
+    "testTo": "إرسال تجربة إلى",
+    "sendTest": "إرسال تجربة",
+    "testSent": "أُرسلت.",
+    "testFailed": "فشل",
+    "notConfigured": "لم يُضبط SMTP بعد.",
+    "recentEmails": "آخر الرسائل",
+    "emailStatus": {
+      "SENT": "أُرسلت",
+      "SKIPPED": "تخطّيت",
+      "FAILED": "فشلت"
+    }
   }
 }

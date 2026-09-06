@@ -33,3 +33,15 @@ describe('webhookUrlError', () => {
     expect(webhookUrlError('not a url', true)).toBe('INVALID_URL');
   });
 });
+
+describe('DNS rebinding guard', () => {
+  it('classifies private, loopback, link-local and mapped addresses', async () => {
+    const { isPrivateIp, resolvesToPrivate } = await import('./webhook.service.js');
+    for (const ip of ['127.0.0.1', '10.0.0.5', '192.168.1.1', '172.16.0.1', '172.31.255.255', '169.254.1.1', '100.64.0.1', '::1', 'fe80::1', 'fd00::1', '::ffff:10.0.0.1']) expect(isPrivateIp(ip), ip).toBe(true);
+    for (const ip of ['8.8.8.8', '172.32.0.1', '2606:4700::1111', '203.0.113.10']) expect(isPrivateIp(ip), ip).toBe(false);
+    expect(await resolvesToPrivate('https://hooks.example.org/x', async () => [{ address: '203.0.113.10' }])).toBe(false);
+    expect(await resolvesToPrivate('https://hooks.example.org/x', async () => [{ address: '203.0.113.10' }, { address: '10.1.1.1' }])).toBe(true);
+    expect(await resolvesToPrivate('https://hooks.example.org/x', async () => [])).toBe(true);
+    expect(await resolvesToPrivate('https://hooks.example.org/x', async () => { throw new Error('ENOTFOUND'); })).toBe(true);
+  });
+});

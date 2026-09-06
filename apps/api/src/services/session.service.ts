@@ -167,7 +167,7 @@ export async function startSession(ctx: AppContext, tenantId: string, input: Sta
     },
   });
   await ctx.db.khutbah.updateMany({ where: { id: input.khutbahId, tenantId }, data: { status: 'DELIVERED' } });
-  seedSessionStats(ctx, tenantId, row.id);
+  void seedSessionStats(ctx, tenantId, row.id);
   const snap: LiveSessionSnapshot = {
     sessionId: row.id,
     tenantId,

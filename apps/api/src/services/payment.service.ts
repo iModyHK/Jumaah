@@ -1,10 +1,11 @@
 /**
- * Payment gateway (hosted edition). `PAYMENT_PROVIDER=manual` (default) means bank transfer: the invoice carries the
- * IBAN and the super admin marks it paid. `PAYMENT_PROVIDER=moyasar` creates a hosted Moyasar invoice (mada, Apple Pay,
- * cards) and verifies payments by asking Moyasar's API, never by trusting a callback on its own.
+ * Payment gateway (hosted edition). Provider "manual" (default) means bank transfer: the invoice carries the IBAN
+ * and the super admin marks it paid. Provider "moyasar" creates a hosted Moyasar invoice (mada, Apple Pay, cards)
+ * and verifies payments by asking Moyasar's API, never by trusting a callback on its own. Settings come from the
+ * portal (Platform → Payments) with PAYMENT_PROVIDER / MOYASAR_* in the environment as defaults.
  */
-import type { Config } from '../config.js';
 import type { AppContext } from '../lib/context.js';
+import { platformConfig, type PlatformConfig } from './platform-config.service.js';
 
 export interface PaymentCreation {
   provider: string;
@@ -55,8 +56,8 @@ export async function moyasarInvoiceState(fetchFn: FetchLike, secret: string, id
   return 'failed';
 }
 
-export function paymentProviderName(config: Pick<Config, 'PAYMENT_PROVIDER' | 'MOYASAR_SECRET_KEY'>): 'manual' | 'moyasar' {
-  return config.PAYMENT_PROVIDER === 'moyasar' && config.MOYASAR_SECRET_KEY ? 'moyasar' : 'manual';
+export function paymentProviderName(payment: Pick<PlatformConfig['payment'], 'provider' | 'moyasarSecretKey'>): 'manual' | 'moyasar' {
+  return payment.provider === 'moyasar' && payment.moyasarSecretKey ? 'moyasar' : 'manual';
 }
 
 /** A pay link for an invoice, or null when payment is by bank transfer. */
@@ -66,10 +67,11 @@ export async function createPayment(
   fetchFn: FetchLike = fetch,
 ): Promise<PaymentCreation | null> {
   const { config } = ctx;
-  if (paymentProviderName(config) !== 'moyasar') return null;
+  const { payment } = await platformConfig(ctx);
+  if (paymentProviderName(payment) !== 'moyasar') return null;
   const base = config.PUBLIC_BASE_URL.replace(/\/$/, '');
   const view = `${base}/display/invoice/${encodeURIComponent(invoice.number)}?t=${invoice.accessToken}`;
-  const created = await moyasarCreateInvoice(fetchFn, config.MOYASAR_SECRET_KEY!, {
+  const created = await moyasarCreateInvoice(fetchFn, payment.moyasarSecretKey!, {
     amountHalalas: invoice.total,
     description: `Jumaah Cloud ${invoice.number}`,
     callbackUrl: `${base}/api/public/billing/moyasar/callback?invoice=${invoice.id}`,
@@ -81,6 +83,7 @@ export async function createPayment(
 }
 
 export async function verifyPayment(ctx: AppContext, provider: string, ref: string, fetchFn: FetchLike = fetch): Promise<PaymentState> {
-  if (provider === 'moyasar' && ctx.config.MOYASAR_SECRET_KEY) return moyasarInvoiceState(fetchFn, ctx.config.MOYASAR_SECRET_KEY, ref);
+  const { payment } = await platformConfig(ctx);
+  if (provider === 'moyasar' && payment.moyasarSecretKey) return moyasarInvoiceState(fetchFn, payment.moyasarSecretKey, ref);
   return 'pending';
 }

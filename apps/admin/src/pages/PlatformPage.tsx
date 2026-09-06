@@ -6,6 +6,7 @@ import { api } from '../api';
 import { Field, TextInput } from '../components/Field';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
 import { PlatformBillingCard } from '../components/PlatformBillingCard';
+import { PlatformConfigCard } from '../components/PlatformConfigCard';
 import { useToast } from '../components/Toast';
 import { fmtDate } from '../lib/format';
 
@@ -72,6 +73,7 @@ export function PlatformPage() {
       </Card>
       <AiUsageOverview />
       <PlatformBillingCard />
+      <PlatformConfigCard />
     </div>
   );
 }

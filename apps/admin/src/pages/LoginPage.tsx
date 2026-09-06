@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { loginSchema, type HostInfoDto } from '@jumaah/shared';
 import { ApiRequestError, Button, Spinner, currentLocale, setLocale } from '@jumaah/ui';
@@ -94,6 +94,9 @@ export function LoginPage() {
           <Button type="submit" variant="primary" disabled={busy} className="mt-2">
             {busy ? <Spinner /> : t('auth.login')}
           </Button>
+          <Link to="/forgot" className="j-muted mt-2 text-center text-sm underline">
+            {t('auth.forgot')}
+          </Link>
         </div>
       </form>
     </div>

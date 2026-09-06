@@ -7,7 +7,7 @@ import type { AppContext, IO } from '../lib/context.js';
 import { tenantBaseUrlFor } from '../lib/host.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
-import { viewerConnected, viewerDisconnected, viewerTotal } from '../services/insight.service.js';
+import { viewerTotal, viewersChanged } from '../services/insight.service.js';
 import { applyCommand, getLiveKhutbah, getSnapshot, heartbeat } from '../services/session.service.js';
 
 export function displayConfigOf(d: {
@@ -121,13 +121,16 @@ export function attachSocketHandlers(ctx: AppContext): void {
       socket.emit('server:time', Date.now());
     };
 
-    const emitCount = () => io.to(ROOMS.imam(tenantId)).to(ROOMS.admin(tenantId)).emit('displays:count', { count: viewerTotal(tenantId) });
+    // Viewers are counted from the socket rooms (shared across API instances by the Redis adapter); during a live
+    // khutbah the count also feeds that session's attendance insight.
+    const emitCount = async () => {
+      const snap = await getSnapshot(ctx, tenantId);
+      const count = await viewersChanged(ctx, tenantId, snap.sessionId && snap.state !== 'ENDED' ? snap.sessionId : null);
+      io.to(ROOMS.imam(tenantId)).to(ROOMS.admin(tenantId)).emit('displays:count', { count });
+    };
 
     if (role === 'DISPLAY' || role === 'PUBLIC') {
-      // Count the viewer, and while a khutbah is live record it towards that session's attendance insight.
-      const snap = await getSnapshot(ctx, tenantId);
-      viewerConnected(ctx, tenantId, snap.sessionId && snap.state !== 'ENDED' ? snap.sessionId : null, role, socket.data.deviceId);
-      emitCount();
+      await emitCount();
       const info = await buildTenantPublicInfo(db, tenantId);
       if (info) socket.emit('tenant:info', info);
       if (role === 'DISPLAY' && socket.data.displayId) {
@@ -140,7 +143,7 @@ export function attachSocketHandlers(ctx: AppContext): void {
 
     if (role === 'IMAM' || role === 'ADMIN') {
       await sendState();
-      socket.emit('displays:count', { count: viewerTotal(tenantId) });
+      socket.emit('displays:count', { count: await viewerTotal(ctx, tenantId) });
       if (role === 'IMAM' && socket.data.deviceId) void heartbeat(ctx, tenantId, socket.data.deviceId, true);
     }
 
@@ -206,10 +209,7 @@ export function attachSocketHandlers(ctx: AppContext): void {
     socket.on('ping:time', (_clientTs, ack) => reply(ack, Date.now()));
 
     socket.on('disconnect', async () => {
-      if (role === 'DISPLAY' || role === 'PUBLIC') {
-        viewerDisconnected(tenantId, role, socket.data.deviceId);
-        emitCount();
-      }
+      if (role === 'DISPLAY' || role === 'PUBLIC') await emitCount().catch(() => undefined);
       if (role === 'IMAM' && socket.data.deviceId) {
         // If no other imam socket for this device/tenant remains, mark disconnected (displays keep last paragraph).
         const remaining = await io.in(ROOMS.imam(tenantId)).fetchSockets();
@@ -229,6 +229,6 @@ function touchDisplay(ctx: AppContext, displayId: string) {
   void ctx.db.display.update({ where: { id: displayId }, data: { lastSeenAt: new Date() } }).catch(() => undefined);
 }
 
-export function displayCount(tenantId: string): number {
-  return viewerTotal(tenantId);
+export function displayCount(ctx: AppContext, tenantId: string): Promise<number> {
+  return viewerTotal(ctx, tenantId);
 }

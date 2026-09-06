@@ -208,6 +208,47 @@ export const sponsorSchema = z.object({
   turnstileToken: z.string().max(4096).optional(),
 });
 export const markPaidSchema = z.object({ reference: z.string().max(200).optional() });
+
+// ---------- Platform configuration in the portal (hosted edition) ----------
+export const PLATFORM_CONFIG_GROUPS = ['billing', 'payment', 'email', 'security'] as const;
+export type PlatformConfigGroup = (typeof PLATFORM_CONFIG_GROUPS)[number];
+/** A secret field: a string sets it, null clears it, undefined / '' keeps what is stored. */
+const secretField = z.string().max(500).nullable().optional();
+export const platformGroupSchemas = {
+  billing: z.object({
+    sellerName: z.string().min(1).max(160).nullable().optional(),
+    sellerAddress: z.string().max(300).nullable().optional(),
+    vatRate: z.number().min(0).max(1).nullable().optional(),
+    vatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
+    bank: z.string().max(120).nullable().optional(),
+    iban: z.string().max(40).nullable().optional(),
+  }),
+  payment: z.object({
+    provider: z.enum(['manual', 'moyasar']).optional(),
+    moyasarSecretKey: secretField,
+    moyasarWebhookSecret: secretField,
+  }),
+  email: z.object({
+    host: z.string().max(200).nullable().optional(),
+    port: z.number().int().min(1).max(65535).nullable().optional(),
+    secure: z.boolean().optional(),
+    user: z.string().max(200).nullable().optional(),
+    pass: secretField,
+    fromName: z.string().max(120).nullable().optional(),
+    fromEmail: z.string().email().max(200).nullable().optional(),
+    replyTo: z.string().email().max(200).nullable().optional(),
+    notifyEmail: z.string().email().max(200).nullable().optional(),
+  }),
+  security: z.object({
+    turnstileSecret: secretField,
+    siteUrl: z.string().url().max(200).nullable().optional(),
+  }),
+} as const;
+export const testEmailSchema = z.object({ to: z.string().email().max(200), locale: z.enum(['ar', 'en']).default('ar') });
+
+// ---------- Password reset ----------
+export const forgotPasswordSchema = z.object({ email: z.string().email().max(200), tenantSlug: z.string().max(64).optional() });
+export const resetPasswordSchema = z.object({ token: z.string().min(10).max(200), password: z.string().min(8).max(200) });
 /** Plans a mosque can start or buy by itself (Organisation accounts are set up with us). */
 export const SELF_SERVICE_PLANS = ['BASIC', 'STANDARD', 'PRO'] as const;
 export const signupSchema = z.object({

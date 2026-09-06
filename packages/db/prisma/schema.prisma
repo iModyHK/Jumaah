@@ -362,6 +362,7 @@ model User {
 
   tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   organisation  Organisation?  @relation(fields: [organisationId], references: [id], onDelete: SetNull)
+  passwordResets PasswordReset[]
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
 
@@ -778,6 +779,34 @@ model Backup {
 }
 
 /// Platform-level key/value settings (cloud): latest edge image tag, announcements, etc.
+/// A password reset link: the token is emailed, its hash stored, valid for an hour and usable once.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Every outgoing email: sent, skipped (no SMTP configured) or failed, with the error. Shown on the platform page.
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  template  String
+  tenantId  String?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model PlatformSetting {
   key       String   @id
   value     Json

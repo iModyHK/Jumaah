@@ -32,8 +32,8 @@ describe('Moyasar integration', () => {
     await expect(moyasarInvoiceState(fakeFetch(401, { message: 'nope' }, []), 'k', 'inv_1')).rejects.toThrow('Moyasar 401');
   });
   it('falls back to manual payment without a secret key', () => {
-    expect(paymentProviderName({ PAYMENT_PROVIDER: 'moyasar', MOYASAR_SECRET_KEY: undefined })).toBe('manual');
-    expect(paymentProviderName({ PAYMENT_PROVIDER: 'moyasar', MOYASAR_SECRET_KEY: 'sk' })).toBe('moyasar');
-    expect(paymentProviderName({ PAYMENT_PROVIDER: 'manual', MOYASAR_SECRET_KEY: 'sk' })).toBe('manual');
+    expect(paymentProviderName({ provider: 'moyasar', moyasarSecretKey: null })).toBe('manual');
+    expect(paymentProviderName({ provider: 'moyasar', moyasarSecretKey: 'sk' })).toBe('moyasar');
+    expect(paymentProviderName({ provider: 'manual', moyasarSecretKey: 'sk' })).toBe('manual');
   });
 });

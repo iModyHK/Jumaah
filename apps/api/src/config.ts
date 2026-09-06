@@ -58,6 +58,22 @@ const schema = z.object({
   MOYASAR_WEBHOOK_SECRET: z.string().optional(),
   /** Cloudflare Turnstile secret for the public sponsor form (www.jumaah.net posts to this API). */
   TURNSTILE_SECRET_KEY: z.string().optional(),
+  // ---- Email (defaults; the portal's Platform → Email settings override them) ----
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
+  SMTP_SECURE: z
+    .string()
+    .optional()
+    .transform((v) => v === '1' || v === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM_NAME: z.string().default('Jumaah'),
+  MAIL_FROM_EMAIL: z.string().optional(),
+  MAIL_REPLY_TO: z.string().optional(),
+  /** Where platform notices go (new sponsorships, failed deliveries). */
+  MAIL_NOTIFY: z.string().optional(),
+  /** The marketing site, linked from emails and the admin. */
+  SITE_URL: z.string().optional(),
 });
 
 export type Config = ReturnType<typeof loadConfig>;

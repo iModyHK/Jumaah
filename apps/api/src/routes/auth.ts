@@ -1,6 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, randomToken, sha256, verifyPassword } from '@jumaah/db';
-import { acceptInviteSchema, changePasswordSchema, loginSchema, refreshSchema, type AuthResponse, type AuthUser } from '@jumaah/shared';
+import { acceptInviteSchema, changePasswordSchema, forgotPasswordSchema, loginSchema, refreshSchema, resetPasswordSchema, type AuthResponse, type AuthUser } from '@jumaah/shared';
+import { tenantBaseUrlFor } from '../lib/host.js';
+import { sendEmailLater } from '../services/email.service.js';
 import { audit } from '../lib/audit.js';
 import { badRequest, notFound, unauthorized } from '../lib/errors.js';
 import { signAccessToken } from '../lib/jwt.js';
@@ -139,5 +141,46 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     });
     await audit(db, inv.tenantId, { id: user.id, ip: request.ip }, 'auth.invite.accept', 'User', user.id);
     return issueTokens(user, request);
+  });
+
+  // ---- Password reset ----
+  const RESET_MINUTES = 60;
+
+  /** Always answers ok: whether the address exists is never revealed. The mosque comes from the address or the body. */
+  app.post('/forgot', { config: { rateLimit: { max: config.RATE_LIMIT_AUTH, timeWindow: '1 minute' } } }, async (request) => {
+    const body = parse(forgotPasswordSchema, request.body);
+    const email = body.email.toLowerCase();
+    const slug = request.hostSlug ?? body.tenantSlug ?? null;
+    const users = await db.user.findMany({ where: { email, isActive: true, ...(slug ? { tenant: { slug } } : {}) }, include: { tenant: { select: { name: true, slug: true, customDomain: true, customDomainVerifiedAt: true, isActive: true } } } });
+    for (const u of users) {
+      if (u.tenant && !u.tenant.isActive) continue;
+      const token = randomToken(32);
+      await db.passwordReset.create({ data: { userId: u.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_MINUTES * 60_000) } });
+      const base = u.tenant ? tenantBaseUrlFor(config, u.tenant) : config.PUBLIC_BASE_URL.replace(/\/$/, '');
+      sendEmailLater(app.ctx, { to: u.email, locale: u.locale === 'en' ? 'en' : 'ar', template: 'passwordReset', tenantId: u.tenantId, data: { name: u.name, resetUrl: `${base}/admin/reset/${token}`, mosqueName: u.tenant?.name ?? null, expiresMinutes: RESET_MINUTES } });
+      await audit(db, u.tenantId, { id: null, ip: request.ip }, 'auth.password.forgot', 'User', u.id);
+    }
+    return { ok: true };
+  });
+
+  app.get('/reset/:token', async (request) => {
+    const token = (request.params as { token: string }).token;
+    const row = await db.passwordReset.findUnique({ where: { tokenHash: sha256(token) }, include: { user: { include: { tenant: { select: { name: true, slug: true } } } } } });
+    if (!row || row.usedAt || row.expiresAt < new Date()) throw notFound('Reset link');
+    return { email: row.user.email, tenant: row.user.tenant };
+  });
+
+  app.post('/reset', { config: { rateLimit: { max: config.RATE_LIMIT_AUTH, timeWindow: '1 minute' } } }, async (request) => {
+    const body = parse(resetPasswordSchema, request.body);
+    const row = await db.passwordReset.findUnique({ where: { tokenHash: sha256(body.token) }, include: { user: true } });
+    if (!row || row.usedAt || row.expiresAt < new Date()) throw notFound('Reset link');
+    await db.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: row.userId }, data: { passwordHash: await hashPassword(body.password) } });
+      await tx.passwordReset.update({ where: { id: row.id }, data: { usedAt: new Date() } });
+      await tx.passwordReset.updateMany({ where: { userId: row.userId, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.refreshToken.updateMany({ where: { userId: row.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    });
+    await audit(db, row.user.tenantId, { id: row.userId, ip: request.ip }, 'auth.password.reset', 'User', row.userId);
+    return { ok: true };
   });
 }

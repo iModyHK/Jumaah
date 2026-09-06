@@ -11,6 +11,7 @@ import { HandoutPage } from './pages/HandoutPage';
 import { OrganisationPage } from './pages/OrganisationPage';
 import { OrganisationsPage } from './pages/OrganisationsPage';
 import { ApiPage } from './pages/ApiPage';
+import { ForgotPasswordPage, ResetPasswordPage } from './pages/ForgotPasswordPage';
 import { GlossaryPage } from './pages/GlossaryPage';
 import { ProvidersPage } from './pages/ProvidersPage';
 import { DisplaysPage } from './pages/DisplaysPage';
@@ -31,6 +32,8 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
+      <Route path="/forgot" element={<ForgotPasswordPage />} />
+      <Route path="/reset/:token" element={<ResetPasswordPage />} />
       <Route
         path="/khutbahs/:id/handout"
         element={

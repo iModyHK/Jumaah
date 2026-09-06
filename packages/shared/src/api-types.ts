@@ -545,3 +545,22 @@ export interface SignupResultDto {
   adminUrl: string;
   phoneUrl: string;
 }
+
+/** GET /platform/config — values by group; secrets replaced by { set, hint }. */
+export interface PlatformConfigDto {
+  groups: Record<'billing' | 'payment' | 'email' | 'security', Record<string, unknown>>;
+  /** "group.field" entries that come from the portal rather than the environment. */
+  fromPortal: string[];
+  secretFields: Record<'billing' | 'payment' | 'email' | 'security', string[]>;
+}
+
+export interface EmailLogDto {
+  id: string;
+  to: string;
+  subject: string;
+  template: string;
+  tenantId: string | null;
+  status: 'SENT' | 'SKIPPED' | 'FAILED';
+  error: string | null;
+  createdAt: string;
+}

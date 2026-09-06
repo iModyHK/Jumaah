@@ -1180,3 +1180,82 @@ describe('billing review: cancellation at period end and custom invoices', () =>
     expect(t.subscriptionStatus).toBe('ACTIVE');
   });
 });
+
+describe('platform settings in the portal, email log, password reset', () => {
+  afterAll(async () => {
+    await app.ctx.db.platformSetting.deleteMany({ where: { key: { in: ['platform.billing', 'platform.payment', 'platform.email', 'platform.security'] } } });
+    await app.ctx.db.emailLog.deleteMany({});
+    await app.ctx.db.passwordReset.deleteMany({});
+  });
+
+  it('portal values override the environment, secrets come back masked, and clearing restores the default', async () => {
+    const before = await app.inject({ method: 'GET', url: '/api/platform/config', headers: auth(superToken) });
+    expect(before.statusCode, before.body).toBe(200);
+    expect(before.json().groups.billing.sellerName).toBe('Jumaah Cloud');
+    expect(before.json().groups.payment.moyasarSecretKey).toEqual({ set: false, hint: null });
+    expect((await app.inject({ method: 'GET', url: '/api/platform/config', headers: auth(adminToken) })).statusCode).toBe(403);
+
+    const saved = await app.inject({ method: 'PUT', url: '/api/platform/config/billing', headers: auth(superToken), payload: { sellerName: 'شركة جُمعة', vatRate: 0.15, vatNumber: '300000000000003', iban: 'SA0000000000000000000001', bank: 'Al Rajhi' } });
+    expect(saved.statusCode, saved.body).toBe(200);
+    expect(saved.json().groups.billing).toMatchObject({ sellerName: 'شركة جُمعة', vatRate: 0.15, vatNumber: '300000000000003' });
+    expect(saved.json().fromPortal).toContain('billing.sellerName');
+    // a secret: set, masked, kept when omitted, cleared with null
+    const pay = await app.inject({ method: 'PUT', url: '/api/platform/config/payment', headers: auth(superToken), payload: { provider: 'moyasar', moyasarSecretKey: 'sk_test_abcdefghijklmnop' } });
+    expect(pay.json().groups.payment.moyasarSecretKey.set).toBe(true);
+    expect(JSON.stringify(pay.json())).not.toContain('sk_test_abcdefghijklmnop');
+    const keep = await app.inject({ method: 'PUT', url: '/api/platform/config/payment', headers: auth(superToken), payload: { provider: 'manual' } });
+    expect(keep.json().groups.payment.moyasarSecretKey.set).toBe(true);
+    const row = await app.ctx.db.platformSetting.findUniqueOrThrow({ where: { key: 'platform.payment' } });
+    expect(JSON.stringify(row.value)).not.toContain('sk_test_abcdefghijklmnop');
+    const cleared = await app.inject({ method: 'PUT', url: '/api/platform/config/payment', headers: auth(superToken), payload: { moyasarSecretKey: null } });
+    expect(cleared.json().groups.payment.moyasarSecretKey.set).toBe(false);
+    expect((await app.inject({ method: 'PUT', url: '/api/platform/config/nope', headers: auth(superToken), payload: {} })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PUT', url: '/api/platform/config/billing', headers: auth(superToken), payload: { vatNumber: '12' } })).statusCode).toBe(400);
+
+    // the new seller details and VAT rate reach invoices at once
+    const seller = await app.inject({ method: 'GET', url: '/api/billing', headers: auth(adminToken) });
+    expect(seller.json().seller).toMatchObject({ name: 'شركة جُمعة', vatRate: 0.15, vatNumber: '300000000000003', iban: 'SA0000000000000000000001' });
+    const inv = await app.inject({ method: 'POST', url: '/api/platform/invoices', headers: auth(superToken), payload: { tenantId, description: 'VAT check', unitPriceSar: 100 } });
+    expect(inv.statusCode, inv.body).toBe(201);
+    expect(inv.json()).toMatchObject({ subtotal: 10000, vat: 1500, total: 11500 });
+    const pub = await app.inject({ method: 'GET', url: `/api/public/invoices/${inv.json().number}?t=${new URL(inv.json().viewUrl).searchParams.get('t')}` });
+    expect(typeof pub.json().qr).toBe('string');
+    await app.ctx.db.invoice.delete({ where: { id: inv.json().id } });
+  });
+
+  it('emails are logged as skipped without SMTP, and the test endpoint says so', async () => {
+    const res = await app.inject({ method: 'POST', url: '/api/platform/config/email/test', headers: auth(superToken), payload: { to: 'someone@example.org', locale: 'en' } });
+    expect(res.statusCode, res.body).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'SKIPPED', configured: false });
+    const log = await app.inject({ method: 'GET', url: '/api/platform/emails', headers: auth(superToken) });
+    expect(log.json()[0]).toMatchObject({ to: 'someone@example.org', template: 'test', status: 'SKIPPED' });
+  });
+
+  it('password reset: the link is single-use, time-limited and never reveals whether the address exists', async () => {
+    const unknown = await app.inject({ method: 'POST', url: '/api/auth/forgot', payload: { email: 'nobody@example.org' } });
+    expect(unknown.statusCode).toBe(200);
+    const known = await app.inject({ method: 'POST', url: '/api/auth/forgot', headers: { host: 'demo.jumaah.test' }, payload: { email: 'translator@demo.mosque' } });
+    expect(known.statusCode, known.body).toBe(200);
+    const user = await app.ctx.db.user.findFirstOrThrow({ where: { email: 'translator@demo.mosque', tenantId } });
+    const rows = await app.ctx.db.passwordReset.findMany({ where: { userId: user.id, usedAt: null } });
+    expect(rows).toHaveLength(1);
+    await new Promise((r) => setTimeout(r, 200));
+    const mail = await app.ctx.db.emailLog.findFirst({ where: { to: 'translator@demo.mosque', template: 'passwordReset' }, orderBy: { createdAt: 'desc' } });
+    expect(mail?.status).toBe('SKIPPED');
+    // the token itself is only in the email; recreate it through the hash by issuing a known one
+    const { randomToken, sha256 } = await import('@jumaah/db');
+    const token = randomToken(32);
+    await app.ctx.db.passwordReset.update({ where: { id: rows[0].id }, data: { tokenHash: sha256(token) } });
+    expect((await app.inject({ method: 'GET', url: `/api/auth/reset/${token}` })).json()).toMatchObject({ email: 'translator@demo.mosque', tenant: { slug: 'demo' } });
+    expect((await app.inject({ method: 'POST', url: '/api/auth/reset', payload: { token, password: 'short' } })).statusCode).toBe(400);
+    const done = await app.inject({ method: 'POST', url: '/api/auth/reset', payload: { token, password: 'NewPass12345!' } });
+    expect(done.statusCode, done.body).toBe(200);
+    expect((await app.inject({ method: 'GET', url: `/api/auth/reset/${token}` })).statusCode).toBe(404);
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', headers: { host: 'demo.jumaah.test' }, payload: { email: 'translator@demo.mosque', password: 'NewPass12345!' } });
+    expect(login.statusCode, login.body).toBe(200);
+    // put the seed password back
+    const { hashPassword } = await import('@jumaah/db');
+    await app.ctx.db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword('Demo12345!') } });
+    expect((await app.inject({ method: 'GET', url: '/api/auth/reset/not-a-token-at-all' })).statusCode).toBe(404);
+  });
+});

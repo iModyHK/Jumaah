@@ -70,7 +70,17 @@
     "changePassword": "Change password",
     "currentPassword": "Current password",
     "newPassword": "New password",
-    "sessionExpired": "Session expired, please log in again"
+    "sessionExpired": "Session expired, please log in again",
+    "forgot": "Forgot your password?",
+    "forgotTitle": "Reset your password",
+    "forgotHint": "Enter the email you sign in with. If an account exists, a reset link is sent to it.",
+    "forgotSent": "If an account exists for that address, an email with a reset link is on its way. The link is valid for one hour.",
+    "sendReset": "Send the link",
+    "backToLogin": "Back to sign in",
+    "resetTitle": "Choose a new password",
+    "resetSubmit": "Save the new password",
+    "resetDone": "Your password was changed. You can sign in now.",
+    "resetInvalid": "This reset link is invalid or has expired. Ask for a new one."
   },
   "roles": {
     "SUPER_ADMIN": "Platform admin",
@@ -798,5 +808,66 @@
     "unitPrice": "Unit price (SAR)",
     "dueDays": "Due in (days)",
     "issue": "Issue invoice"
+  },
+  "platformConfig": {
+    "title": "Platform settings",
+    "hint": "Billing, payments, email and security are edited here and take effect within a minute. Values from the environment (.env) are the defaults; anything saved here overrides them. Secrets are stored encrypted and shown only as a hint.",
+    "groups": {
+      "billing": "Billing & VAT",
+      "payment": "Payments",
+      "email": "Email (SMTP)",
+      "security": "Security & site"
+    },
+    "fields": {
+      "billing": {
+        "sellerName": "Seller name on invoices",
+        "sellerAddress": "Seller address",
+        "vatRate": "VAT rate (0 or 0.15)",
+        "vatNumber": "VAT number (15 digits)",
+        "bank": "Bank",
+        "iban": "IBAN"
+      },
+      "payment": {
+        "provider": "Payment method",
+        "moyasarSecretKey": "Moyasar secret key",
+        "moyasarWebhookSecret": "Moyasar webhook secret"
+      },
+      "email": {
+        "host": "SMTP host",
+        "port": "SMTP port",
+        "secure": "TLS on connect (port 465)",
+        "user": "SMTP user",
+        "pass": "SMTP password",
+        "fromName": "Sender name",
+        "fromEmail": "Sender address",
+        "replyTo": "Reply-to address",
+        "notifyEmail": "Platform notices go to"
+      },
+      "security": {
+        "turnstileSecret": "Cloudflare Turnstile secret",
+        "siteUrl": "Marketing site address"
+      }
+    },
+    "options": {
+      "manual": "Bank transfer (marked paid by you)",
+      "moyasar": "Moyasar (mada, Apple Pay, cards)"
+    },
+    "fromPortal": "set here",
+    "fromEnv": "from the environment",
+    "secretSet": "set:",
+    "secretUnset": "not set",
+    "clearSecret": "clear",
+    "testEmail": "Test the email settings",
+    "testTo": "Send a test to",
+    "sendTest": "Send test",
+    "testSent": "Sent.",
+    "testFailed": "Failed",
+    "notConfigured": "SMTP is not configured yet.",
+    "recentEmails": "Recent emails",
+    "emailStatus": {
+      "SENT": "Sent",
+      "SKIPPED": "Skipped",
+      "FAILED": "Failed"
+    }
   }
 }

@@ -20,7 +20,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
   app.get('/session', { preHandler: app.requireRole(...ALL_STAFF) }, async (request) => {
     const snap = await getSnapshot(app.ctx, request.tenantId);
     const khutbah = snap.khutbahId ? await getLiveKhutbah(app.ctx, request.tenantId, snap.khutbahId) : null;
-    return { session: snap, khutbah, displays: displayCount(request.tenantId) };
+    return { session: snap, khutbah, displays: await displayCount(app.ctx, request.tenantId) };
   });
 
   app.post('/session/start', { preHandler: app.requireRole(...IMAM_ROLES) }, async (request) => {

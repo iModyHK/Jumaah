@@ -29,20 +29,23 @@ import type { Config } from '../config.js';
 import { audit, type Actor } from '../lib/audit.js';
 import type { AppContext } from '../lib/context.js';
 import { conflict, notFound } from '../lib/errors.js';
-import { createPayment } from './payment.service.js';
+import { billingRecipients, organisationRecipients, sendEmailLater } from './email.service.js';
+import { createPayment, paymentProviderName } from './payment.service.js';
+import { platformConfig } from './platform-config.service.js';
 
 const DAY = 86_400_000;
 
-export function sellerInfo(config: Config): SellerInfoDto {
+export async function sellerInfo(ctx: AppContext): Promise<SellerInfoDto> {
+  const { billing, payment } = await platformConfig(ctx);
   return {
-    name: config.BILLING_SELLER_NAME,
-    vatNumber: config.BILLING_VAT_NUMBER || null,
-    address: config.BILLING_SELLER_ADDRESS || null,
-    iban: config.BILLING_IBAN || null,
-    bank: config.BILLING_BANK || null,
-    vatRate: config.BILLING_VAT_RATE,
+    name: billing.sellerName,
+    vatNumber: billing.vatNumber,
+    address: billing.sellerAddress,
+    iban: billing.iban,
+    bank: billing.bank,
+    vatRate: billing.vatRate,
     currency: CURRENCY,
-    provider: config.PAYMENT_PROVIDER === 'moyasar' && config.MOYASAR_SECRET_KEY ? 'moyasar' : 'manual',
+    provider: paymentProviderName(payment),
   };
 }
 
@@ -124,7 +127,8 @@ export interface CreateInvoiceInput {
 
 export async function createInvoice(ctx: AppContext, input: CreateInvoiceInput): Promise<Invoice> {
   const subtotal = input.lines.reduce((n, l) => n + l.amount, 0);
-  const totals = computeTotals(subtotal, ctx.config.BILLING_VAT_RATE);
+  const { billing } = await platformConfig(ctx);
+  const totals = computeTotals(subtotal, billing.vatRate);
   const now = new Date();
   let created: Invoice | null = null;
   for (let attempt = 0; attempt < 3 && !created; attempt++) {
@@ -143,7 +147,7 @@ export async function createInvoice(ctx: AppContext, input: CreateInvoiceInput):
           periodEnd: input.periodEnd ?? null,
           currency: CURRENCY,
           subtotal: totals.subtotal,
-          vatRate: ctx.config.BILLING_VAT_RATE,
+          vatRate: billing.vatRate,
           vat: totals.vat,
           total: totals.total,
           lines: input.lines as unknown as Prisma.InputJsonValue,
@@ -157,15 +161,37 @@ export async function createInvoice(ctx: AppContext, input: CreateInvoiceInput):
       if ((err as { code?: string }).code !== 'P2002' || attempt === 2) throw err;
     }
   }
-  const inv = created!;
+  let inv = created!;
   // A pay link when a gateway is configured; failures are logged and retried when someone presses "Pay".
   try {
     const p = await createPayment(ctx, inv);
-    if (p) return ctx.db.invoice.update({ where: { id: inv.id }, data: { paymentProvider: p.provider, paymentRef: p.ref, paymentUrl: p.url } });
+    if (p) inv = await ctx.db.invoice.update({ where: { id: inv.id }, data: { paymentProvider: p.provider, paymentRef: p.ref, paymentUrl: p.url } });
   } catch (err) {
     ctx.log.warn({ err, invoice: inv.number }, 'payment link could not be created');
   }
+  if (inv.kind !== 'SPONSORSHIP') void emailInvoice(ctx, inv);
   return inv;
+}
+
+/** Tell the customer about a new invoice (the sponsor flow sends its own message). */
+async function emailInvoice(ctx: AppContext, inv: Invoice): Promise<void> {
+  try {
+    const recipients = inv.tenantId ? await billingRecipients(ctx, inv.tenantId) : inv.organisationId ? await organisationRecipients(ctx, inv.organisationId) : [];
+    const seller = await sellerInfo(ctx);
+    const line = (inv.lines as unknown as InvoiceLine[])[0];
+    const billTo = inv.billTo as { name?: string };
+    for (const r of recipients) {
+      sendEmailLater(ctx, {
+        to: r.to,
+        locale: r.locale,
+        template: 'invoiceIssued',
+        tenantId: inv.tenantId,
+        data: { customerName: billTo?.name ?? '', number: inv.number, total: inv.total, dueAt: inv.dueAt.toISOString(), viewUrl: invoiceViewUrl(ctx.config, inv), paymentUrl: inv.paymentUrl, iban: seller.iban, bank: seller.bank, sellerName: seller.name, description: r.locale === 'ar' ? (line?.descriptionAr ?? line?.description ?? '') : (line?.description ?? '') },
+      });
+    }
+  } catch (err) {
+    ctx.log.warn({ err, invoice: inv.number }, 'invoice email failed');
+  }
 }
 
 /** Make sure an open invoice has a pay link (gateway configured); returns the invoice. */
@@ -298,6 +324,10 @@ export async function markOverdue(ctx: AppContext, now: Date = new Date()): Prom
     if (!where) continue;
     const res = await ctx.db.tenant.updateMany({ where: { ...where, subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] } }, data: { subscriptionStatus: 'PAST_DUE' } });
     n += res.count;
+    if (res.count > 0) {
+      const recipients = inv.tenantId ? await billingRecipients(ctx, inv.tenantId) : await organisationRecipients(ctx, inv.organisationId!);
+      for (const r of recipients) sendEmailLater(ctx, { to: r.to, locale: r.locale, template: 'pastDue', tenantId: inv.tenantId, data: { customerName: (inv.billTo as { name?: string })?.name ?? '', number: inv.number, total: inv.total, viewUrl: invoiceViewUrl(ctx.config, inv), graceDays: OVERDUE_GRACE_DAYS } });
+    }
   }
   return n;
 }
@@ -323,6 +353,17 @@ export async function markPaid(ctx: AppContext, invoiceId: string, payment: { pr
     await ctx.db.sponsorship.updateMany({ where: { id: inv.sponsorshipId, status: 'PENDING' }, data: { status: 'PAID' } });
   }
   await audit(ctx.db, inv.tenantId, actor, 'invoice.paid', 'Invoice', inv.id, { status: inv.status }, { status: 'PAID', provider: payment.provider, reference: payment.reference });
+  void (async () => {
+    const recipients = inv.tenantId
+      ? await billingRecipients(ctx, inv.tenantId)
+      : inv.organisationId
+        ? await organisationRecipients(ctx, inv.organisationId)
+        : inv.sponsorshipId
+          ? await ctx.db.sponsorship.findUnique({ where: { id: inv.sponsorshipId } }).then((s) => (s ? [{ to: s.sponsorEmail, locale: (s.lang === 'en' ? 'en' : 'ar') as 'ar' | 'en' }] : []))
+          : [];
+    const paidUntil = inv.tenantId ? (await ctx.db.tenant.findUnique({ where: { id: inv.tenantId }, select: { subscriptionEndsAt: true } }))?.subscriptionEndsAt?.toISOString() ?? null : inv.periodEnd?.toISOString() ?? null;
+    for (const r of recipients) sendEmailLater(ctx, { to: r.to, locale: r.locale, template: 'paymentReceived', tenantId: inv.tenantId, data: { customerName: (inv.billTo as { name?: string })?.name ?? '', number: inv.number, total: inv.total, viewUrl: invoiceViewUrl(ctx.config, inv), paidUntil } });
+  })().catch((err) => ctx.log.warn({ err }, 'payment email failed'));
   return paid;
 }
 
@@ -346,6 +387,11 @@ export async function createSponsorship(ctx: AppContext, input: { sponsorName: s
     billTo: { name: input.sponsorName, email: input.sponsorEmail.toLowerCase(), vatNumber: null, address: null },
     note: input.mosqueName ? `Requested mosque: ${input.mosqueName}` : null,
   });
+  const seller = await sellerInfo(ctx);
+  const viewUrl = invoiceViewUrl(ctx.config, invoice);
+  sendEmailLater(ctx, { to: sponsorship.sponsorEmail, locale: input.lang, template: 'sponsorship', data: { sponsorName: sponsorship.sponsorName, mosques: sponsorship.mosques, number: invoice.number, total: invoice.total, viewUrl, paymentUrl: invoice.paymentUrl, iban: seller.iban, bank: seller.bank, sellerName: seller.name } });
+  const { email } = await platformConfig(ctx);
+  if (email.notifyEmail) sendEmailLater(ctx, { to: email.notifyEmail, locale: 'en', template: 'sponsorshipNotice', data: { sponsorName: sponsorship.sponsorName, sponsorEmail: sponsorship.sponsorEmail, mosques: sponsorship.mosques, mosqueName: sponsorship.mosqueName, message: sponsorship.message, number: invoice.number, total: invoice.total } });
   return { sponsorship, invoice };
 }
 
@@ -405,20 +451,22 @@ export function startBillingScheduler(ctx: AppContext): void {
 }
 
 /** The QR printed on tax invoices once the seller has a VAT number. */
-export function invoiceQr(config: Config, inv: Invoice): string | null {
-  if (!config.BILLING_VAT_NUMBER) return null;
-  return zatcaQr({ sellerName: config.BILLING_SELLER_NAME, vatNumber: config.BILLING_VAT_NUMBER, timestamp: inv.paidAt ?? inv.issuedAt, totalHalalas: inv.total, vatHalalas: inv.vat });
+export async function invoiceQr(ctx: AppContext, inv: Invoice): Promise<string | null> {
+  const { billing } = await platformConfig(ctx);
+  if (!billing.vatNumber) return null;
+  return zatcaQr({ sellerName: billing.sellerName, vatNumber: billing.vatNumber, timestamp: inv.paidAt ?? inv.issuedAt, totalHalalas: inv.total, vatHalalas: inv.vat });
 }
 
-/** Turnstile check for public forms (the sponsor page); skipped when no secret is configured (self-hosted, tests). */
-export async function verifyTurnstile(config: Config, token: string | undefined, ip: string | undefined, fetchFn: typeof fetch = fetch): Promise<boolean> {
-  if (!config.TURNSTILE_SECRET_KEY) return true;
+/** Turnstile check for public forms (sponsor, sign-up); skipped when no secret is configured (self-hosted, tests). */
+export async function verifyTurnstile(ctx: AppContext, token: string | undefined, ip: string | undefined, fetchFn: typeof fetch = fetch): Promise<boolean> {
+  const { security } = await platformConfig(ctx);
+  if (!security.turnstileSecret) return true;
   if (!token) return false;
   try {
     const res = await fetchFn('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ secret: config.TURNSTILE_SECRET_KEY, response: token, remoteip: ip }),
+      body: JSON.stringify({ secret: security.turnstileSecret, response: token, remoteip: ip }),
     });
     const body = (await res.json()) as { success?: boolean };
     return !!body.success;

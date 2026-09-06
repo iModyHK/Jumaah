@@ -4,6 +4,7 @@ import { badRequest, forbidden } from '../lib/errors.js';
 import { tenantBaseUrlFor } from '../lib/host.js';
 import { parse } from '../lib/validate.js';
 import { verifyTurnstile } from '../services/billing.service.js';
+import { sendEmailLater } from '../services/email.service.js';
 import { createTenantWithAdmin, slugProblem } from '../services/tenant.service.js';
 
 /** Public sign-up of the hosted edition: the storefront on www.jumaah.net creates the mosque and its first admin here. */
@@ -23,7 +24,7 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
   app.post('/public/signup', { config: { rateLimit: { max: config.RATE_LIMIT_AUTH, timeWindow: '1 minute' } } }, async (request, reply): Promise<SignupResultDto> => {
     if (!config.isCloud || !config.tenantBaseDomain) throw forbidden('Sign-up is only available on Jumaah Cloud');
     const body = parse(signupSchema, request.body);
-    if (!(await verifyTurnstile(config, body.turnstileToken, request.ip))) throw badRequest('Verification failed', { code: 'captcha' });
+    if (!(await verifyTurnstile(app.ctx, body.turnstileToken, request.ip))) throw badRequest('Verification failed', { code: 'captcha' });
     const { tenant } = await createTenantWithAdmin(
       app.ctx,
       { name: body.mosqueName, slug: body.slug, timezone: body.timezone, locale: body.locale, plan: body.plan, cycle: body.cycle, adminEmail: body.adminEmail, adminName: body.adminName, adminPassword: body.password, languages: body.languages },
@@ -31,6 +32,8 @@ export async function signupRoutes(app: FastifyInstance): Promise<void> {
       'tenant.signup',
     );
     const base = tenantBaseUrlFor(config, { slug: tenant.slug });
+    const planLabel = { BASIC: 'Basic', STANDARD: 'Standard', PRO: 'Pro', ENTERPRISE: 'Organisation', FREE: 'Free' }[tenant.plan] ?? tenant.plan;
+    sendEmailLater(app.ctx, { to: body.adminEmail, locale: body.locale, template: 'welcome', tenantId: tenant.id, data: { mosqueName: tenant.name, adminName: body.adminName, adminUrl: `${base}/admin/`, phoneUrl: `${base}/display/m/${tenant.slug}`, trialEndsAt: tenant.subscriptionEndsAt?.toISOString() ?? null, plan: planLabel } });
     reply.code(201);
     return { slug: tenant.slug, name: tenant.name, plan: tenant.plan, trialEndsAt: tenant.subscriptionEndsAt?.toISOString() ?? null, adminUrl: `${base}/admin/`, phoneUrl: `${base}/display/m/${tenant.slug}` };
   });

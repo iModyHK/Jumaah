@@ -156,6 +156,8 @@ model Tenant {
   billingEmail          String?
   /// The mosque asked to stop: no renewal invoice; at the paid-until date the plan falls back to FREE, nothing is deleted.
   cancelAtPeriodEnd     Boolean            @default(false)
+  /// When the "your trial ends soon" email went out (sent once per trial).
+  trialNoticeSentAt     DateTime?
   isActive              Boolean            @default(true)
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt

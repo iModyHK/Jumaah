@@ -231,7 +231,8 @@ export async function issueRenewals(ctx: AppContext, now: Date = new Date()): Pr
   const horizon = new Date(now.getTime() + RENEWAL_LEAD_DAYS * DAY);
   let issued = 0;
   const tenants = await ctx.db.tenant.findMany({
-    where: { isActive: true, organisationId: null, cancelAtPeriodEnd: false, plan: { not: 'FREE' }, subscriptionStatus: { in: ['ACTIVE', 'TRIAL', 'PAST_DUE'] }, subscriptionEndsAt: { not: null, lte: horizon } },
+    // Trials are never invoiced automatically: they get a notice and then fall back to the free plan (see runTrials).
+    where: { isActive: true, organisationId: null, cancelAtPeriodEnd: false, plan: { not: 'FREE' }, subscriptionStatus: { in: ['ACTIVE', 'PAST_DUE'] }, subscriptionEndsAt: { not: null, lte: horizon } },
   });
   for (const t of tenants) {
     const open = await ctx.db.invoice.findFirst({ where: { tenantId: t.id, kind: 'SUBSCRIPTION', status: 'OPEN' } });
@@ -312,6 +313,49 @@ export async function createCustomInvoice(
   });
   await audit(ctx.db, input.tenantId ?? null, actor, 'invoice.custom', 'Invoice', inv.id, null, { number: inv.number, total: inv.total, organisationId: input.organisationId ?? null });
   return inv;
+}
+
+/** Days before the end of a trial the "ends soon" notice goes out. */
+export const TRIAL_NOTICE_DAYS = 7;
+const PLAN_LABEL: Record<string, string> = { BASIC: 'Basic', STANDARD: 'Standard', PRO: 'Pro', ENTERPRISE: 'Organisation', FREE: 'Free' };
+
+function tenantAdminUrl(ctx: AppContext, t: { slug: string; customDomain: string | null; customDomainVerifiedAt: Date | null }): string {
+  const scheme = ctx.config.PUBLIC_BASE_URL.startsWith('http://') ? 'http' : 'https';
+  const host = t.customDomain && t.customDomainVerifiedAt ? t.customDomain : ctx.config.tenantBaseDomain ? `${t.slug}.${ctx.config.tenantBaseDomain}` : null;
+  return host ? `${scheme}://${host}/admin/` : `${ctx.config.PUBLIC_BASE_URL.replace(/\/$/, '')}/admin/`;
+}
+
+/**
+ * Trials: a notice a week before the end, then, unless the mosque subscribed meanwhile, the free plan with nothing
+ * deleted. A trial that chose a plan has an open invoice and is left to the overdue rules; payment makes it ACTIVE.
+ */
+export async function runTrials(ctx: AppContext, now: Date = new Date()): Promise<{ noticed: number; ended: number }> {
+  const soon = new Date(now.getTime() + TRIAL_NOTICE_DAYS * DAY);
+  const ending = await ctx.db.tenant.findMany({ where: { isActive: true, subscriptionStatus: 'TRIAL', trialNoticeSentAt: null, subscriptionEndsAt: { not: null, lte: soon, gt: now } } });
+  for (const t of ending) {
+    await ctx.db.tenant.update({ where: { id: t.id }, data: { trialNoticeSentAt: now } });
+    const daysLeft = Math.max(1, Math.ceil((t.subscriptionEndsAt!.getTime() - now.getTime()) / DAY));
+    for (const r of await billingRecipients(ctx, t.id)) {
+      sendEmailLater(ctx, { to: r.to, locale: r.locale, template: 'trialEnding', tenantId: t.id, data: { mosqueName: t.name, endsAt: t.subscriptionEndsAt!.toISOString(), plan: PLAN_LABEL[t.plan] ?? t.plan, adminUrl: tenantAdminUrl(ctx, t), daysLeft } });
+    }
+  }
+  const over = await ctx.db.tenant.findMany({ where: { isActive: true, subscriptionStatus: 'TRIAL', plan: { not: 'FREE' }, subscriptionEndsAt: { not: null, lte: now } } });
+  let ended = 0;
+  for (const t of over) {
+    const pending = await ctx.db.invoice.findFirst({ where: { tenantId: t.id, kind: { in: ['SUBSCRIPTION', 'CUSTOM'] }, status: 'OPEN' } });
+    if (pending) continue;
+    await ctx.db.tenant.update({ where: { id: t.id }, data: { plan: 'FREE', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null } });
+    await audit(ctx.db, t.id, { id: null, email: 'billing:scheduler' }, 'billing.trialEnded', 'Tenant', t.id, { plan: t.plan }, { plan: 'FREE' });
+    for (const r of await billingRecipients(ctx, t.id)) sendEmailLater(ctx, { to: r.to, locale: r.locale, template: 'trialEnded', tenantId: t.id, data: { mosqueName: t.name, adminUrl: tenantAdminUrl(ctx, t) } });
+    ended += 1;
+  }
+  return { noticed: ending.length, ended };
+}
+
+/** Rows nobody needs any more: the email log after 90 days, reset links after 7. */
+export async function housekeeping(ctx: AppContext, now: Date = new Date()): Promise<void> {
+  await ctx.db.emailLog.deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - 90 * DAY) } } }).catch(() => undefined);
+  await ctx.db.passwordReset.deleteMany({ where: { createdAt: { lt: new Date(now.getTime() - 7 * DAY) } } }).catch(() => undefined);
 }
 
 /** Open subscription invoices past due plus grace: the mosque (or every mosque of the organisation) becomes past due. */
@@ -433,13 +477,15 @@ export async function subscribeNow(ctx: AppContext, tenantId: string, plan: Subs
   return inv;
 }
 
-export async function runBilling(ctx: AppContext, now: Date = new Date()): Promise<{ issued: number; overdue: number; cancelled: number }> {
-  if (!ctx.config.isCloud) return { issued: 0, overdue: 0, cancelled: 0 };
+export async function runBilling(ctx: AppContext, now: Date = new Date()): Promise<{ issued: number; overdue: number; cancelled: number; trialsEnded: number; trialNotices: number }> {
+  if (!ctx.config.isCloud) return { issued: 0, overdue: 0, cancelled: 0, trialsEnded: 0, trialNotices: 0 };
   const cancelled = await applyCancellations(ctx, now);
+  const trials = await runTrials(ctx, now);
   const issued = await issueRenewals(ctx, now);
   const overdue = await markOverdue(ctx, now);
-  if (issued || overdue || cancelled) ctx.log.info({ issued, overdue, cancelled }, 'billing run');
-  return { issued, overdue, cancelled };
+  await housekeeping(ctx, now);
+  if (issued || overdue || cancelled || trials.ended || trials.noticed) ctx.log.info({ issued, overdue, cancelled, trials }, 'billing run');
+  return { issued, overdue, cancelled, trialsEnded: trials.ended, trialNotices: trials.noticed };
 }
 
 /** Hosted edition: issue renewals and flag overdue invoices every few hours. */

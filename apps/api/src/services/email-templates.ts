@@ -20,6 +20,8 @@ export interface TemplateData {
   pastDue: { customerName: string; number: string; total: number; viewUrl: string; graceDays: number };
   sponsorship: { sponsorName: string; mosques: number; number: string; total: number; viewUrl: string; paymentUrl: string | null; iban: string | null; bank: string | null; sellerName: string };
   sponsorshipNotice: { sponsorName: string; sponsorEmail: string; mosques: number; mosqueName: string | null; message: string | null; number: string; total: number };
+  trialEnding: { mosqueName: string; endsAt: string; plan: string; adminUrl: string; daysLeft: number };
+  trialEnded: { mosqueName: string; adminUrl: string };
   test: { sentBy: string };
 }
 
@@ -163,6 +165,36 @@ export function renderTemplate<K extends TemplateName>(name: K, locale: Locale, 
         [`${esc(x.sponsorEmail)} · ${x.mosques} mosque(s) · ${money(x.total, 'en')} · invoice ${esc(x.number)}`, x.mosqueName ? `Requested mosque: ${esc(x.mosqueName)}` : '', x.message ? `Message: ${esc(x.message)}` : ''].filter(Boolean),
         null,
         'Apply the seats from Admin → Platform → Billing once the invoice is paid.',
+      );
+    }
+    case 'trialEnding': {
+      const x = d as TemplateData['trialEnding'];
+      return build(
+        locale,
+        ar ? `تنتهي تجربة ${x.mosqueName} خلال ${x.daysLeft} أيام` : `${x.mosqueName}: your trial ends in ${x.daysLeft} days`,
+        ar ? 'تجربتكم المجانية تقارب نهايتها' : 'Your free trial is almost over',
+        [
+          ar
+            ? `تنتهي تجربة الباقة ${esc(x.plan)} لمسجد <b>${esc(x.mosqueName)}</b> في ${date(x.endsAt, locale)}. للاستمرار اشتركوا من الإعدادات ← الاشتراك؛ وإلا يعود المسجد إلى الباقة المجانية دون فقدان أي شيء.`
+            : `The ${esc(x.plan)} trial for <b>${esc(x.mosqueName)}</b> ends on ${date(x.endsAt, locale)}. To keep going, subscribe from Settings → Subscription; otherwise the mosque returns to the free plan and nothing is lost.`,
+        ],
+        { label: ar ? 'الاشتراك الآن' : 'Subscribe now', url: `${x.adminUrl}settings` },
+        FOOT[locale],
+      );
+    }
+    case 'trialEnded': {
+      const x = d as TemplateData['trialEnded'];
+      return build(
+        locale,
+        ar ? `انتهت تجربة ${x.mosqueName}` : `${x.mosqueName}: the trial has ended`,
+        ar ? 'انتهت التجربة المجانية' : 'Your free trial has ended',
+        [
+          ar
+            ? `عاد <b>${esc(x.mosqueName)}</b> إلى الباقة المجانية: الخطب والشاشات والجوالات تعمل كما هي، وتوقفت ميزات الباقات المدفوعة فقط. يمكنكم الاشتراك في أي وقت لإعادتها.`
+            : `<b>${esc(x.mosqueName)}</b> is back on the free plan: khutbahs, screens and phones keep working; only the paid features paused. Subscribe at any time to bring them back.`,
+        ],
+        { label: ar ? 'الاشتراك' : 'Subscribe', url: `${x.adminUrl}settings` },
+        FOOT[locale],
       );
     }
     case 'test': {

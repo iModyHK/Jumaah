@@ -1259,3 +1259,36 @@ describe('platform settings in the portal, email log, password reset', () => {
     expect((await app.inject({ method: 'GET', url: '/api/auth/reset/not-a-token-at-all' })).statusCode).toBe(404);
   });
 });
+
+describe('trials: a notice a week before the end, then the free plan unless subscribed', () => {
+  afterAll(async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'PRO', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null, trialNoticeSentAt: null } });
+    await app.ctx.db.invoice.deleteMany({ where: { tenantId } });
+    await app.ctx.db.emailLog.deleteMany({});
+  });
+  it('never invoices a trial, sends the notice once, and ends the trial on the free plan', async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'STANDARD', subscriptionStatus: 'TRIAL', subscriptionEndsAt: new Date(Date.now() + 5 * 86_400_000), trialNoticeSentAt: null } });
+    const run = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(run.statusCode).toBe(200);
+    expect(run.json().trialNotices).toBeGreaterThanOrEqual(1);
+    expect(await app.ctx.db.invoice.count({ where: { tenantId, status: 'OPEN' } })).toBe(0);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await app.ctx.db.emailLog.count({ where: { template: 'trialEnding', tenantId } })).toBe(1);
+    const again = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(again.json().trialNotices).toBe(0);
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { subscriptionEndsAt: new Date(Date.now() - 1000) } });
+    const ended = await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect(ended.json().trialsEnded).toBeGreaterThanOrEqual(1);
+    const t = await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+    expect(t).toMatchObject({ plan: 'FREE', subscriptionStatus: 'ACTIVE', subscriptionEndsAt: null });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(await app.ctx.db.emailLog.count({ where: { template: 'trialEnded', tenantId } })).toBe(1);
+  });
+  it('a trial that subscribed is left to its invoice', async () => {
+    await app.ctx.db.tenant.update({ where: { id: tenantId }, data: { plan: 'STANDARD', subscriptionStatus: 'TRIAL', subscriptionEndsAt: new Date(Date.now() - 1000) } });
+    const sub = await app.inject({ method: 'POST', url: '/api/billing/subscribe', headers: auth(adminToken), payload: { plan: 'STANDARD', cycle: 'MONTHLY' } });
+    expect(sub.statusCode, sub.body).toBe(201);
+    await app.inject({ method: 'POST', url: '/api/platform/billing/run', headers: auth(superToken) });
+    expect((await app.ctx.db.tenant.findUniqueOrThrow({ where: { id: tenantId } })).plan).toBe('STANDARD');
+  });
+});

@@ -163,7 +163,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return { ok: true };
   });
 
-  app.get('/reset/:token', async (request) => {
+  app.get('/reset/:token', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request) => {
     const token = (request.params as { token: string }).token;
     const row = await db.passwordReset.findUnique({ where: { tokenHash: sha256(token) }, include: { user: { include: { tenant: { select: { name: true, slug: true } } } } } });
     if (!row || row.usedAt || row.expiresAt < new Date()) throw notFound('Reset link');

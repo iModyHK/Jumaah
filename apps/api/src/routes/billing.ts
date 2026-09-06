@@ -127,7 +127,7 @@ export async function billingRoutes(app: FastifyInstance): Promise<void> {
   });
 
   /** Anyone holding the invoice link (number + token) can view and print it. */
-  app.get('/public/invoices/:number', async (request): Promise<PublicInvoiceDto> => {
+  app.get('/public/invoices/:number', { config: { rateLimit: { max: 60, timeWindow: '1 minute' } } }, async (request): Promise<PublicInvoiceDto> => {
     const number = idParam(request.params, 'number');
     const token = (request.query as { t?: string }).t;
     const inv = await db.invoice.findUnique({ where: { number }, include: { tenant: { select: { name: true, slug: true } }, organisation: { select: { name: true } } } });

@@ -16,9 +16,16 @@ interface FeaturesDto {
   features: PlanFeatures;
 }
 
-const MAX_SIDE = 512;
+/** The API accepts logo data URLs up to this many characters (about 220 KB of image). */
+const LOGO_MAX_CHARS = 300_000;
+/** Longest side to try, largest first; the first encoding that fits the limit wins. */
+const SIDES = [512, 384, 256, 192];
 
-/** Resize an image file to at most 512px and return a PNG data URL (SVG is kept as is). */
+/**
+ * Turn an image file into a data URL that fits the API limit: SVG as is; rasters are drawn at up to 512px and
+ * encoded as WebP (keeps transparency, much smaller than PNG), then PNG where the browser cannot write WebP,
+ * shrinking step by step until it fits. Photos and detailed logos used to fail at 512px PNG.
+ */
 async function fileToLogo(file: File): Promise<string> {
   if (file.type === 'image/svg+xml') {
     const text = await file.text();
@@ -32,12 +39,21 @@ async function fileToLogo(file: File): Promise<string> {
       i.onerror = () => reject(new Error('bad image'));
       i.src = url;
     });
-    const scale = Math.min(1, MAX_SIDE / Math.max(img.width, img.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(img.width * scale));
-    canvas.height = Math.max(1, Math.round(img.height * scale));
-    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
+    let smallest = '';
+    for (const side of SIDES) {
+      const scale = Math.min(1, side / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      for (const [type, quality] of [['image/webp', 0.9], ['image/png', undefined]] as const) {
+        const out = canvas.toDataURL(type, quality);
+        if (!out.startsWith(`data:${type}`)) continue; // the browser cannot encode this type
+        if (out.length <= LOGO_MAX_CHARS) return out;
+        if (!smallest || out.length < smallest.length) smallest = out;
+      }
+    }
+    return smallest;
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -87,7 +103,7 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
     if (!file) return;
     try {
       const dataUrl = await fileToLogo(file);
-      if (dataUrl.length > 300_000) throw new Error(t('branding.tooLarge'));
+      if (dataUrl.length > LOGO_MAX_CHARS) throw new Error(t('branding.tooLarge'));
       setDraft((d) => ({ ...d, logoDataUrl: dataUrl }));
     } catch (err) {
       toast.error(err);

@@ -38,6 +38,12 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/users/invite', { preHandler: admin }, async (request, reply) => {
     const body = parse(inviteUserSchema, request.body);
+    // Outstanding invitations count against the plan's cap too, so a mosque cannot walk past it by inviting people.
+    const [accounts, pending] = await Promise.all([
+      db.user.count({ where: { tenantId: request.tenantId } }),
+      db.invitation.count({ where: { tenantId: request.tenantId, acceptedAt: null, expiresAt: { gt: new Date() } } }),
+    ]);
+    await app.ctx.hooks.quota?.(app.ctx, request.tenantId, 'user', accounts + pending);
     const email = body.email.toLowerCase();
     const token = randomToken(32);
     const inv = await db.invitation.create({

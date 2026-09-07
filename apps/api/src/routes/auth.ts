@@ -132,6 +132,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(acceptInviteSchema, request.body);
     const inv = await db.invitation.findUnique({ where: { tokenHash: sha256(body.token) } });
     if (!inv || inv.acceptedAt || inv.expiresAt < new Date()) throw notFound('Invitation');
+    // A returning member re-uses their account; a new one has to fit inside the plan's cap.
+    const already = await db.user.findUnique({ where: { tenantId_email: { tenantId: inv.tenantId, email: inv.email } } });
+    if (!already) await app.ctx.hooks.quota?.(app.ctx, inv.tenantId, 'user', await db.user.count({ where: { tenantId: inv.tenantId } }));
     const user = await db.$transaction(async (tx) => {
       const existing = await tx.user.findUnique({ where: { tenantId_email: { tenantId: inv.tenantId, email: inv.email } } });
       const u = existing

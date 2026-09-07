@@ -298,3 +298,62 @@ describe('glossary, providers, displays, audit', () => {
     await login('admin@demo.mosque', 'Demo12345!');
   });
 });
+
+describe('importing a khutbah from a file', () => {
+  /** A multipart body built by hand, so the test needs no extra dependency. */
+  const upload = (name, type, bytes) => {
+    const boundary = '----jumaahtest' + Math.random().toString(16).slice(2);
+    const head = Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${name}"\r\nContent-Type: ${type}\r\n\r\n`);
+    const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+    return { payload: Buffer.concat([head, Buffer.from(bytes), tail]), headers: { 'content-type': `multipart/form-data; boundary=${boundary}` } };
+  };
+
+  /** A one-page PDF with a line of Helvetica text, written here so no fixture file is needed. */
+  const tinyPdf = (text) => {
+    const objs = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 144] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    ];
+    const stream = `BT /F1 18 Tf 20 100 Td (${text}) Tj ET`;
+    objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+    objs.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    let out = '%PDF-1.4\n';
+    const offs = [];
+    objs.forEach((o, i) => {
+      offs.push(out.length);
+      out += `${i + 1} 0 obj\n${o}\nendobj\n`;
+    });
+    const xref = out.length;
+    out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + offs.map((o) => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+    out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    return Buffer.from(out, 'latin1');
+  };
+
+  it('reads text and PDF uploads into paragraphs, and refuses anything else', async () => {
+    const txt = upload('khutbah.txt', 'text/plain', Buffer.from('الحمد لله رب العالمين.\n\nأما بعد فيا عباد الله.\n', 'utf8'));
+    const a = await app.inject({ method: 'POST', url: '/api/import/extract', headers: { ...auth(adminToken), ...txt.headers }, payload: txt.payload });
+    expect(a.statusCode, a.body).toBe(200);
+    expect(a.json()).toMatchObject({ format: 'txt' });
+    expect(a.json().paragraphs).toHaveLength(2);
+    expect(a.json().text).toContain('الحمد لله');
+
+    const pdf = upload('khutbah.pdf', 'application/pdf', tinyPdf('Praise be to Allah'));
+    const b = await app.inject({ method: 'POST', url: '/api/import/extract', headers: { ...auth(adminToken), ...pdf.headers }, payload: pdf.payload });
+    expect(b.statusCode, b.body).toBe(200);
+    expect(b.json().format).toBe('pdf');
+    expect(b.json().text).toContain('Praise be to Allah');
+    // pages are joined by the importer, so no "-- 1 of 1 --" marker reaches the khutbah
+    expect(b.json().text).not.toMatch(/-- \d+ of \d+ --/);
+
+    const rtf = upload('note.rtf', 'application/rtf', Buffer.from('{\\rtf1}', 'utf8'));
+    const c = await app.inject({ method: 'POST', url: '/api/import/extract', headers: { ...auth(adminToken), ...rtf.headers }, payload: rtf.payload });
+    expect(c.statusCode).toBe(400);
+
+    // translators prepare khutbahs, so they may import; nobody may without a token
+    const again = upload('khutbah.txt', 'text/plain', Buffer.from('نص', 'utf8'));
+    expect((await app.inject({ method: 'POST', url: '/api/import/extract', headers: { ...auth(translatorToken), ...again.headers }, payload: again.payload })).statusCode).toBe(200);
+    const anon = upload('khutbah.txt', 'text/plain', Buffer.from('نص', 'utf8'));
+    expect((await app.inject({ method: 'POST', url: '/api/import/extract', headers: anon.headers, payload: anon.payload })).statusCode).toBe(401);
+  });
+});

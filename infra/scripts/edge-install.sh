@@ -38,7 +38,7 @@ if [ ! -f .env ]; then
   echo ".env written with generated secrets (LAN address: ${LAN_IP:-localhost})"
 fi
 
-docker compose -f docker-compose.edge.yml up -d --build
+docker compose up -d --build
 # Seed only on first boot; disable afterwards so restores are never overwritten.
 sed -i "s#^SEED_ON_START=.*#SEED_ON_START=0#" .env
 

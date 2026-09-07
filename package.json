@@ -3,11 +3,16 @@
   "version": "1.2.0",
   "license": "MIT",
   "homepage": "https://www.jumaah.net",
-  "repository": { "type": "git", "url": "https://github.com/iModyHK/Jumaah.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iModyHK/Jumaah.git"
+  },
   "private": true,
   "description": "Multi-tenant Friday khutbah live translation platform (edge + cloud)",
   "packageManager": "pnpm@9.15.4",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
@@ -20,10 +25,8 @@
     "db:migrate:dev": "pnpm --filter @jumaah/db migrate:dev",
     "db:seed": "pnpm --filter @jumaah/db seed",
     "db:reset": "pnpm --filter @jumaah/db reset",
-    "edge:up": "docker compose -f docker-compose.edge.yml up -d --build",
-    "edge:down": "docker compose -f docker-compose.edge.yml down",
-    "cloud:up": "docker compose -f docker-compose.cloud.yml up -d --build",
-    "cloud:down": "docker compose -f docker-compose.cloud.yml down"
+    "up": "docker compose up -d --build",
+    "down": "docker compose down"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

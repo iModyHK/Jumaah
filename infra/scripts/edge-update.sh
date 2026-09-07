@@ -24,8 +24,8 @@ else
   echo "IMAGE_TAG=$TAG" >> "$ENV_FILE"
 fi
 
-docker compose -f docker-compose.edge.yml pull
-docker compose -f docker-compose.edge.yml up -d --remove-orphans
+docker compose pull
+docker compose up -d --remove-orphans
 docker image prune -f >/dev/null
 echo "done. running:"
-docker compose -f docker-compose.edge.yml ps
+docker compose ps

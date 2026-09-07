@@ -1,13 +1,13 @@
 # =============================================================================
-# Jumaah — EDGE stack (one per mosque). Works fully offline on the mosque LAN.
-#   docker compose -f docker-compose.edge.yml up -d --build
-# Services: web (Caddy + 3 PWAs) · api · sync-worker · db · redis · (optional) ollama / libretranslate
+# Jumaah Community Edition — one stack per mosque. Works fully offline on the mosque LAN.
+#   docker compose up -d
+# Services: web (Caddy + 3 PWAs) · api · sync-worker (idle unless CLOUD_API_URL is set) · db · redis ·
+#           (optional, --profile local-ai) ollama / libretranslate
 # =============================================================================
-name: jumaah-edge
+name: jumaah
 
 x-app-env: &app-env
   NODE_ENV: production
-  DEPLOYMENT_MODE: edge
   IMAGE_TAG: ${IMAGE_TAG:-1.2.0}
   DATABASE_URL: postgresql://${POSTGRES_USER:-jumaah}:${POSTGRES_PASSWORD:-jumaah_dev_password}@db:5432/${POSTGRES_DB:-jumaah}?schema=public
   REDIS_URL: redis://redis:6379
@@ -21,7 +21,7 @@ x-app-env: &app-env
   RATE_LIMIT_AUTH: ${RATE_LIMIT_AUTH:-10}
   RATE_LIMIT_GENERAL: ${RATE_LIMIT_GENERAL:-300}
   CLOUD_API_URL: ${CLOUD_API_URL:-}
-  EDGE_TENANT_SLUG: ${EDGE_TENANT_SLUG:-demo}
+  EDGE_TENANT_SLUG: ${EDGE_TENANT_SLUG:-}
   EDGE_SYNC_KEY: ${EDGE_SYNC_KEY:-}
   EDGE_DEVICE_ID: ${EDGE_DEVICE_ID:-}
   SYNC_INTERVAL_SECONDS: ${SYNC_INTERVAL_SECONDS:-60}
@@ -118,7 +118,7 @@ services:
       - ollama:/root/.ollama
     expose:
       - "11434"
-    # After first start:  docker compose -f docker-compose.edge.yml exec ollama ollama pull qwen2.5:7b
+    # After first start:  docker compose exec ollama ollama pull qwen2.5:7b
 
   libretranslate:
     image: libretranslate/libretranslate:latest

@@ -8,7 +8,7 @@
 	}
 }
 
-# Hosted edition: the platform address plus one wildcard for every mosque (alnoor.jumaah.net).
+# Jumaah Cloud: the platform address plus one wildcard for every mosque (alnoor.jumaah.net).
 # A wildcard certificate needs the DNS challenge, so the web image ships Caddy with the Cloudflare DNS module and
 # CLOUDFLARE_API_TOKEN must be a token with "Zone / DNS / Edit" on the base domain.
 {$SITE_ADDRESS}, *.{$TENANT_BASE_DOMAIN} {

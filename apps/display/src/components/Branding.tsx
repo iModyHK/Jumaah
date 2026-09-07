@@ -13,7 +13,7 @@ function lighten(hex: string, amount: number): string {
   return `rgb(${c((n >> 16) & 255)}, ${c((n >> 8) & 255)}, ${c(n & 255)})`;
 }
 
-/** CSS variables that carry the mosque's colours over the chosen theme. Nothing is set when the plan gives none. */
+/** CSS variables that carry the mosque's colours over the chosen theme. Nothing is set when the features give none. */
 export function brandingStyle(b: TenantPublicBranding | undefined): CSSProperties {
   const s: Record<string, string> = {};
   if (b?.primary) {

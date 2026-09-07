@@ -39,7 +39,7 @@ export const changePasswordSchema = z.object({
 
 // ---------- Tenants ----------
 const hexColour = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a #RRGGBB colour');
-/** Paid-edition branding, stored in tenant.settings.branding. Each field is gated by the plan on the server. */
+/** Branding, stored in tenant.settings.branding. Each field is gated by the mosque's features on the server. */
 export const brandingSchema = z
   .object({
     /** Small raster or SVG logo as a data URL (the admin resizes to 512px before upload). */

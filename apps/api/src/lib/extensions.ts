@@ -21,6 +21,7 @@ export interface TenantRow {
 
 /** Gate on the server's own (platform) translation providers for one mosque. */
 export interface AiGate {
+  /** The extension's label for the mosque's entitlement. */
   plan: string;
   state: string;
   allowed: boolean;
@@ -72,7 +73,7 @@ export interface CoreHooks {
   assumeOnline?: boolean;
   /** Extra slugs no mosque may take (the platform's own host labels). */
   reservedSlugs?: Set<string>;
-  /** Name the tenant behind the Host header (alnoor.jumaah.net → "alnoor", or a verified custom domain). */
+  /** Name the tenant behind the Host header (alnoor.example.org → "alnoor", or a verified custom domain). */
   hostSlug?(request: FastifyRequest): Promise<string | null>;
   /** Extra browser origins allowed by CORS. */
   allowOrigin?(origin: string): Promise<boolean>;
@@ -86,7 +87,7 @@ export interface CoreHooks {
   switchTenant?(request: FastifyRequest, user: RequestUser, wanted: string): Promise<string | null>;
   /** Which mosque a socket may join when the token's mosque and the requested one differ. */
   socketTenant?(claims: { sub: string; tid: string | null }, wanted: string): Promise<string | null>;
-  /** Whether a mosque's users may sign in (subscription checks). */
+  /** Whether a mosque's users may sign in (an extension's own checks). */
   tenantLoginAllowed?(tenant: TenantRow): boolean;
   /** Features of a mosque. Without a hook every mosque has the Community set. */
   features?(tenant: TenantRow): { features: Features; ext?: Record<string, unknown> };

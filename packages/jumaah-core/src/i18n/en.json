@@ -395,7 +395,6 @@
     "credentialsOnce": "Save these credentials now — they will not be shown again",
     "adminPassword": "Admin password",
     "impersonateHint": "Temporary (1 hour) access token with mosque admin rights. Its use is recorded in the audit log.",
-    "rotateSyncKey": "Rotate sync key",
     "suspend": "Suspend",
     "activeSessions": "Active sessions",
     "title": "Mosques",
@@ -423,8 +422,6 @@
     "cloudUrl": "Cloud URL",
     "title": "Cloud sync",
     "mode": "Mode",
-    "edge": "Mosque server (Edge)",
-    "cloud": "Cloud",
     "online": "Online",
     "offline": "Offline",
     "lastPush": "Last push",
@@ -513,7 +510,7 @@
   },
   "branding": {
     "title": "Branding",
-    "hint": "How the mosque appears on screens, on worshippers' phones and on the printed poster. Locked fields belong to a higher plan.",
+    "hint": "How the mosque appears on screens, on worshippers’ phones and on the printed poster.",
     "logo": "Logo",
     "noLogo": "No logo uploaded",
     "upload": "Upload logo",
@@ -524,8 +521,7 @@
     "backgroundHint": "Screen and phone page background. Leave unset to keep the chosen theme.",
     "css": "Custom CSS",
     "cssHint": "Applied to the screens and the phone page. For designers; leave empty otherwise.",
-    "hideMark": "Hide the Jumaah mark on screens and phones",
-    "locked": "requires the plan above {{plan}}"
+    "hideMark": "Hide the Jumaah mark on screens and phones"
   },
   "signage": {
     "title": "Screens between khutbahs",

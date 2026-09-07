@@ -19,7 +19,7 @@ export interface ApplyResult {
 
 const ORDER = ['Tenant', 'TenantLanguage', 'Khutbah', 'KhutbahSection', 'Paragraph', 'Translation', 'GlossaryEntry', 'Display', 'KhutbahVersion'];
 
-const dateFields = new Set(['createdAt', 'updatedAt', 'gregorianDate', 'lastSeenAt', 'deletedAt', 'subscriptionEndsAt']);
+const dateFields = new Set(['createdAt', 'updatedAt', 'gregorianDate', 'lastSeenAt', 'deletedAt']);
 function revive(row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) out[k] = dateFields.has(k) && typeof v === 'string' ? new Date(v) : v;

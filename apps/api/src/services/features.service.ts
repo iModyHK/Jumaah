@@ -1,7 +1,7 @@
 /**
  * Feature switches of a mosque. The core never lists preparation, review, imam control, screens, phones, offline or
  * backups here: they are always available. Community Edition has a fixed set (COMMUNITY_FEATURES); an extension may
- * derive the set from a plan through the `features` hook.
+ * derive the set from its own rules through the `features` hook.
  */
 import { COMMUNITY_FEATURES, type Branding, type Features, type Signage, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
@@ -10,7 +10,7 @@ import type { TenantRow } from '../lib/extensions.js';
 
 export interface TenantFeaturesDto {
   features: Features;
-  /** What an extension adds (plan name, subscription state). */
+  /** What an extension adds next to the switches. */
   ext?: Record<string, unknown>;
 }
 

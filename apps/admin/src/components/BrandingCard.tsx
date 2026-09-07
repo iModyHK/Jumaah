@@ -74,7 +74,7 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
 
   const f = features.data?.features;
   const ext = useExtensions();
-  // A locked field shows the extension's label ("needs the Standard plan"); without one it is simply hidden.
+  // A locked field shows the extension's label (why it is locked); without one it is simply hidden.
   const lockLabel = (feature: string) => ext.lockedFeatureLabel?.(feature, features.data as Record<string, unknown> | undefined, t as never) ?? null;
   const lock = (ok: boolean | undefined, feature: string) => (ok ? null : <span className="j-muted text-xs"> · {lockLabel(feature)}</span>);
   const show = (ok: boolean | undefined, feature: string) => !features.data || ok || !!lockLabel(feature);

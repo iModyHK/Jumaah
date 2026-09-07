@@ -89,7 +89,7 @@ export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah:
       <div className="flex flex-col gap-4">
         {aiDeny && (
           <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(229,72,77,0.12)', color: 'var(--j-danger)' }}>
-            {aiDeny} {blocked ? t('plan.manualHint') : t('plan.ownProvidersHint')}
+            {aiDeny}
           </div>
         )}
         {gate.note && <div className="j-muted text-xs">{gate.note}</div>}

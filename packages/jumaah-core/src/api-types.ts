@@ -59,7 +59,7 @@ export interface TenantDto {
   settings: Record<string, unknown>;
   languages: string[];
   createdAt: string;
-  /** Fields added by an extension (hosted edition: plan, subscription, organisation, custom domain). */
+  /** Fields added by an extension (the hosted edition keeps its own columns here). */
   ext?: Record<string, unknown>;
   _count?: { users: number; khutbahs: number; displays: number };
 }

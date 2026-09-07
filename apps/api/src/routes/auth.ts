@@ -53,7 +53,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(loginSchema, request.body);
     const email = body.email.toLowerCase();
     const candidates = await db.user.findMany({ where: { email, isActive: true }, include: { tenant: true } });
-    // Hosted edition: the mosque is implied by the address (alnoor.jumaah.net). A slug in the body must agree with it.
+    // With per-mosque hosts (an extension) the mosque is implied by the address; a slug in the body must agree with it.
     if (request.hostSlug && body.tenantSlug && body.tenantSlug !== request.hostSlug) throw unauthorized('Invalid credentials');
     const slug = body.tenantSlug ?? request.hostSlug ?? undefined;
     // The same email may exist in several mosques (and as a super admin without a tenant). Without a slug the

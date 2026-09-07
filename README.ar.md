@@ -1,10 +1,12 @@
-# جُمعة — ترجمة خطبة الجمعة لحظياً
+# جُمعة (نسخة المجتمع) — ترجمة خطبة الجمعة لحظياً
 
 [🇬🇧 English version](README.md)
 
-> **للمساجد:** موقع [www.jumaah.net](https://www.jumaah.net) يشرح ما يفعله «جمعة» مع تجربة حية، وكيف تحصلون عليه مجاناً. هذا الملف موجّه لمن يثبّت المنصة أو يطوّرها. للأسئلة: نموذج التواصل في الموقع. للأخطاء: [افتحوا مشكلة على GitHub](https://github.com/iModyHK/Jumaah/issues).
+> **للمساجد:** موقع [www.jumaah.net](https://www.jumaah.net) يشرح ما يفعله «جمعة» مع تجربة حية. هذا الملف موجّه لمن يثبّت نسخة المجتمع أو يطوّرها. للأسئلة: نموذج التواصل في الموقع. للأخطاء: [افتحوا مشكلة على GitHub](https://github.com/iModyHK/Jumaah/issues).
 
-منصة متعددة المستأجرين (Multi-tenant) تعرض خطبة الجمعة مترجمة، فقرةً فقرة، على شاشات المسجد بينما يقرأها الإمام بالعربية. كل مسجد يشغّل **سيرفراً محلياً (Edge)** عبر Docker يعمل بالكامل بدون إنترنت أثناء الخطبة، مع مزامنة اختيارية لسيرفر **سحابي مركزي** (إدارة المساجد، مكتبة الخطب المشتركة، مفاتيح الترجمة المركزية، النسخ الاحتياطي).
+«جمعة» يعرض خطبة الجمعة مترجمة، فقرةً فقرة، على شاشات المسجد وهواتف المصلّين بينما يقرأها الإمام بالعربية.
+
+**نسخة المجتمع** (هذا المستودع) مجانية دائماً وتعمل بالكامل دون إنترنت: خادم صغير على شبكة المسجد (جهاز «جمعة» أو أي مضيف Docker) يشغّل الإدارة وواجهة الإمام والشاشات وصفحة الجوال، بمفاتيح الترجمة الخاصة بكم أو بنموذج محلي. **جُمعة كلاود** ([jumaah.net](https://www.jumaah.net)) خدمة مستضافة اختيارية لمن لا يريد تشغيل خادم، وللجهات التي تدير عدة مساجد؛ ويمكن لخادم نسخة المجتمع المزامنة معها. جهاز «جمعة» متاح عبر jumaah.net.
 
 ```
 ┌──────────────────────── شبكة المسجد (Edge) ────────────────────────┐        ┌────────── السحابة ──────────┐
@@ -34,15 +36,16 @@ apps/
   admin/          لوحة الإدارة React (عربي/إنجليزي)
   imam/           تطبيق المنبر PWA
   display/        الشاشات + صفحة الجوال العامة PWA
-  sync-worker/    عامل المزامنة edge ↔ cloud
+  sync-worker/    عميل المزامنة مع جُمعة كلاود (خامل ما لم يُضبط)
 packages/
-  shared/         الأنواع، مخططات zod، تقسيم الفقرات، أحداث Socket، نصوص i18n
+  jumaah-core/    الأنواع، مخططات zod، تقسيم الفقرات، مواقيت الصلاة، أحداث Socket، نصوص i18n
   translation-providers/  الواجهة الموحدة، الموفّرون، القاموس، الكاش، التكلفة، السلسلة
   db/             مخطط Prisma، الـ migrations (مع RLS)، الـ seed، التشفير، تطبيق المزامنة
   ui/             مشترك React: i18n، عميل API، عميل Socket، hooks، الخطوط، الثيم
 tests/e2e/        Playwright (رفع ← ترجمة ← اعتماد ← بث ← عرض)
 infra/            إعداد Caddy، Dockerfile للواجهات، سكربتات التثبيت/التحديث
-docker-compose.edge.yml · docker-compose.cloud.yml · .env.example · DECISIONS.md
+docs/             sync-protocol.md (عقد المزامنة بين خادم المسجد وجُمعة كلاود)
+docker-compose.yml · .env.example · DECISIONS.md · CHANGELOG.md
 ```
 
 ## التشغيل السريع (تطوير)
@@ -77,7 +80,7 @@ pnpm test:e2e    # Playwright: يشغّل الـ API والواجهات الثل
 pnpm typecheck && pnpm build
 ```
 
-## النشر على سيرفر المسجد (Edge)
+## النشر على سيرفر المسجد
 
 أي جهاز صغير x86/ARM على شبكة المسجد (4 GB RAM كافية، وأكثر إن شغّلت Ollama).
 
@@ -85,37 +88,22 @@ pnpm typecheck && pnpm build
 curl -fsSL https://raw.githubusercontent.com/iModyHK/Jumaah/main/infra/scripts/edge-install.sh | bash
 ```
 
-السكربت يثبّت Docker، يستنسخ المستودع في `/opt/jumaah`، يكتب `.env` بأسرار عشوائية، يشغّل `docker-compose.edge.yml` ويزرع أول مدير (تُطبع بياناته في النهاية). يدوياً:
+السكربت يثبّت Docker، يستنسخ المستودع في `/opt/jumaah`، يكتب `.env` بأسرار عشوائية، يشغّل الحزمة ويزرع أول مدير (تُطبع بياناته في النهاية). يدوياً:
 
 ```bash
 cp .env.example .env    # عيّن JWT_SECRET, ENCRYPTION_KEY, POSTGRES_PASSWORD, PUBLIC_BASE_URL=http://<lan-ip>:8080
-SEED_ON_START=1 docker compose -f docker-compose.edge.yml up -d --build
+SEED_ON_START=1 docker compose up -d --build
 ```
 
 - الإدارة: `http://<lan-ip>:8080/admin/` · المنبر: `/imam/` · الشاشات: `/display/<token>`.
-- ترجمة محلية بدون إنترنت: `docker compose -f docker-compose.edge.yml --profile local-ai up -d` ثم `docker compose -f docker-compose.edge.yml exec ollama ollama pull qwen2.5:7b`، وأضف الموفّر من الإدارة ← مصادر الترجمة (Ollama، `http://ollama:11434`).
-- الربط بالسحابة: مدير المنصة ينشئ المسجد في إدارة السحابة (يظهر **مفتاح المزامنة** مرة واحدة)؛ على الـ edge عيّن `CLOUD_API_URL` و`EDGE_TENANT_SLUG` و`EDGE_SYNC_KEY` في `.env` وأعد التشغيل. عامل المزامنة يجلب بيانات المسجد كاملة إن كانت القاعدة فارغة، ثم يزامن كل `SYNC_INTERVAL_SECONDS` (أو بزر «مزامنة الآن»).
-- التحديث: `./infra/scripts/edge-update.sh` يسحب الإصدار المعلن من السحابة (`edge.latestImageTag`، يُحرَّر من صفحة المنصة لدى مدير المنصة) ويعيد التشغيل.
+- ترجمة محلية بدون إنترنت: `docker compose --profile local-ai up -d` ثم `docker compose exec ollama ollama pull qwen2.5:7b`، وأضف الموفّر من الإدارة ← مصادر الترجمة (Ollama، `http://ollama:11434`).
+- الربط بجُمعة كلاود (اختياري): حسابكم السحابي يصدر **مفتاح مزامنة** للمسجد؛ عيّن `CLOUD_API_URL` و`EDGE_TENANT_SLUG` و`EDGE_SYNC_KEY` في `.env` وأعد التشغيل. عامل المزامنة يجلب بيانات المسجد كاملة إن كانت القاعدة فارغة، ثم يزامن كل `SYNC_INTERVAL_SECONDS` (أو بزر «مزامنة الآن»). البروتوكول موثّق في [`docs/sync-protocol.md`](docs/sync-protocol.md).
+- التحديث: `./infra/scripts/edge-update.sh <tag>` يسحب إصداراً ويعيد التشغيل (ومن دون وسم يسأل جُمعة كلاود، عند الربط، عن الإصدار الموصى به).
 - النسخ الاحتياطي: الإدارة ← النسخ الاحتياطي (ملف JSON.gz لكل مسجد: تنزيل/استعادة/رفع). الأحجام: `pgdata`, `redisdata`, `backups`.
 
-## نشر السحابة
+## جُمعة كلاود (اختياري)
 
-```bash
-cp .env.example .env    # DEPLOYMENT_MODE=cloud، أسرار قوية، SITE_ADDRESS=jumaah.example.com، ANTHROPIC_API_KEY=… (مفاتيح مركزية)
-SEED_ON_START=1 docker compose -f docker-compose.cloud.yml up -d --build
-```
-
-Caddy يحصل على شهادة TLS تلقائياً لـ `SITE_ADDRESS`. مفاتيح الموفّرين في `.env` تتحول إلى موفّرين عامّين عند أول تشغيل (وتُدار من الإدارة ← مصادر الترجمة ← قسم المنصة). نسخة `pg_dump` يومية في خدمة `db-backup`.
-
-### عنوان لكل مسجد (النسخة المستضافة)
-
-اضبط `TENANT_BASE_DOMAIN=jumaah.net` فيصبح لكل مسجد عنوانه `<slug>.jumaah.net`: صفحات الدخول تُخفي حقل «المسجد»، وروابط الشاشات والهواتف تستخدم عنوان المسجد نفسه (`alnoor.jumaah.net/display/m`)، والدعوات كذلك. المتطلبات:
-
-- سجل DNS شامل `*.jumaah.net` يشير إلى خادم السحابة (إضافةً إلى `SITE_ADDRESS` مثل `cloud.jumaah.net` للمدير العام)؛
-- `CLOUDFLARE_API_TOKEN` بصلاحية *Zone / DNS / Edit* على النطاق، لأن شهادة الـ wildcard لا تُصدر إلا عبر تحدي DNS (صورة الويب تشحن Caddy مع وحدة Cloudflare)؛
-- `CADDY_COMMAND="caddy run --config /etc/caddy/Caddyfile.cloud"` ليستخدم حاوي الويب تعريف الموقع الشامل.
-
-خوادم المساجد (edge) لا تتأثر: من دون `TENANT_BASE_DOMAIN` تبقى الروابط على `PUBLIC_BASE_URL`.
+النسخة المستضافة في مستودع مستقل يُبنى على هذا المستودع: تضيف عناوين المساجد، والمؤسسات، والفوترة، والهوية البصرية بعد الشعار، والأرشيف العام، والنشرات، وإحصاءات الحضور، وشبكة الترجمة المشتركة، ومفاتيح API والويب هوك، بحسب الباقة. لا شيء هنا يعتمد عليها؛ خادم نسخة المجتمع لا يخاطبها إلا عبر عميل المزامنة أعلاه.
 
 ## إعداد الشاشات
 

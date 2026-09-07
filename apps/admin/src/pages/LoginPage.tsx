@@ -17,7 +17,7 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tenantSlug, setSlug] = useState('');
-  // Hosted edition: alnoor.jumaah.net already names the mosque, so the field is replaced by the mosque's name.
+  // With per-mosque hosts (an extension) the address already names the mosque, so the field is replaced by its name.
   const [hostTenant, setHostTenant] = useState<HostInfoDto['tenant']>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);

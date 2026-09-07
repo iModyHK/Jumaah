@@ -1,17 +1,19 @@
-# Jumaah — Live Friday Khutbah Translation
+# Jumaah Community Edition — Live Friday Khutbah Translation
 
 [🇸🇦 النسخة العربية](README.ar.md)
 
-> **For mosques:** [www.jumaah.net](https://www.jumaah.net) shows what Jumaah does, with a live demo, and how to get it. It is free for every mosque. This README is for the people who install or develop it. Questions: use the form on the website. Bugs: [open an issue](https://github.com/iModyHK/Jumaah/issues).
+> **For mosques:** [www.jumaah.net](https://www.jumaah.net) shows what Jumaah does, with a live demo. This README is for the people who install or develop the Community Edition. Questions: use the form on the website. Bugs: [open an issue](https://github.com/iModyHK/Jumaah/issues).
 
-Multi-tenant platform that shows the Friday khutbah, paragraph by paragraph, translated on the mosque's screens while the imam reads it in Arabic. Every mosque runs a small **edge server** (Docker, fully offline during the khutbah) and can optionally sync with a central **cloud server** (mosque management, shared khutbah library, central translation keys, backups).
+Jumaah shows the Friday khutbah, paragraph by paragraph, translated on the mosque's screens and on worshippers' phones while the imam reads it in Arabic.
+
+**Community Edition** (this repository) is free forever and fully functional offline: one small server on the mosque LAN (a Jumaah Box or any Docker host) runs the admin, the imam's tablet view, the screens and the phone page, with your own translation keys or a local model. **Jumaah Cloud** ([jumaah.net](https://www.jumaah.net)) is an optional hosted service for people who would rather not run a server, and for organisations managing several mosques; a Community server can sync to it. Box hardware is available through jumaah.net.
 
 ```
-┌───────────────────────── mosque LAN (edge) ──────────────────────────┐        ┌────────── cloud ──────────┐
-│  Imam tablet ──► /imam/  ─┐                                          │        │  /admin/ (super admin)    │
-│                           ├─ Socket.IO ─► API (Fastify) ─► Postgres  │◄─sync─►│  API · Postgres · Redis   │
-│  Screens ─────► /display/ ┘               │      └─► Redis           │        │  shared library · keys    │
-│  Phones (QR) ─► /display/m/<mosque>       └─► sync-worker ───────────┘        └───────────────────────────┘
+┌───────────────────────── mosque LAN ─────────────────────────────────┐        ┌── Jumaah Cloud (optional) ─┐
+│  Imam tablet ──► /imam/  ─┐                                          │        │  hosted mosques, sync,     │
+│                           ├─ Socket.IO ─► API (Fastify) ─► Postgres  │◄─sync─►│  organisations, billing    │
+│  Screens ─────► /display/ ┘               │      └─► Redis           │        │  (separate repository)     │
+│  Phones (QR) ─► /display/m/<mosque>       └─► sync-worker ───────────┘        └────────────────────────────┘
 │  Admin ───────► /admin/                     Ollama / LibreTranslate (optional, offline MT)
 └──────────────────────────────────────────────────────────────────────┘
 ```
@@ -23,7 +25,7 @@ Multi-tenant platform that shows the Friday khutbah, paragraph by paragraph, tra
 - **Imam view (PWA)** — big adjustable Arabic text, dark mode, current/next/previous paragraph, huge Next/Previous/Pause/Improv/section buttons, swipe & keyboard, timers and progress, wake lock, offline command queue with automatic reconnection, optional auto-advance, single active imam session per mosque with take-over.
 - **Displays (PWA)** — token URL per screen (no login), 1–4 languages in single/split/grid layouts, per-language fonts and direction (Urdu Nastaliq, Bengali, Amharic, Chinese…), previous paragraph faded, between khutbahs a board with mosque name, prayer times computed daily from the mosque location (Umm al-Qura and other methods, or manual times), welcome message and a QR code that opens the same translation on a worshipper's phone, kiosk/fullscreen, "imam is speaking" during improvisation.
 - **Realtime** — Socket.IO over the LAN (< 200 ms), authoritative state on the server, late-joining screens get the current paragraph immediately, sequence numbers, heartbeat and reconnection.
-- **Multi-tenant + hybrid hosting** — `tenantId` on every table + PostgreSQL RLS policies, Docker Compose for edge and cloud, outbox-based two-way sync with last-write-wins (losing versions kept), edge relays translation to the cloud when online and uses local models offline, edge update via image tag published by the cloud.
+- **Several mosques per server, optional cloud sync** — `tenantId` on every table + PostgreSQL RLS policies, one Docker Compose stack, and an outbox-based two-way sync client for Jumaah Cloud (last-write-wins, losing versions kept; see [`docs/sync-protocol.md`](docs/sync-protocol.md)). Logo on screens, QR poster and the board between khutbahs (prayer times, date, announcements) are part of the Community Edition.
 - **Security & ops** — email/password login with invitations, JWT access + rotating refresh tokens, Redis rate limiting, AES-256-GCM encrypted API keys, audit log with before/after, backup/restore from the admin UI, bilingual (Arabic RTL / English) admin.
 
 ## Repository layout
@@ -34,15 +36,16 @@ apps/
   admin/          React admin dashboard (ar/en)
   imam/           Imam PWA
   display/        Screens + public mobile PWA
-  sync-worker/    Edge ↔ cloud outbox synchroniser
+  sync-worker/    Sync client for Jumaah Cloud (idle unless configured)
 packages/
-  shared/         Types, zod schemas, paragraph splitter, socket events, i18n resources
+  jumaah-core/    Types, zod schemas, paragraph splitter, prayer times, socket events, i18n resources
   translation-providers/  Provider interface, implementations, glossary, cache keys, cost, fallback chain
   db/             Prisma schema, migrations (incl. RLS), seed, crypto helpers, sync apply logic
   ui/             Shared React bits: i18n bootstrap, API client, socket client, hooks, fonts, theme
 tests/e2e/        Playwright end-to-end (upload → translate → approve → broadcast → display)
 infra/            Caddy config, web Dockerfile, install/update scripts
-docker-compose.edge.yml · docker-compose.cloud.yml · .env.example · DECISIONS.md
+docs/             sync-protocol.md (the contract a Community server uses to talk to Jumaah Cloud)
+docker-compose.yml · .env.example · DECISIONS.md · CHANGELOG.md
 ```
 
 ## Quick start (development)
@@ -77,7 +80,7 @@ pnpm test:e2e        # Playwright: starts api + 3 frontends, runs the full khutb
 pnpm typecheck && pnpm build
 ```
 
-## Deploying on a mosque server (edge)
+## Deploying on a mosque server
 
 Any small x86/ARM box on the mosque LAN (4 GB RAM is plenty; more if you run Ollama).
 
@@ -85,50 +88,22 @@ Any small x86/ARM box on the mosque LAN (4 GB RAM is plenty; more if you run Oll
 curl -fsSL https://raw.githubusercontent.com/iModyHK/Jumaah/main/infra/scripts/edge-install.sh | bash
 ```
 
-The script installs Docker, clones the repo to `/opt/jumaah`, writes `.env` with generated secrets, starts `docker-compose.edge.yml` and seeds the first admin (printed at the end). Manual equivalent:
+The script installs Docker, clones the repo to `/opt/jumaah`, writes `.env` with generated secrets, starts the stack and seeds the first admin (printed at the end). Manual equivalent:
 
 ```bash
 cp .env.example .env    # set JWT_SECRET, ENCRYPTION_KEY, POSTGRES_PASSWORD, PUBLIC_BASE_URL=http://<lan-ip>:8080
-SEED_ON_START=1 docker compose -f docker-compose.edge.yml up -d --build
+SEED_ON_START=1 docker compose up -d --build
 ```
 
 - Admin: `http://<lan-ip>:8080/admin/` · Imam: `/imam/` · Screens: `/display/<token>`.
-- Offline machine translation: `docker compose -f docker-compose.edge.yml --profile local-ai up -d` then `docker compose -f docker-compose.edge.yml exec ollama ollama pull qwen2.5:7b`. Add the provider in Admin → Translation providers (Ollama, `http://ollama:11434`).
-- Connect to the cloud: the super admin creates the mosque in the cloud admin (a **sync key** is shown once); on the edge set `CLOUD_API_URL`, `EDGE_TENANT_SLUG`, `EDGE_SYNC_KEY` in `.env` and restart. The sync worker bootstraps the mosque data if the local DB is empty, then syncs every `SYNC_INTERVAL_SECONDS` (or on "Sync now").
-- Update: `./infra/scripts/edge-update.sh` pulls the tag announced by the cloud (`edge.latestImageTag`, editable in the super-admin Platform page) and restarts.
+- Offline machine translation: `docker compose --profile local-ai up -d` then `docker compose exec ollama ollama pull qwen2.5:7b`. Add the provider in Admin → Translation providers (Ollama, `http://ollama:11434`).
+- Connect to Jumaah Cloud (optional): your cloud account issues a **sync key** for the mosque; set `CLOUD_API_URL`, `EDGE_TENANT_SLUG`, `EDGE_SYNC_KEY` in `.env` and restart. The sync worker bootstraps the mosque data if the local database is empty, then syncs every `SYNC_INTERVAL_SECONDS` (or on "Sync now"). The protocol is documented in [`docs/sync-protocol.md`](docs/sync-protocol.md).
+- Update: `./infra/scripts/edge-update.sh <tag>` pulls a release and restarts (without a tag it asks Jumaah Cloud, when connected, which tag it recommends).
 - Backups: Admin → Backups (JSON.gz per mosque, download/restore/upload). Volumes: `pgdata`, `redisdata`, `backups`.
 
-## Deploying the cloud
+## Jumaah Cloud (optional)
 
-```bash
-cp .env.example .env    # DEPLOYMENT_MODE=cloud, strong secrets, SITE_ADDRESS=jumaah.example.com, ANTHROPIC_API_KEY=… (central keys)
-SEED_ON_START=1 docker compose -f docker-compose.cloud.yml up -d --build
-```
-
-Caddy obtains TLS automatically for `SITE_ADDRESS`. Central provider keys from `.env` are turned into global providers at first start (and can be managed in Admin → Providers → platform section). Nightly `pg_dump` in the `db-backup` service.
-
-### One address per mosque (hosted edition)
-
-Set `TENANT_BASE_DOMAIN=jumaah.net` and every mosque is reachable at `<slug>.jumaah.net`: the login pages skip the mosque field, screen and phone links use the mosque's own address (`alnoor.jumaah.net/display/m`), and invitations point there too. Requirements:
-
-- a wildcard DNS record `*.jumaah.net` pointing at the cloud server (plus `SITE_ADDRESS`, e.g. `cloud.jumaah.net`, for the super admin);
-- `CLOUDFLARE_API_TOKEN` with *Zone / DNS / Edit* on the domain, because a wildcard certificate is only issued through the DNS challenge (the web image ships Caddy with the Cloudflare module);
-- `CADDY_COMMAND="caddy run --config /etc/caddy/Caddyfile.cloud"` so the web container uses the wildcard site definition.
-
-Edge servers ignore all of this: without `TENANT_BASE_DOMAIN`, links keep using `PUBLIC_BASE_URL`.
-
-The marketing site can run in the same stack: set `RESEND_API_KEY`, `SITE_TO_EMAIL` and `TURNSTILE_SECRET_KEY`, point `www.<base domain>` and the bare domain at the server, and start with `--profile site`. Caddy serves `www` from the site container and redirects the bare domain to it.
-
-### What the hosted edition adds
-
-Everything below is switched on per mosque by its plan (`PLAN_FEATURES` in `packages/jumaah-core/src/constants.ts`); a Community server simply has the free plan and the complete core.
-
-- **Plans and AI**: Basic, Standard, Pro and Organisation with a 30-day trial; platform AI metered per mosque with a grace period. Admin → Settings shows the allowance.
-- **Branding and screens**: logo upload, colours, custom CSS, printable QR poster, date and announcements between khutbahs, prayer times computed from the mosque location.
-- **Archive, handouts, insight**: public archive at `/display/a/<slug>`, printable handouts per language, attendance per session.
-- **Custom domains and organisations**: a Pro mosque points a CNAME at its Jumaah address and verifies it in Settings (Caddy issues the certificate on demand); an organisation account manages up to ten mosques with a pooled AI allowance.
-- **Network, API and webhooks**: approved translations of identical Arabic paragraphs are shared and reused before any AI; API keys and signed webhooks are documented in [`docs/api.md`](docs/api.md).
-- **Billing**: renewal invoices with VAT, bank transfer or Moyasar, public sign-up and online subscription, sponsor-a-mosque. The billing variables in `.env.example` configure the seller, VAT and gateway.
+The hosted edition lives in a separate repository and builds on this one: it adds mosques by address, organisations, billing, branding beyond the logo, the public archive, handouts, attendance insight, the shared translation network, API keys and webhooks, all switched on per plan. Nothing here depends on it. A Community server talks to it only through the sync client above.
 
 ## Setting up screens
 
@@ -156,4 +131,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to help (translations, device t
 
 ## License
 
-[MIT](LICENSE). Free for every mosque, forever.
+[MIT](LICENSE). The Community Edition is free for every mosque, forever.

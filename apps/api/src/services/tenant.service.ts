@@ -1,6 +1,6 @@
 /**
  * Creating a mosque (tenant) with its first admin: used by the super admin's console (and by an extension's public
- * sign-up). Extensions may add columns (a plan, a sync key) through the tenantCreateData hook.
+ * sign-up). Extensions may add columns through the tenantCreateData hook.
  */
 import { hashPassword, randomToken } from '@jumaah/db';
 import { audit, type Actor } from '../lib/audit.js';
@@ -13,7 +13,7 @@ export interface CreateTenantInput {
   slug: string;
   timezone: string;
   locale: 'ar' | 'en';
-  /** Extension fields (plan, cycle, …) travel through to the tenantCreateData hook. */
+  /** Extension fields travel through to the tenantCreateData hook. */
   [extra: string]: unknown;
   adminEmail: string;
   adminName: string;

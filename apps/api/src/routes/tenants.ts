@@ -29,7 +29,7 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/tenants', { preHandler: superOnly }, async (request, reply) => {
-    // Extension fields (a plan, a billing cycle) pass through to the tenantCreateData hook.
+    // Extension fields pass through to the tenantCreateData hook.
     const body = parse(createTenantSchema.passthrough(), request.body);
     const { tenant, password, generatedPassword, secrets } = await createTenantWithAdmin(app.ctx, { ...body, adminPassword: body.adminPassword }, actorOf(request));
     return reply.code(201).send({ tenant: dto(tenant), adminPassword: generatedPassword ? password : undefined, ...secrets });
@@ -114,7 +114,7 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     return dto(t);
   });
 
-  /** Features the mosque may use right now (plus whatever an extension adds, e.g. its plan). */
+  /** Features the mosque may use right now (plus whatever an extension adds). */
   app.get('/tenant/features', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
     const t = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId } });
     const f = tenantFeatures(app.ctx, t);

@@ -18,8 +18,8 @@ export function basePath(): string {
  *   /display/                 -> token entry
  *   /display/<token>          -> wall screen
  *   /display/m/<slug>         -> public mobile page
- *   /display/m                -> public mobile page of the mosque implied by the address (hosted edition:
- *                                alnoor.jumaah.net/display/m); the slug is resolved from /api/public/host
+ *   /display/m                -> public mobile page of the mosque implied by the address (per-mosque hosts, an
+ *                                extension); the slug is resolved from /api/public/host
  *   /display/poster/<slug>    -> printable QR poster (?size=A4|A3)
  *   anything else an extension matches (Jumaah Cloud: the public archive, invoices)
  */

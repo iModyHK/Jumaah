@@ -49,7 +49,7 @@ export class CloudRelayProvider implements TranslationProvider {
     }
     if (res.status === 401) throw new ProviderError('CLOUD', 'AUTH', 'sync key rejected');
     if (res.status === 403) {
-      // Either the sync key or the mosque's plan: surface the cloud's own message (e.g. AI_NOT_INCLUDED, AI_QUOTA).
+      // Either the sync key or the cloud's own rules: surface its message (e.g. AI_NOT_INCLUDED, AI_QUOTA).
       let message = 'rejected by the cloud';
       try {
         const body = (await res.json()) as { error?: { code?: string; message?: string } };

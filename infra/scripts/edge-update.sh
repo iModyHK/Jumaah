@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Update a mosque edge server to a new image tag published by the cloud.
-#   ./infra/scripts/edge-update.sh 1.2.0          # explicit tag
+#   ./infra/scripts/edge-update.sh 1.0.0          # explicit tag
 #   ./infra/scripts/edge-update.sh                # tag reported by the cloud (/api/sync/version)
 set -euo pipefail
 cd "$(dirname "$0")/../.."

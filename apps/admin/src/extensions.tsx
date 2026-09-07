@@ -60,7 +60,7 @@ export interface AdminExtensions {
   topBarSwitcher?: ComponentType;
   /** Gate shown in the translate dialog (plans). */
   translateGate?: (estimate: CostEstimate | null | undefined, languages: string[], t: (key: string, opts?: Record<string, unknown>) => string) => TranslateGate;
-  /** Label next to a locked feature ("needs the Standard plan"); null hides the field. */
+  /** Label next to a locked feature (why it is locked); null hides the field. */
   lockedFeatureLabel?: (feature: string, featuresExt: Record<string, unknown> | undefined, t: (key: string, opts?: Record<string, unknown>) => string) => string | null;
   /** Extra i18n resources merged into the core ones. */
   i18n?: { ar: Record<string, unknown>; en: Record<string, unknown> };

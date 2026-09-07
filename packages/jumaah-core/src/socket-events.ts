@@ -50,9 +50,9 @@ export interface LiveSessionSnapshot {
   imamConnected: boolean;
 }
 
-/** Branding as screens and phones may show it: stored settings already filtered by the mosque's plan. */
+/** Branding as screens and phones may show it: stored settings already filtered by the mosque's features. */
 export interface TenantPublicBranding {
-  /** Uploaded logo (data URL) when the plan allows it, else the plain logo URL, else null. */
+  /** Uploaded logo (data URL) when the features allow it, else the plain logo URL, else null. */
   logoUrl: string | null;
   /** Highlight colour (#RRGGBB) or null for the theme default. */
   primary: string | null;
@@ -64,7 +64,7 @@ export interface TenantPublicBranding {
   hideMark: boolean;
 }
 
-/** What screens show between khutbahs (paid editions), already filtered by plan and by date. */
+/** What screens show between khutbahs, already filtered by the features and by date. */
 export interface TenantPublicSignage {
   /** Show the Hijri and Gregorian date under the clock. */
   showDate: boolean;

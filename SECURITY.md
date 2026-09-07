@@ -13,7 +13,7 @@ You will get an acknowledgement within 7 days. Fixes are released as a new image
 
 ## Scope
 
-- The API (`apps/api`), the admin, imam and display apps, the sync worker, and the edge/cloud Docker Compose setups.
+- The API (`apps/api`), the admin, imam and display apps, the sync worker, and the Docker Compose setups.
 - Authentication, tenant isolation (RLS), stored provider keys, display tokens and sync keys.
 
 Out of scope: vulnerabilities in third-party translation providers themselves, and issues that require an already-compromised host.

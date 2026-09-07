@@ -129,6 +129,13 @@ All variables are documented in [`.env.example`](.env.example). Design choices a
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for how to help (translations, device testing, code) and [`SECURITY.md`](SECURITY.md) for reporting vulnerabilities privately.
 
+## Releasing
+
+Write the notes under a new `## <version> — <date>` heading in [`CHANGELOG.md`](CHANGELOG.md), then run
+`node scripts/release.mjs <version>`: it writes the version into every package, `.env.example` and `docker-compose.yml`,
+commits and creates the annotated tag. Push `main` and the tag; CI builds and publishes the images. Jumaah Cloud pins
+the Community Edition by tag, so a cloud update follows each release.
+
 ## License
 
 [MIT](LICENSE). The Community Edition is free for every mosque, forever.

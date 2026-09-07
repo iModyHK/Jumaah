@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1 — 2026-09-07
+
+- Screens: the board between khutbahs now fits the screen whatever the mosque shows on it. On wide (16:9) screens the
+  announcement sits beside the clock and the QR code beside the prayer times; if the board is still too tall it is
+  scaled down instead of being clipped.
+- API: the server starts only when it is the actual entry point, so an extension that imports it (Jumaah Cloud) no
+  longer boots a second server on the same port.  is exported for extensions.
+
 ## 1.0.0 — 2026-09-07
 
 First release of the Jumaah Community Edition as its own project.

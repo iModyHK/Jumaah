@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 — 2026-09-07
+
+- API: extensions can add instructions to the AI translators through the new translationInstructions hook
+  (appended to the built-in prompt for Claude, OpenAI and Ollama, in translation jobs and provider tests).
+- Dependencies: ioredis 6, @fastify/multipart 10 (security release), pdf-parse 2 (current pdf.js; PDF import
+  joins pages itself). Newer GitHub Actions. Dependabot leaves Node, zod and the Vite React plugin majors alone.
+- scripts/release.mjs cuts a release: checks the changelog entry, bumps every version, commits and tags.
+
 ## 1.0.1 — 2026-09-07
 
 - Screens: the board between khutbahs now fits the screen whatever the mosque shows on it. On wide (16:9) screens the

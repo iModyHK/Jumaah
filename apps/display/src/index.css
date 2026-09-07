@@ -286,6 +286,16 @@ html.j-kiosk body {
   padding: 3vmin 4vmin;
   overflow: hidden;
 }
+/* The wall board: laid out at its natural size, then scaled down by FitBox when the screen is shorter. */
+.j-idle-fit {
+  flex: 0 0 auto;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  transform-origin: center;
+}
 .j-idle-logo {
   max-height: 16vmin;
   max-width: 40vw;

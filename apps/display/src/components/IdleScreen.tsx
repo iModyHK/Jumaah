@@ -3,6 +3,7 @@ import type { TenantPublicInfo } from '@jumaah/core';
 import { LangText } from '@jumaah/ui';
 import { phrase } from '../phrases';
 import { useClock } from './Clock';
+import { FitBox } from './FitBox';
 import { PrayerTimesRow, useTodayPrayerTimes } from './PrayerTimes';
 import { QrCode } from './QrCode';
 import { Announcements, DateLine } from './Signage';
@@ -34,8 +35,8 @@ export function IdleScreen({
   // During the week the screen is a prayer-times and announcements board; the waiting line belongs to Friday.
   const waiting = !compact && (friday || expecting);
 
-  return (
-    <div className="j-idle j-fade-in">
+  const body = (
+    <>
       {logoUrl && <img src={logoUrl} alt="" className="j-idle-logo" draggable={false} />}
       <LangText lang={tenant.locale} as="h1" className="j-idle-name" style={{ textAlign: 'center', margin: 0 }}>
         {tenant.name}
@@ -82,6 +83,13 @@ export function IdleScreen({
           ))}
         </div>
       )}
-    </div>
+    </>
+  );
+  // Wall screens are a fixed box: the board shrinks to fit it. On a phone the page scrolls instead.
+  if (compact) return <div className="j-idle j-fade-in">{body}</div>;
+  return (
+    <FitBox className="j-idle j-fade-in" innerClassName="j-idle-fit">
+      {body}
+    </FitBox>
   );
 }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 — 2026-09-08
+
+- API: a quota hook lets an extension cap how many screens or staff accounts a mosque creates, and how many
+  languages one screen shows. It covers invitations as well as direct creation. The Community server sets no
+  hook, so nothing is ever capped there.
+- Admin: a navigation item may name a group, so a server operator sees their pages under their own heading;
+  and an extension may replace the server-wide page outright.
+- Tests: importing a khutbah from a text or PDF file is now covered end to end.
+
 ## 1.0.2 — 2026-09-07
 
 - API: extensions can add instructions to the AI translators through the new translationInstructions hook

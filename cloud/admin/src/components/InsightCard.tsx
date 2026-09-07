@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import type { InsightDto, PlanFeatures, SubscriptionPlan } from '@jumaah/core';
+import type { InsightDto, PlanFeatures, SubscriptionPlan } from '@jumaah/cloud-shared';
 import { Spinner } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { fmtDate, fmtDuration } from '../lib/format';
-import { Card } from './PageHeader';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { fmtDate, fmtDuration } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
 
 interface FeaturesDto {
   plan: SubscriptionPlan;

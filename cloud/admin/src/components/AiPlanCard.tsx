@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { PARAGRAPHS_PER_KHUTBAH_UNIT, type AiAllowanceDto } from '@jumaah/core';
+import { PARAGRAPHS_PER_KHUTBAH_UNIT, type AiAllowanceDto } from '@jumaah/cloud-shared';
 import { StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { Card } from './PageHeader';
-import { fmtDate } from '../lib/format';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { fmtDate } from '@jumaah/admin';
 
 /** Hosted edition only: the mosque's plan, this month's platform-AI usage and why AI may be off. Renders nothing on self-hosted servers. */
 export function AiPlanCard() {

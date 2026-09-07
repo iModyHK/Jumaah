@@ -404,7 +404,8 @@
     "adminEmail": "Mosque admin email",
     "adminName": "Mosque admin name",
     "librarySharing": "Allow sharing to library",
-    "impersonate": "Log in as admin"
+    "impersonate": "Log in as admin",
+    "suspended": "Suspended"
   },
   "library": {
     "noItems": "The library is empty",
@@ -436,7 +437,8 @@
     "syncNow": "Sync now",
     "imageTag": "Software version",
     "latestImageTag": "Latest available",
-    "updateAvailable": "Update available"
+    "updateAvailable": "Update available",
+    "community": "Community Edition"
   },
   "imam": {
     "title": "Imam view",

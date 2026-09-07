@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { brandingSchema, type Branding, type PlanFeatures, type SubscriptionPlan, type TenantDto } from '@jumaah/core';
+import { brandingSchema, type Branding, type Features, type TenantDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
@@ -9,11 +9,11 @@ import { Checkbox, Field, FormRow, TextArea } from './Field';
 import { Card } from './PageHeader';
 import { useToast } from './Toast';
 import { validate } from '../lib/forms';
+import { useExtensions } from '../extensions';
 
 interface FeaturesDto {
-  plan: SubscriptionPlan;
-  state: string;
-  features: PlanFeatures;
+  features: Features;
+  [ext: string]: unknown;
 }
 
 /** The API accepts logo data URLs up to this many characters (about 220 KB of image). */
@@ -59,7 +59,7 @@ async function fileToLogo(file: File): Promise<string> {
   }
 }
 
-/** Paid-edition branding: logo upload, colours, custom CSS and the Jumaah mark. Fields the plan excludes are shown locked. */
+/** Branding: logo upload, colours, custom CSS and the Jumaah mark. Fields outside the mosque's features are locked or hidden. */
 export function BrandingCard({ tenant }: { tenant: TenantDto }) {
   const { t } = useTranslation();
   const { tenantId } = useAuth();
@@ -73,8 +73,11 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
   useEffect(() => setDraft(stored), [tenant.id, tenant.settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const f = features.data?.features;
-  const plan = features.data?.plan ?? tenant.plan;
-  const lock = (ok: boolean | undefined) => (ok ? null : <span className="j-muted text-xs"> · {t('branding.locked', { plan: t(`tenants.plans.${plan}`) })}</span>);
+  const ext = useExtensions();
+  // A locked field shows the extension's label ("needs the Standard plan"); without one it is simply hidden.
+  const lockLabel = (feature: string) => ext.lockedFeatureLabel?.(feature, features.data as Record<string, unknown> | undefined, t as never) ?? null;
+  const lock = (ok: boolean | undefined, feature: string) => (ok ? null : <span className="j-muted text-xs"> · {lockLabel(feature)}</span>);
+  const show = (ok: boolean | undefined, feature: string) => !features.data || ok || !!lockLabel(feature);
 
   const save = useMutation({
     mutationFn: (branding: Branding) => api.patch<TenantDto>('/tenant', { settings: { branding } }),
@@ -121,7 +124,7 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
     >
       <div className="j-muted mb-3 text-sm">{t('branding.hint')}</div>
       <div className="flex flex-col gap-4">
-        <Field label={<>{t('branding.logo')}{lock(f?.logoUpload)}</>} error={errors.logoDataUrl}>
+        <Field label={<>{t('branding.logo')}{lock(f?.logoUpload, 'logoUpload')}</>} error={errors.logoDataUrl}>
           <div className="flex flex-wrap items-center gap-3">
             {draft.logoDataUrl ? (
               <img src={draft.logoDataUrl} alt="" className="h-14 w-auto max-w-40 rounded-md object-contain" style={{ background: 'var(--j-bg-soft)' }} />
@@ -137,15 +140,16 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
             )}
           </div>
         </Field>
+        {show(f?.colours, 'colours') && (
         <FormRow>
-          <Field label={<>{t('branding.primary')}{lock(f?.colours)}</>} error={errors.primary} hint={t('branding.primaryHint')}>
+          <Field label={<>{t('branding.primary')}{lock(f?.colours, 'colours')}</>} error={errors.primary} hint={t('branding.primaryHint')}>
             <div className="flex items-center gap-2">
               <input type="color" value={draft.primary ?? '#1e6b58'} disabled={!f?.colours} onChange={(e) => setDraft((d) => ({ ...d, primary: e.target.value }))} className="h-9 w-12 rounded-md border" style={{ borderColor: 'var(--j-border)', background: 'transparent' }} />
               <code className="j-kbd" dir="ltr">{draft.primary ?? '—'}</code>
               {draft.primary && <Button className="px-2 py-1 text-xs" onClick={() => setDraft((d) => ({ ...d, primary: null }))}>{t('common.reset')}</Button>}
             </div>
           </Field>
-          <Field label={<>{t('branding.background')}{lock(f?.colours)}</>} error={errors.accent} hint={t('branding.backgroundHint')}>
+          <Field label={<>{t('branding.background')}{lock(f?.colours, 'colours')}</>} error={errors.accent} hint={t('branding.backgroundHint')}>
             <div className="flex items-center gap-2">
               <input type="color" value={draft.accent ?? '#0b1220'} disabled={!f?.colours} onChange={(e) => setDraft((d) => ({ ...d, accent: e.target.value }))} className="h-9 w-12 rounded-md border" style={{ borderColor: 'var(--j-border)', background: 'transparent' }} />
               <code className="j-kbd" dir="ltr">{draft.accent ?? '—'}</code>
@@ -153,12 +157,15 @@ export function BrandingCard({ tenant }: { tenant: TenantDto }) {
             </div>
           </Field>
         </FormRow>
-        <Field label={<>{t('branding.css')}{lock(f?.css)}</>} error={errors.css} hint={t('branding.cssHint')}>
+        )}
+        {show(f?.css, 'css') && (
+        <Field label={<>{t('branding.css')}{lock(f?.css, 'css')}</>} error={errors.css} hint={t('branding.cssHint')}>
           <TextArea dir="ltr" rows={5} value={draft.css ?? ''} disabled={!f?.css} onChange={(e) => setDraft((d) => ({ ...d, css: e.target.value }))} placeholder=".j-idle-name { letter-spacing: .02em }" style={{ fontFamily: 'ui-monospace, Consolas, monospace' }} />
         </Field>
+        )}
         <div className="flex items-center gap-2">
           <Checkbox label={t('branding.hideMark')} checked={!!draft.hideMark} disabled={!f?.hideMark} onChange={(v) => setDraft((d) => ({ ...d, hideMark: v }))} />
-          {lock(f?.hideMark)}
+          {lock(f?.hideMark, 'hideMark')}
         </div>
       </div>
     </Card>

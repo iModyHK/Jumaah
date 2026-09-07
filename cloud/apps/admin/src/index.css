@@ -1,0 +1,4 @@
+@import "@jumaah/admin/index.css";
+/* Tailwind must see the core admin sources and the cloud extension sources. */
+@source "../../../../apps/admin/src";
+@source "../../../admin/src";

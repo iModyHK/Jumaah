@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatSar, type PublicInvoiceDto } from '@jumaah/core';
+import { formatSar, type PublicInvoiceDto } from '@jumaah/cloud-shared';
 import { apiBaseUrl, LangText } from '@jumaah/ui';
-import { CenterMessage } from '../components/Overlays';
-import { QrCode } from '../components/QrCode';
-import { useTheme } from '../kiosk';
+import { CenterMessage } from '@jumaah/display';
+import { QrCode } from '@jumaah/display';
+import { useTheme } from '@jumaah/display';
 
 /**
  * Invoice page: /display/invoice/<number>?t=<token>. Anyone with the link can view and print it (the token is the

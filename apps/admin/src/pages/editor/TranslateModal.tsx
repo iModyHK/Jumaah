@@ -11,8 +11,10 @@ import { useToast } from '../../components/Toast';
 import { errorMessage } from '../../lib/errors';
 import { fmtUsd } from '../../lib/format';
 import { validate } from '../../lib/forms';
+import { useExtensions } from '../../extensions';
 
 export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah: KhutbahDto; open: boolean; onClose: () => void; onStarted: (job: TranslationJobDto) => void }) {
+  const ext = useExtensions();
   const { t } = useTranslation();
   const toast = useToast();
   const [languages, setLanguages] = useState<string[]>(khutbah.targetLanguages);
@@ -65,16 +67,10 @@ export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah:
     onError: (e) => toast.error(e),
   });
 
-  // Hosted edition: the estimate carries the plan's answer. No providers at all means the plan blocks the job.
-  const ai = estimate?.ai;
-  const aiDeny: string | null = ai?.applies
-    ? !ai.allowed && ai.reason
-      ? t(`plan.deny.${ai.reason}`, { plan: t(`tenants.plans.${ai.plan}`), count: ai.maxLanguages ?? 0 })
-      : ai.maxLanguages !== null && languages.length > ai.maxLanguages
-        ? t('plan.deny.LANGUAGES', { count: ai.maxLanguages })
-        : null
-    : null;
-  const blocked = !!aiDeny && (estimate?.perProvider.length ?? 0) === 0;
+  // An extension (plans) may gate the server's providers; no providers at all means the job cannot start.
+  const gate = ext.translateGate?.(estimate, languages, t as never) ?? { message: null, blocked: false, note: null };
+  const aiDeny = gate.message;
+  const blocked = gate.blocked;
 
   return (
     <Modal
@@ -96,9 +92,7 @@ export function TranslateModal({ khutbah, open, onClose, onStarted }: { khutbah:
             {aiDeny} {blocked ? t('plan.manualHint') : t('plan.ownProvidersHint')}
           </div>
         )}
-        {ai?.applies && ai.allowed && ai.monthlyParagraphs !== null && (
-          <div className="j-muted text-xs">{t('plan.remaining', { remaining: ai.remainingParagraphs, total: ai.monthlyParagraphs })}</div>
-        )}
+        {gate.note && <div className="j-muted text-xs">{gate.note}</div>}
         <Field label={t('khutbah.targetLanguages')}>
           <LanguagePicker value={languages} onChange={setLanguages} options={khutbah.targetLanguages} />
         </Field>

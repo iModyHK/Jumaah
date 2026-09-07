@@ -1,0 +1,387 @@
+/* Jumaah Cloud pages of the display app: the public archive and printable invoices. */
+
+.j-mobile-archive {
+  font-size: 0.8rem;
+  color: var(--j-accent);
+  text-decoration: none;
+  border: 1px solid var(--j-accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.6rem;
+  white-space: nowrap;
+}
+
+.j-archive {
+  min-height: 100vh;
+  background: var(--j-bg);
+  color: var(--j-fg);
+  display: flex;
+  flex-direction: column;
+}
+
+.j-archive-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--j-border);
+  background: var(--j-bg-soft);
+}
+
+.j-archive-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.j-archive-logo {
+  height: 2rem;
+  width: auto;
+}
+
+.j-archive-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.j-archive-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.j-archive-link {
+  color: var(--j-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.j-archive-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  flex-wrap: wrap;
+}
+
+.j-archive-btn {
+  border: 1.5px solid var(--j-accent);
+  background: var(--j-accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.j-archive-body {
+  width: min(100%, 52rem);
+  margin: 0 auto;
+  padding: 1rem 1rem 3rem;
+  flex: 1;
+}
+
+.j-archive-h2 {
+  margin: 0.5rem 0 0;
+  font-size: 1.5rem;
+}
+
+.j-archive-sub {
+  margin: 0.25rem 0 1rem;
+  color: var(--j-fg-muted);
+}
+
+.j-archive-empty {
+  color: var(--j-fg-muted);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.j-archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.j-archive-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--j-border);
+  border-radius: 12px;
+  background: var(--j-bg-soft);
+  color: inherit;
+  text-decoration: none;
+}
+
+.j-archive-item:hover {
+  border-color: var(--j-accent);
+}
+
+.j-archive-item-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.j-archive-item-langs {
+  font-size: 0.85rem;
+  color: var(--j-fg-muted);
+}
+
+.j-archive-khutbah-head {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.j-archive-h1 {
+  margin: 0 0 0.3rem;
+  font-size: 1.9rem;
+}
+
+.j-archive-section {
+  margin-bottom: 1.75rem;
+}
+
+.j-archive-h3 {
+  font-size: 1rem;
+  color: var(--j-fg-muted);
+  border-bottom: 1px solid var(--j-border);
+  padding-bottom: 0.3rem;
+  margin: 0 0 0.75rem;
+}
+
+.j-archive-h3-en {
+  font-weight: 400;
+}
+
+.j-archive-para {
+  padding: 0.6rem 0;
+  border-bottom: 1px dashed var(--j-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.j-archive-para:last-child {
+  border-bottom: 0;
+}
+
+.j-archive-ar {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.9;
+}
+
+.j-archive-para[data-kind='QURAN'] .j-archive-ar {
+  color: var(--j-accent);
+}
+
+.j-archive-ref {
+  font-size: 0.8em;
+  color: var(--j-fg-muted);
+}
+
+.j-archive-tr {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.j-archive-pending {
+  color: var(--j-fg-muted);
+  font-style: italic;
+}
+
+.j-invoice {
+  min-height: 100vh;
+  background: #e9ecef;
+  color: #16211c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  font-family: system-ui, 'Noto Naskh Arabic', sans-serif;
+}
+
+.j-invoice-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.j-archive-btn-ghost {
+  background: transparent;
+  color: var(--j-accent);
+}
+
+.j-invoice-banner {
+  background: #dff5ea;
+  color: #1e6b58;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+}
+
+.j-invoice-page {
+  background: #fff;
+  width: 210mm;
+  max-width: 100%;
+  min-height: 250mm;
+  padding: 16mm 14mm;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.j-invoice-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 2px solid #1e6b58;
+  padding-bottom: 0.75rem;
+}
+
+.j-invoice-seller {
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #1e6b58;
+}
+
+.j-invoice-title {
+  text-align: end;
+}
+
+.j-invoice-title h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.j-invoice-number {
+  font-family: ui-monospace, monospace;
+  font-size: 1rem;
+}
+
+.j-invoice-status {
+  display: inline-block;
+  margin-top: 0.3rem;
+  padding: 0.1rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid currentColor;
+}
+
+.j-invoice-status-paid {
+  color: #1e6b58;
+}
+
+.j-invoice-status-open {
+  color: #b7791f;
+}
+
+.j-invoice-status-void {
+  color: #7d8a84;
+}
+
+.j-invoice-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.j-invoice-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7d8a84;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.j-invoice-muted {
+  color: #7d8a84;
+  font-size: 0.9rem;
+}
+
+.j-invoice-qr-img {
+  width: 96px;
+  height: 96px;
+}
+
+.j-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.j-invoice-table td {
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid #e1e5e3;
+  text-align: start;
+  vertical-align: top;
+}
+
+.j-invoice-table th {
+  color: #7d8a84;
+  font-size: 0.8rem;
+}
+
+.j-invoice-table .num {
+  text-align: end;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.j-invoice-table tfoot td {
+  border-bottom: 0;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.j-invoice-total td {
+  font-weight: 800;
+  font-size: 1.1rem;
+  border-top: 2px solid #1e6b58 !important;
+}
+
+.j-invoice-pay {
+  background: #f4f6f5;
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  font-size: 0.95rem;
+}
+
+.j-invoice-pay p {
+  margin: 0.2rem 0;
+}
+
+.j-invoice-bank {
+  margin-top: 0.4rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.j-invoice-foot {
+  margin-top: auto;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e1e5e3;
+  color: #7d8a84;
+  font-size: 0.8rem;
+  text-align: center;
+}

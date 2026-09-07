@@ -1,0 +1,22 @@
+/** Library entry of the admin app: what an extension (Jumaah Cloud) builds on. */
+export { AdminApp } from './AdminApp';
+export { EMPTY_EXTENSIONS, useExtensions, type AdminExtensions, type AdminNavItem, type AdminRoute, type TranslateGate } from './extensions';
+export { api, useApi, getSession, setSession, activeTenantId } from './api';
+export { useAuth } from './auth/AuthProvider';
+export { RequireAuth, RequireRole, RequireTenant } from './auth/RequireAuth';
+export * from './components/Field';
+export * from './components/PageHeader';
+export { useToast } from './components/Toast';
+export { Modal } from './components/Modal';
+export { ConfirmDialog } from './components/ConfirmDialog';
+export * from './components/CopyButton';
+export { DataTable } from './components/DataTable';
+export { Pagination } from './components/Pagination';
+export { ProgressBar } from './components/ProgressBar';
+export { LanguagePicker } from './components/LanguagePicker';
+export { FileDrop } from './components/FileDrop';
+export * from './components/StatusBadge';
+export * from './lib/format';
+export * from './lib/forms';
+export * from './lib/errors';
+export { useSocketEvent, useSocketConnected } from './lib/socket';

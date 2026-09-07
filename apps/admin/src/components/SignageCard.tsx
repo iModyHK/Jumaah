@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { signageSchema, type Announcement, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantDto } from '@jumaah/core';
+import { signageSchema, type Announcement, type Features, type Signage, type TenantDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
@@ -9,15 +9,16 @@ import { Checkbox, Field, FormRow, TextArea, TextInput } from './Field';
 import { Card } from './PageHeader';
 import { useToast } from './Toast';
 import { validate } from '../lib/forms';
+import { useExtensions } from '../extensions';
 
 interface FeaturesDto {
-  plan: SubscriptionPlan;
-  features: PlanFeatures;
+  features: Features;
+  [ext: string]: unknown;
 }
 
 const newId = () => `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
-/** Screens between khutbahs (paid editions): Hijri/Gregorian date and scheduled announcements. */
+/** Screens between khutbahs: Hijri/Gregorian date and scheduled announcements. */
 export function SignageCard({ tenant }: { tenant: TenantDto }) {
   const { t } = useTranslation();
   const { tenantId } = useAuth();
@@ -34,7 +35,8 @@ export function SignageCard({ tenant }: { tenant: TenantDto }) {
   }, [tenant.id, tenant.settings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allowed = !!features.data?.features.signage;
-  const plan = features.data?.plan ?? tenant.plan;
+  const ext = useExtensions();
+  const lockLabel = allowed ? null : (ext.lockedFeatureLabel?.('signage', features.data as Record<string, unknown> | undefined, t as never) ?? null);
 
   const save = useMutation({
     mutationFn: (signage: Signage) => api.patch<TenantDto>('/tenant', { settings: { signage } }),
@@ -74,7 +76,7 @@ export function SignageCard({ tenant }: { tenant: TenantDto }) {
     >
       <div className="j-muted mb-3 text-sm">
         {t('signage.hint')}
-        {!allowed && features.data && <span> · {t('branding.locked', { plan: t(`tenants.plans.${plan}`) })}</span>}
+        {lockLabel && <span> · {lockLabel}</span>}
       </div>
       <div className="flex flex-col gap-4">
         <Checkbox label={t('signage.showDate')} checked={showDate} disabled={!allowed} onChange={setShowDate} />

@@ -6,8 +6,7 @@ import { getLanguage, type KhutbahDto, type LiveKhutbah, type LiveSessionSnapsho
 import { EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
-import { InsightCard } from '../components/InsightCard';
-import { SubscriptionBanner } from '../components/SubscriptionBanner';
+import { useExtensions } from '../extensions';
 import { Card, PageHeader, Stat } from '../components/PageHeader';
 import { ProgressBar } from '../components/ProgressBar';
 import { KhutbahStatusBadge } from '../components/StatusBadge';
@@ -24,6 +23,7 @@ interface SessionInfo {
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user, isSuper, tenantId } = useAuth();
+  const ext = useExtensions();
   const today = toDateInput(new Date());
 
   const upcoming = useQuery({
@@ -54,7 +54,9 @@ export function DashboardPage() {
   return (
     <div>
       <PageHeader title={t('dashboard.welcome', { name: user?.name ?? '' })} />
-      <SubscriptionBanner />
+      {ext.dashboardTop.map((C, i) => (
+        <C key={i} />
+      ))}
       <div className="grid gap-4 md:grid-cols-3">
         <Stat label={t('dashboard.activeDisplays')} value={displayCount} />
         <Stat
@@ -128,9 +130,11 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="mt-4">
-        <InsightCard />
-      </div>
+      {ext.dashboardBottom.map((C, i) => (
+        <div key={i} className="mt-4">
+          <C />
+        </div>
+      ))}
     </div>
   );
 }

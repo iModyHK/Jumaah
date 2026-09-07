@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { SUBSCRIPTION_PLANS, SUBSCRIPTION_STATUSES, createTenantSchema, updateTenantSchema, type Paginated, type SubscriptionPlan, type SubscriptionStatus, type TenantDto } from '@jumaah/core';
+import { createTenantSchema, updateTenantSchema, type Paginated, type TenantDto } from '@jumaah/core';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
@@ -15,20 +15,22 @@ import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
 import { useToast } from '../components/Toast';
-import { fmtDate } from '../lib/format';
+import { useExtensions } from '../extensions';
 import { clean, validate } from '../lib/forms';
 
 const PAGE_SIZE = 25;
 
+/** The create response: the mosque, the generated admin password, and any one-time secrets an extension adds. */
 interface CreateResult {
   tenant: TenantDto;
-  syncKey: string;
   adminPassword?: string;
+  [secret: string]: unknown;
 }
 
 export function TenantsPage() {
   const { t } = useTranslation();
   const { setTenantId } = useAuth();
+  const ext = useExtensions();
   const toast = useToast();
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -38,7 +40,6 @@ export function TenantsPage() {
   const [created, setCreated] = useState<CreateResult | null>(null);
   const [editing, setEditing] = useState<TenantDto | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<TenantDto | null>(null);
-  const [rotateTarget, setRotateTarget] = useState<TenantDto | null>(null);
   const [secret, setSecret] = useState<{ title: string; value: string; hint: string } | null>(null);
 
   const list = useQuery({ queryKey: ['tenants', { q, page }], queryFn: () => api.get<Paginated<TenantDto>>('/tenants', { q, page, pageSize: PAGE_SIZE }) });
@@ -52,15 +53,6 @@ export function TenantsPage() {
     },
     onError: (e) => toast.error(e),
   });
-  const rotate = async (tenant: TenantDto) => {
-    try {
-      const r = await api.post<{ syncKey: string }>(`/tenants/${tenant.id}/sync-key`);
-      setSecret({ title: t('tenants.syncKey'), value: r.syncKey, hint: t('tenants.credentialsOnce') });
-    } catch (err) {
-      toast.error(err);
-      throw err;
-    }
-  };
   const impersonate = async (tenant: TenantDto) => {
     try {
       const r = await api.post<{ accessToken: string; expiresIn: number; tenant: TenantDto }>(`/tenants/${tenant.id}/impersonate`);
@@ -73,6 +65,9 @@ export function TenantsPage() {
     setTenantId(tenant.id);
     navigate('/');
   };
+  const ExtCell = ext.tenants.cell?.Component;
+  const ExtActions = ext.tenants.actions;
+  const extraSecrets = created ? Object.entries(created).filter(([k, v]) => k !== 'tenant' && k !== 'adminPassword' && typeof v === 'string') : [];
 
   return (
     <div>
@@ -106,28 +101,15 @@ export function TenantsPage() {
               <div>
                 <div className="font-semibold">{x.name}</div>
                 <code className="j-kbd text-xs">{x.slug}</code>
+                {!x.isActive && (
+                  <div className="mt-1">
+                    <StatusPill tone="danger">{t('tenants.suspended')}</StatusPill>
+                  </div>
+                )}
               </div>
             ),
           },
-          {
-            key: 'plan',
-            header: t('tenants.plan'),
-            render: (x) => (
-              <div className="flex flex-col gap-1">
-                <span>{t(`tenants.plans.${x.plan}`)}</span>
-                <StatusPill tone={x.subscriptionStatus === 'ACTIVE' ? 'ok' : x.subscriptionStatus === 'SUSPENDED' ? 'danger' : 'warn'}>{t(`tenants.subscriptionStatus.${x.subscriptionStatus}`)}</StatusPill>
-              </div>
-            ),
-          },
-          {
-            key: 'ends',
-            header: t('tenants.subscriptionEndsAt'),
-            render: (x) => (
-              <span className="text-xs" style={x.subscriptionEndsAt && new Date(x.subscriptionEndsAt) < new Date() ? { color: 'var(--j-danger)' } : undefined}>
-                {fmtDate(x.subscriptionEndsAt)}
-              </span>
-            ),
-          },
+          ...(ExtCell && ext.tenants.cell ? [{ key: 'ext', header: t(ext.tenants.cell.header), render: (x: TenantDto) => <ExtCell tenant={x} /> }] : []),
           {
             key: 'counts',
             header: t('common.total'),
@@ -152,10 +134,8 @@ export function TenantsPage() {
                 <Button className="px-2 py-1 text-xs" onClick={() => void impersonate(x)}>
                   {t('tenants.impersonate')}
                 </Button>
-                <Button className="px-2 py-1 text-xs" onClick={() => setRotateTarget(x)}>
-                  {t('tenants.rotateSyncKey')}
-                </Button>
-                <Button variant="danger" className="px-2 py-1 text-xs" onClick={() => setSuspendTarget(x)} disabled={x.subscriptionStatus === 'SUSPENDED'}>
+                {ExtActions && <ExtActions tenant={x} onChanged={() => void invalidate()} />}
+                <Button variant="danger" className="px-2 py-1 text-xs" onClick={() => setSuspendTarget(x)} disabled={!x.isActive}>
                   {t('tenants.suspend')}
                 </Button>
               </div>
@@ -179,13 +159,17 @@ export function TenantsPage() {
       <Modal open={!!created} onClose={() => setCreated(null)} title={created?.tenant.name ?? ''} footer={<Button onClick={() => setCreated(null)}>{t('common.close')}</Button>}>
         {created && (
           <div className="flex flex-col gap-3">
-            <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(245,165,36,0.12)', color: 'var(--j-warn)' }}>
-              {t('tenants.credentialsOnce')}
-            </div>
-            <div>
-              <div className="j-label">{t('tenants.syncKey')}</div>
-              <CopyField value={created.syncKey} />
-            </div>
+            {(created.adminPassword || extraSecrets.length > 0) && (
+              <div className="rounded-lg px-3 py-2 text-sm" style={{ background: 'rgba(245,165,36,0.12)', color: 'var(--j-warn)' }}>
+                {t('tenants.credentialsOnce')}
+              </div>
+            )}
+            {extraSecrets.map(([k, v]) => (
+              <div key={k}>
+                <div className="j-label">{t(`tenants.${k}`, { defaultValue: k })}</div>
+                <CopyField value={String(v)} />
+              </div>
+            ))}
             {created.adminPassword && (
               <div>
                 <div className="j-label">{t('tenants.adminPassword')}</div>
@@ -197,7 +181,6 @@ export function TenantsPage() {
       </Modal>
       <EditTenantModal tenant={editing} onClose={() => setEditing(null)} />
       <ConfirmDialog open={!!suspendTarget} onClose={() => setSuspendTarget(null)} danger title={t('tenants.suspend')} message={`${suspendTarget?.name ?? ''} — ${t('common.areYouSure')}`} onConfirm={() => (suspendTarget ? suspend.mutateAsync(suspendTarget.id).then(() => undefined) : undefined)} />
-      <ConfirmDialog open={!!rotateTarget} onClose={() => setRotateTarget(null)} title={t('tenants.rotateSyncKey')} message={`${rotateTarget?.name ?? ''} — ${t('common.areYouSure')}`} onConfirm={() => (rotateTarget ? rotate(rotateTarget) : undefined)} />
       <Modal open={!!secret} onClose={() => setSecret(null)} title={secret?.title ?? ''} footer={<Button onClick={() => setSecret(null)}>{t('common.close')}</Button>}>
         {secret && (
           <div className="flex flex-col gap-3">
@@ -213,16 +196,18 @@ export function TenantsPage() {
 function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (r: CreateResult) => void }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const ext = useExtensions();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [timezone, setTimezone] = useState('Asia/Riyadh');
   const [locale, setLocale] = useState<'ar' | 'en'>('ar');
-  const [plan, setPlan] = useState<SubscriptionPlan>('FREE');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [languages, setLanguages] = useState<string[]>(['en', 'ur']);
+  const [extra, setExtra] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const ExtraFields = ext.tenants.createFields;
 
   const create = useMutation({
     mutationFn: (body: unknown) => api.post<CreateResult>('/tenants', body),
@@ -238,9 +223,9 @@ function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClos
   });
 
   const submit = () => {
-    const v = validate(createTenantSchema, clean({ name: name.trim(), slug: slug.trim(), timezone: timezone.trim(), locale, plan, adminEmail: adminEmail.trim().toLowerCase(), adminName: adminName.trim(), adminPassword, languages }));
+    const v = validate(createTenantSchema, clean({ name: name.trim(), slug: slug.trim(), timezone: timezone.trim(), locale, adminEmail: adminEmail.trim().toLowerCase(), adminName: adminName.trim(), adminPassword, languages }));
     setErrors(v.errors);
-    if (v.ok) create.mutate(v.data);
+    if (v.ok) create.mutate({ ...v.data, ...extra });
   };
 
   return (
@@ -277,15 +262,7 @@ function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClos
               <option value="en">{t('common.english')}</option>
             </Select>
           </Field>
-          <Field label={t('tenants.plan')} error={errors.plan}>
-            <Select value={plan} onChange={(e) => setPlan(e.target.value as SubscriptionPlan)}>
-              {SUBSCRIPTION_PLANS.map((p) => (
-                <option key={p} value={p}>
-                  {t(`tenants.plans.${p}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          {ExtraFields && <ExtraFields value={extra} onChange={(patch) => setExtra((x) => ({ ...x, ...patch }))} errors={errors} />}
         </FormRow>
         <FormRow cols={3}>
           <Field label={t('tenants.adminEmail')} error={errors.adminEmail}>
@@ -313,9 +290,6 @@ function EditTenantModal({ tenant, onClose }: { tenant: TenantDto | null; onClos
   const [name, setName] = useState('');
   const [timezone, setTimezone] = useState('');
   const [locale, setLocale] = useState<'ar' | 'en'>('ar');
-  const [plan, setPlan] = useState<SubscriptionPlan>('FREE');
-  const [status, setStatus] = useState<SubscriptionStatus>('TRIAL');
-  const [endsAt, setEndsAt] = useState('');
   const [sharing, setSharing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [key, setKey] = useState<string | null>(null);
@@ -324,9 +298,6 @@ function EditTenantModal({ tenant, onClose }: { tenant: TenantDto | null; onClos
     setName(tenant.name);
     setTimezone(tenant.timezone);
     setLocale(tenant.locale);
-    setPlan(tenant.plan);
-    setStatus(tenant.subscriptionStatus);
-    setEndsAt(tenant.subscriptionEndsAt ? tenant.subscriptionEndsAt.slice(0, 10) : '');
     setSharing(tenant.librarySharingAllowed);
     setErrors({});
   }
@@ -340,15 +311,7 @@ function EditTenantModal({ tenant, onClose }: { tenant: TenantDto | null; onClos
     onError: (e) => toast.error(e),
   });
   const submit = () => {
-    const v = validate(updateTenantSchema, {
-      name: name.trim(),
-      timezone: timezone.trim(),
-      locale,
-      plan,
-      subscriptionStatus: status,
-      subscriptionEndsAt: endsAt ? new Date(`${endsAt}T00:00:00Z`).toISOString() : null,
-      librarySharingAllowed: sharing,
-    });
+    const v = validate(updateTenantSchema, { name: name.trim(), timezone: timezone.trim(), locale, librarySharingAllowed: sharing });
     setErrors(v.errors);
     if (v.ok) save.mutate(v.data);
   };
@@ -381,30 +344,6 @@ function EditTenantModal({ tenant, onClose }: { tenant: TenantDto | null; onClos
             </Select>
           </Field>
         </FormRow>
-        <FormRow cols={3}>
-          <Field label={t('tenants.plan')} error={errors.plan}>
-            <Select value={plan} onChange={(e) => setPlan(e.target.value as SubscriptionPlan)}>
-              {SUBSCRIPTION_PLANS.map((p) => (
-                <option key={p} value={p}>
-                  {t(`tenants.plans.${p}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t('common.status')} error={errors.subscriptionStatus}>
-            <Select value={status} onChange={(e) => setStatus(e.target.value as SubscriptionStatus)}>
-              {SUBSCRIPTION_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {t(`tenants.subscriptionStatus.${s}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t('tenants.subscriptionEndsAt')} error={errors.subscriptionEndsAt}>
-            <TextInput type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
-          </Field>
-        </FormRow>
-        <div className="j-muted text-xs">{t('tenants.paidUntilHint')}</div>
         <Checkbox label={t('tenants.librarySharing')} checked={sharing} onChange={setSharing} />
       </div>
     </Modal>

@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getLanguage, type ArchiveKhutbahDto, type ArchiveListDto, type LiveParagraph, type SectionType } from '@jumaah/core';
+import { getLanguage, type LiveParagraph, type SectionType } from '@jumaah/core';
+import { type ArchiveKhutbahDto, type ArchiveListDto } from '@jumaah/cloud-shared';
 import { apiBaseUrl, LangText, useLocalStorage } from '@jumaah/ui';
-import { Branded, JumaahMark } from '../components/Branding';
-import { CenterMessage } from '../components/Overlays';
-import { useTheme } from '../kiosk';
-import { archiveUrl, mobileUrl } from '../routes';
+import { Branded, JumaahMark } from '@jumaah/display';
+import { CenterMessage } from '@jumaah/display';
+import { useTheme } from '@jumaah/display';
+import { mobileUrl } from '@jumaah/display';
+import { archiveUrl } from '../routes';
 
 type Loaded<T> = T | null | undefined;
 

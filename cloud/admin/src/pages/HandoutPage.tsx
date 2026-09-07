@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getLanguage, type HandoutDto, type LiveParagraph, type SectionType } from '@jumaah/core';
+import { getLanguage, type LiveParagraph, type SectionType } from '@jumaah/core';
+import { type HandoutDto } from '@jumaah/cloud-shared';
 import { Button, EmptyState, LangText, Spinner } from '@jumaah/ui';
-import { api } from '../api';
-import { Checkbox, Select } from '../components/Field';
-import { errorMessage } from '../lib/errors';
-import { fmtDate } from '../lib/format';
+import { api } from '@jumaah/admin';
+import { Checkbox, Select } from '@jumaah/admin';
+import { errorMessage } from '@jumaah/admin';
+import { fmtDate } from '@jumaah/admin';
 
 const SECTIONS: SectionType[] = ['FIRST', 'SECOND', 'DUA'];
 

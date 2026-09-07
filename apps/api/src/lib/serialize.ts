@@ -35,6 +35,7 @@ export function tenantDto(t: Tenant & { languages?: TenantLanguage[]; _count?: T
     timezone: t.timezone,
     locale: t.locale as 'ar' | 'en',
     librarySharingAllowed: t.librarySharingAllowed,
+    isActive: t.isActive,
     settings: (t.settings as Record<string, unknown>) ?? {},
     languages: (t.languages ?? []).filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     createdAt: t.createdAt.toISOString(),

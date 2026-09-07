@@ -1,19 +1,9 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthProvider';
+import { useExtensions, type AdminNavItem } from '../extensions';
 
-interface NavItem {
-  to: string;
-  key: string;
-  icon: string;
-  admin?: boolean;
-  superOnly?: boolean;
-  needsTenant?: boolean;
-  /** Only organisation admins (hosted edition). */
-  orgOnly?: boolean;
-}
-
-const ITEMS: NavItem[] = [
+const ITEMS: AdminNavItem[] = [
   { to: '/', key: 'nav.dashboard', icon: '▦', needsTenant: true },
   { to: '/khutbahs', key: 'nav.khutbahs', icon: '☰', needsTenant: true },
   { to: '/library', key: 'nav.library', icon: '▤' },
@@ -25,17 +15,17 @@ const ITEMS: NavItem[] = [
   { to: '/audit', key: 'nav.audit', icon: '≡', admin: true },
   { to: '/backups', key: 'nav.backups', icon: '⬇', admin: true, needsTenant: true },
   { to: '/sync', key: 'nav.sync', icon: '☁', admin: true, needsTenant: true },
-  { to: '/api', key: 'nav.api', icon: '⌁', admin: true, needsTenant: true },
-  { to: '/organisation', key: 'nav.organisation', icon: '🏛', orgOnly: true },
+];
+const TAIL: AdminNavItem[] = [
   { to: '/tenants', key: 'nav.tenants', icon: '🕌', superOnly: true },
-  { to: '/organisations', key: 'nav.organisations', icon: '🏛', superOnly: true },
   { to: '/platform', key: 'tenants.platform', icon: '◎', superOnly: true },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation();
   const { isAdmin, isSuper, tenantId, user } = useAuth();
-  const visible = ITEMS.filter((i) => (!i.admin || isAdmin) && (!i.superOnly || isSuper) && (!i.orgOnly || !!user?.organisationId) && (!i.needsTenant || tenantId || !isSuper));
+  const ext = useExtensions();
+  const visible = [...ITEMS, ...ext.nav, ...TAIL].filter((i) => (!i.admin || isAdmin) && (!i.superOnly || isSuper) && (!i.visible || i.visible(user)) && (!i.needsTenant || tenantId || !isSuper));
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">

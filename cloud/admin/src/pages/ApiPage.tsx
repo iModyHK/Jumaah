@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { WEBHOOK_EVENTS, createApiKeySchema, createWebhookSchema, type ApiKeyDto, type PlanFeatures, type SubscriptionPlan, type WebhookDto, type WebhookEvent } from '@jumaah/core';
+import { WEBHOOK_EVENTS, createApiKeySchema, createWebhookSchema, type ApiKeyDto, type PlanFeatures, type SubscriptionPlan, type WebhookDto, type WebhookEvent } from '@jumaah/cloud-shared';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { CopyButton } from '../components/CopyButton';
-import { Checkbox, Field, FormRow, TextInput } from '../components/Field';
-import { Modal } from '../components/Modal';
-import { Card, PageHeader } from '../components/PageHeader';
-import { useToast } from '../components/Toast';
-import { fmtDateTime } from '../lib/format';
-import { clean, validate } from '../lib/forms';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { CopyButton } from '@jumaah/admin';
+import { Checkbox, Field, FormRow, TextInput } from '@jumaah/admin';
+import { Modal } from '@jumaah/admin';
+import { Card, PageHeader } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { fmtDateTime } from '@jumaah/admin';
+import { clean, validate } from '@jumaah/admin';
 
 interface FeaturesDto {
   plan: SubscriptionPlan;

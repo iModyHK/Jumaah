@@ -5,11 +5,8 @@ import { PRAYER_METHODS, computePrayerTimes, tenantLanguagesSchema, tenantSettin
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
-import { ArchiveCard } from '../components/ArchiveCard';
-import { BillingCard } from '../components/BillingCard';
 import { BrandingCard } from '../components/BrandingCard';
-import { DomainCard } from '../components/DomainCard';
-import { NetworkCard } from '../components/NetworkCard';
+import { useExtensions } from '../extensions';
 import { SignageCard } from '../components/SignageCard';
 import { Checkbox, Field, FormRow, Select, TextArea, TextInput } from '../components/Field';
 import { LanguagePicker } from '../components/LanguagePicker';
@@ -46,12 +43,8 @@ const SECTIONS = [
   { id: 'general', key: 'settings.general' },
   { id: 'branding', key: 'branding.title' },
   { id: 'signage', key: 'signage.title' },
-  { id: 'archive', key: 'archive.title' },
-  { id: 'domain', key: 'domain.title' },
-  { id: 'network', key: 'network.title' },
   { id: 'languages', key: 'settings.languages' },
-  { id: 'billing', key: 'settings.subscription' },
-] as const;
+];
 
 function draftFrom(t: TenantDto): Draft {
   const s = t.settings as TenantSettings;
@@ -75,6 +68,8 @@ function draftFrom(t: TenantDto): Draft {
 
 export function SettingsPage() {
   const { t } = useTranslation();
+  const ext = useExtensions();
+  const sections = [...SECTIONS, ...ext.settingsCards.map((c) => ({ id: c.id, key: c.key }))];
   const { tenantId } = useAuth();
   const toast = useToast();
   const qc = useQueryClient();
@@ -150,7 +145,7 @@ export function SettingsPage() {
     <div>
       <PageHeader title={t('settings.title')} />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label={t('settings.sections')}>
-        {SECTIONS.map((s) => (
+        {sections.map((s) => (
           <a key={s.id} href={`#${s.id}`} className="j-btn px-3 py-1 text-xs" onClick={(e) => { e.preventDefault(); document.getElementById(s.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); history.replaceState(null, '', `#${s.id}`); }}>
             {t(s.key)}
           </a>
@@ -257,9 +252,6 @@ export function SettingsPage() {
 
         <div id="branding" className="scroll-mt-20"><BrandingCard tenant={tenant.data} /></div>
         <div id="signage" className="scroll-mt-20"><SignageCard tenant={tenant.data} /></div>
-        <div id="archive" className="scroll-mt-20"><ArchiveCard tenant={tenant.data} /></div>
-        <div id="domain" className="scroll-mt-20"><DomainCard tenant={tenant.data} /></div>
-        <div id="network" className="scroll-mt-20"><NetworkCard /></div>
 
         <Card
           id="languages"
@@ -274,7 +266,11 @@ export function SettingsPage() {
           <LanguagePicker value={enabledLangs} onChange={setLanguages} />
         </Card>
 
-        <div id="billing" className="scroll-mt-20"><BillingCard tenant={tenant.data} /></div>
+        {ext.settingsCards.map(({ id, Component }) => (
+          <div key={id} id={id} className="scroll-mt-20">
+            <Component tenant={tenant.data} />
+          </div>
+        ))}
       </div>
     </div>
   );

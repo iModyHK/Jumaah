@@ -1,13 +1,15 @@
+import { cloudTenant } from '../cloud-tenant';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createOrganisationSchema, ORG_MAX_TENANTS, type OrganisationDto, type Paginated, type TenantDto } from '@jumaah/core';
+import { type Paginated, type TenantDto } from '@jumaah/core';
+import { createOrganisationSchema, ORG_MAX_TENANTS, type OrganisationDto } from '@jumaah/cloud-shared';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { Field, FormRow, Select, TextInput } from '../components/Field';
-import { Card, PageHeader } from '../components/PageHeader';
-import { useToast } from '../components/Toast';
-import { clean, validate } from '../lib/forms';
+import { api } from '@jumaah/admin';
+import { Field, FormRow, Select, TextInput } from '@jumaah/admin';
+import { Card, PageHeader } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { clean, validate } from '@jumaah/admin';
 
 /** Super admin: organisation accounts, their mosques (up to the limit) and their admins. */
 export function OrganisationsPage() {
@@ -66,7 +68,7 @@ export function OrganisationsPage() {
       {orgs.data && orgs.data.length === 0 && <EmptyState title={t('organisation.empty')} />}
       <div className="flex flex-col gap-4">
         {orgs.data?.map((o) => (
-          <OrganisationCard key={o.id} org={o} freeTenants={(tenants.data?.items ?? []).filter((x) => !x.organisationId)} onChanged={refresh} />
+          <OrganisationCard key={o.id} org={o} freeTenants={(tenants.data?.items ?? []).filter((x) => !cloudTenant(x).organisationId)} onChanged={refresh} />
         ))}
       </div>
     </div>

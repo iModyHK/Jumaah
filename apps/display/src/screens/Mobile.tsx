@@ -9,7 +9,7 @@ import { EndedScreen } from '../components/EndedScreen';
 import { IdleScreen } from '../components/IdleScreen';
 import { CenterMessage, PausedPill, ReconnectBanner } from '../components/Overlays';
 import { Panels } from '../components/Panels';
-import { archiveUrl } from '../routes';
+import { useExtensions } from '../extensions';
 
 interface MobilePrefs {
   langs: string[];
@@ -31,6 +31,7 @@ function prefersLight(): boolean {
 
 /** Public phone page: /display/m/<slug> */
 export function Mobile({ slug }: { slug: string }) {
+  const ext = useExtensions();
   const live = useLiveStore({ kind: 'mobile', slug });
   const { t, i18n } = useTranslation();
   const [prefs, setPrefs] = useLocalStorage<MobilePrefs>(`jumaah.mobile.prefs.${slug}`, { langs: [], arabic: false, scale: 1 });
@@ -85,11 +86,9 @@ export function Mobile({ slug }: { slug: string }) {
             </LangText>
           </span>
           <span className="flex items-center gap-3">
-            {tenant.archiveEnabled && (
-              <a className="j-mobile-archive" href={archiveUrl(slug)}>
-                {t('display.archive.title')}
-              </a>
-            )}
+            {ext.mobileLinks.map((L, i) => (
+              <L key={i} tenant={tenant} slug={slug} />
+            ))}
             <JumaahMark branding={tenant.branding} />
             <ConnectionDot connected={live.connected} />
           </span>

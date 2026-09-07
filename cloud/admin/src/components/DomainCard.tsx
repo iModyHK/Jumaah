@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { DomainStatusDto, TenantDto } from '@jumaah/core';
+import type { TenantDto } from '@jumaah/core';
+import type { DomainStatusDto } from '@jumaah/cloud-shared';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { Field, TextInput } from './Field';
-import { Card } from './PageHeader';
-import { useToast } from './Toast';
-import { fmtDateTime } from '../lib/format';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { Field, TextInput } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { fmtDateTime } from '@jumaah/admin';
+import { cloudTenant } from '../cloud-tenant';
 
 /** Custom domain (Pro, hosted edition): set it, point a CNAME at the mosque host, verify, done. */
 export function DomainCard({ tenant }: { tenant: TenantDto }) {
@@ -17,8 +19,8 @@ export function DomainCard({ tenant }: { tenant: TenantDto }) {
   const toast = useToast();
   const qc = useQueryClient();
   const status = useQuery({ queryKey: ['tenant', 'domain', tenantId], queryFn: () => api.get<DomainStatusDto>('/tenant/domain') });
-  const [domain, setDomain] = useState(tenant.customDomain ?? '');
-  useEffect(() => setDomain(status.data?.domain ?? tenant.customDomain ?? ''), [status.data?.domain, tenant.customDomain]);
+  const [domain, setDomain] = useState(cloudTenant(tenant).customDomain ?? '');
+  useEffect(() => setDomain(status.data?.domain ?? cloudTenant(tenant).customDomain ?? ''), [status.data?.domain, cloudTenant(tenant).customDomain]);
 
   const done = (data: DomainStatusDto) => {
     qc.setQueryData(['tenant', 'domain', tenantId], data);
@@ -52,7 +54,7 @@ export function DomainCard({ tenant }: { tenant: TenantDto }) {
     <Card title={t('domain.title')}>
       <div className="j-muted mb-3 text-sm">
         {t('domain.hint')}
-        {s && !available && <span> · {s.reason === 'NO_BASE_DOMAIN' ? t('domain.notCloud') : t('branding.locked', { plan: t(`tenants.plans.${tenant.plan}`) })}</span>}
+        {s && !available && <span> · {s.reason === 'NO_BASE_DOMAIN' ? t('domain.notCloud') : t('branding.locked', { plan: t(`tenants.plans.${cloudTenant(tenant).plan}`) })}</span>}
       </div>
       {status.isLoading && <Spinner />}
       {s && (

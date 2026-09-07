@@ -7,10 +7,6 @@ import { DashboardPage } from './pages/DashboardPage';
 import { KhutbahsPage } from './pages/KhutbahsPage';
 import { KhutbahNewPage } from './pages/KhutbahNewPage';
 import { KhutbahEditorPage } from './pages/KhutbahEditorPage';
-import { HandoutPage } from './pages/HandoutPage';
-import { OrganisationPage } from './pages/OrganisationPage';
-import { OrganisationsPage } from './pages/OrganisationsPage';
-import { ApiPage } from './pages/ApiPage';
 import { ForgotPasswordPage, ResetPasswordPage } from './pages/ForgotPasswordPage';
 import { GlossaryPage } from './pages/GlossaryPage';
 import { ProvidersPage } from './pages/ProvidersPage';
@@ -24,26 +20,28 @@ import { LibraryPage } from './pages/LibraryPage';
 import { TenantsPage } from './pages/TenantsPage';
 import { PlatformPage } from './pages/PlatformPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { useExtensions } from './extensions';
 
 const ADMIN = ['SUPER_ADMIN', 'MOSQUE_ADMIN'] as const;
 
 export function App() {
+  const ext = useExtensions();
+  const wrap = (r: (typeof ext.routes)[number]) => {
+    let el = r.needsTenant ? <RequireTenant>{r.element}</RequireTenant> : r.element;
+    if (r.roles) el = <RequireRole roles={[...r.roles]}>{el}</RequireRole>;
+    return el;
+  };
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/invite/:token" element={<InvitePage />} />
       <Route path="/forgot" element={<ForgotPasswordPage />} />
       <Route path="/reset/:token" element={<ResetPasswordPage />} />
-      <Route
-        path="/khutbahs/:id/handout"
-        element={
-          <RequireAuth>
-            <RequireTenant>
-              <HandoutPage />
-            </RequireTenant>
-          </RequireAuth>
-        }
-      />
+      {ext.routes
+        .filter((r) => r.standalone)
+        .map((r) => (
+          <Route key={r.path} path={r.path} element={<RequireAuth>{wrap(r)}</RequireAuth>} />
+        ))}
       <Route
         element={
           <RequireAuth>
@@ -64,9 +62,11 @@ export function App() {
         <Route path="backups" element={<RequireRole roles={[...ADMIN]}><RequireTenant><BackupsPage /></RequireTenant></RequireRole>} />
         <Route path="sync" element={<RequireRole roles={[...ADMIN]}><RequireTenant><SyncPage /></RequireTenant></RequireRole>} />
         <Route path="library" element={<LibraryPage />} />
-        <Route path="organisation" element={<OrganisationPage />} />
-        <Route path="api" element={<RequireRole roles={[...ADMIN]}><RequireTenant><ApiPage /></RequireTenant></RequireRole>} />
-        <Route path="organisations" element={<RequireRole roles={['SUPER_ADMIN']}><OrganisationsPage /></RequireRole>} />
+        {ext.routes
+          .filter((r) => !r.standalone)
+          .map((r) => (
+            <Route key={r.path} path={r.path} element={wrap(r)} />
+          ))}
         <Route path="tenants" element={<RequireRole roles={['SUPER_ADMIN']}><TenantsPage /></RequireRole>} />
         <Route path="platform" element={<RequireRole roles={['SUPER_ADMIN']}><PlatformPage /></RequireRole>} />
         <Route path="*" element={<NotFoundPage />} />

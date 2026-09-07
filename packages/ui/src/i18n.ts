@@ -17,12 +17,25 @@ export function detectLocale(fallback: UiLocale = 'ar'): UiLocale {
   return fallback;
 }
 
-/** Initialise i18next with the shared ar/en resources and keep <html dir/lang> in sync. */
-export function createI18n(initial?: UiLocale): i18n {
+type Resources = Record<string, unknown>;
+
+/** Deep merge of translation trees: extension strings are added to the core ones. */
+function mergeResources(base: Resources, extra: Resources | undefined): Resources {
+  if (!extra) return base;
+  const out: Resources = { ...base };
+  for (const [k, v] of Object.entries(extra)) {
+    const b = out[k];
+    out[k] = v && typeof v === 'object' && !Array.isArray(v) && b && typeof b === 'object' && !Array.isArray(b) ? mergeResources(b as Resources, v as Resources) : v;
+  }
+  return out;
+}
+
+/** Initialise i18next with the core ar/en resources (plus an extension's) and keep <html dir/lang> in sync. */
+export function createI18n(initial?: UiLocale, extra?: { ar: Resources; en: Resources }): i18n {
   const lng = initial ?? detectLocale();
   if (!i18next.isInitialized) {
     void i18next.use(initReactI18next).init({
-      resources: { ar: { translation: ar }, en: { translation: en } },
+      resources: { ar: { translation: mergeResources(ar as Resources, extra?.ar) }, en: { translation: mergeResources(en as Resources, extra?.en) } },
       lng,
       fallbackLng: 'en',
       interpolation: { escapeValue: false },

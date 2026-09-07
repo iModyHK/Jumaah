@@ -404,7 +404,8 @@
     "adminEmail": "بريد مدير المسجد",
     "adminName": "اسم مدير المسجد",
     "librarySharing": "السماح بالمشاركة في المكتبة",
-    "impersonate": "الدخول كمدير"
+    "impersonate": "الدخول كمدير",
+    "suspended": "موقوف"
   },
   "library": {
     "noItems": "المكتبة فارغة",
@@ -436,7 +437,8 @@
     "syncNow": "مزامنة الآن",
     "imageTag": "إصدار البرنامج",
     "latestImageTag": "أحدث إصدار متاح",
-    "updateAvailable": "يتوفر تحديث"
+    "updateAvailable": "يتوفر تحديث",
+    "community": "نسخة المجتمع"
   },
   "imam": {
     "title": "واجهة المنبر",

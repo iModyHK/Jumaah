@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { ArchiveSettings, PlanFeatures, SubscriptionPlan, TenantDto } from '@jumaah/core';
+import type { TenantDto } from '@jumaah/core';
+import type { ArchiveSettings, PlanFeatures, SubscriptionPlan } from '@jumaah/cloud-shared';
 import { Button, Spinner } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { CopyButton } from './CopyButton';
-import { Checkbox } from './Field';
-import { Card } from './PageHeader';
-import { useToast } from './Toast';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { CopyButton } from '@jumaah/admin';
+import { Checkbox } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { cloudTenant } from '../cloud-tenant';
 
 interface FeaturesDto {
   plan: SubscriptionPlan;
@@ -27,7 +29,7 @@ export function ArchiveCard({ tenant }: { tenant: TenantDto }) {
   useEffect(() => setEnabled(stored), [tenant.id, stored]);
 
   const allowed = !!features.data?.features.archive;
-  const plan = features.data?.plan ?? tenant.plan;
+  const plan = features.data?.plan ?? cloudTenant(tenant).plan;
   const url = `${window.location.origin}/display/a/${encodeURIComponent(tenant.slug)}`;
 
   const save = useMutation({

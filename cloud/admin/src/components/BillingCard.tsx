@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BILLING_CYCLES, SELF_SERVICE_PLANS, billingSettingsSchema, formatSar, type BillingCycle, type BillingOverviewDto, type InvoiceDto, type SubscriptionPlan, type TenantDto } from '@jumaah/core';
+import { type TenantDto } from '@jumaah/core';
+import { BILLING_CYCLES, SELF_SERVICE_PLANS, billingSettingsSchema, formatSar, type BillingCycle, type BillingOverviewDto, type InvoiceDto, type SubscriptionPlan } from '@jumaah/cloud-shared';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { Field, FormRow, Select, TextInput } from './Field';
-import { Card } from './PageHeader';
-import { useToast } from './Toast';
-import { fmtDate } from '../lib/format';
-import { clean, validate } from '../lib/forms';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { Field, FormRow, Select, TextInput } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { fmtDate } from '@jumaah/admin';
+import { clean, validate } from '@jumaah/admin';
+import { cloudTenant } from '../cloud-tenant';
 
 export function invoiceTone(status: InvoiceDto['status']): 'ok' | 'warn' | 'muted' {
   return status === 'PAID' ? 'ok' : status === 'OPEN' ? 'warn' : 'muted';
@@ -29,7 +31,7 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
   const [email, setEmail] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [bank, setBank] = useState<string | null>(null);
-  const [plan, setPlan] = useState<SubscriptionPlan>(SELF_SERVICE_PLANS.includes(tenant.plan as never) ? tenant.plan : 'STANDARD');
+  const [plan, setPlan] = useState<SubscriptionPlan>(SELF_SERVICE_PLANS.includes(cloudTenant(tenant).plan as never) ? cloudTenant(tenant).plan : 'STANDARD');
   const cancel = useMutation({
     mutationFn: (c: boolean) => api.post('/billing/cancel', { cancel: c }),
     onSuccess: () => {
@@ -100,15 +102,15 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
       <dl className="grid gap-3 text-sm md:grid-cols-4">
         <div>
           <dt className="j-muted text-xs">{t('settings.plan')}</dt>
-          <dd className="font-semibold">{t(`tenants.plans.${tenant.plan}`)}</dd>
+          <dd className="font-semibold">{t(`tenants.plans.${cloudTenant(tenant).plan}`)}</dd>
         </div>
         <div>
           <dt className="j-muted text-xs">{t('common.status')}</dt>
-          <dd className="font-semibold">{t(`tenants.subscriptionStatus.${tenant.subscriptionStatus}`)}</dd>
+          <dd className="font-semibold">{t(`tenants.subscriptionStatus.${cloudTenant(tenant).subscriptionStatus}`)}</dd>
         </div>
         <div>
           <dt className="j-muted text-xs">{t('tenants.subscriptionEndsAt')}</dt>
-          <dd>{fmtDate(tenant.subscriptionEndsAt)}</dd>
+          <dd>{fmtDate(cloudTenant(tenant).subscriptionEndsAt)}</dd>
         </div>
         <div>
           <dt className="j-muted text-xs">{t('tenants.slug')}</dt>
@@ -128,7 +130,7 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
                 <Select value={cycle} onChange={(e) => setCycle(e.target.value as BillingCycle)}>
                   {BILLING_CYCLES.map((c) => (
                     <option key={c} value={c}>
-                      {t(`billing.cycles.${c}`, { price: formatSar(d.prices[tenant.plan] * (c === 'YEARLY' ? 10 : 1) * 100, ar ? 'ar' : 'en') })}
+                      {t(`billing.cycles.${c}`, { price: formatSar(d.prices[cloudTenant(tenant).plan] * (c === 'YEARLY' ? 10 : 1) * 100, ar ? 'ar' : 'en') })}
                     </option>
                   ))}
                 </Select>
@@ -175,11 +177,11 @@ export function BillingCard({ tenant }: { tenant: TenantDto }) {
                   {subscribe.isPending ? <Spinner /> : t('billing.subscribeNow', { total: formatSar(d.prices[plan] * (cycle === 'YEARLY' ? 10 : 1) * 100, ar ? 'ar' : 'en') })}
                 </Button>
               </div>
-              {tenant.plan !== 'FREE' && (
+              {cloudTenant(tenant).plan !== 'FREE' && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                   {d.settings.cancelAtPeriodEnd ? (
                     <>
-                      <StatusPill tone="warn">{t('billing.cancelPending', { date: fmtDate(tenant.subscriptionEndsAt) })}</StatusPill>
+                      <StatusPill tone="warn">{t('billing.cancelPending', { date: fmtDate(cloudTenant(tenant).subscriptionEndsAt) })}</StatusPill>
                       <Button className="px-2 py-0.5 text-xs" onClick={() => cancel.mutate(false)} disabled={cancel.isPending}>
                         {t('billing.resume')}
                       </Button>

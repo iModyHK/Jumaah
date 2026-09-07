@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { BillingOverviewDto } from '@jumaah/core';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { fmtDate } from '../lib/format';
+import type { BillingOverviewDto } from '@jumaah/cloud-shared';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { fmtDate } from '@jumaah/admin';
 
 const DAY = 24 * 60 * 60 * 1000;
 

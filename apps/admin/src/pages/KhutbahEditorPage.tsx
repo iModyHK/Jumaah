@@ -28,10 +28,12 @@ import { SplitModal } from './editor/SplitModal';
 import { TranslateModal } from './editor/TranslateModal';
 import { VersionsModal } from './editor/VersionsModal';
 import { khutbahKey, useInvalidateKhutbah } from './editor/hooks';
+import { useExtensions } from '../extensions';
 
 type Mode = 'paragraphs' | 'text';
 
 export function KhutbahEditorPage() {
+  const ext = useExtensions();
   const { id = '' } = useParams();
   const { t } = useTranslation();
   const { canEdit } = useAuth();
@@ -145,9 +147,9 @@ export function KhutbahEditorPage() {
             <Button className="px-3 py-1 text-sm" onClick={() => setVersionsOpen(true)}>
               {t('khutbah.versions')}
             </Button>
-            <a href={`${import.meta.env.BASE_URL}khutbahs/${id}/handout`} target="_blank" rel="noreferrer" className="j-btn px-3 py-1 text-sm">
-              {t('handout.open')}
-            </a>
+            {ext.editorActions.map((C, i) => (
+              <C key={i} khutbahId={id!} />
+            ))}
             {canEdit && (
               <>
                 <Button className="px-3 py-1 text-sm" onClick={() => setShareOpen(true)}>

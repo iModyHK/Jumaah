@@ -1,21 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import type { OrganisationDto } from '@jumaah/core';
+import type { OrganisationDto } from '@jumaah/cloud-shared';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { Card, PageHeader } from '../components/PageHeader';
-import { fmtDate } from '../lib/format';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { Card, PageHeader } from '@jumaah/admin';
+import { fmtDate } from '@jumaah/admin';
+import { orgOf } from '../cloud-tenant';
 
 /** The organisation admin's own organisation: every member mosque, and a button to manage each one. */
 export function OrganisationPage() {
   const { t } = useTranslation();
   const { user, tenantId, setTenantId } = useAuth();
   const navigate = useNavigate();
-  const org = useQuery({ queryKey: ['organisation', user?.organisationId], queryFn: () => api.get<OrganisationDto>('/organisation'), enabled: !!user?.organisationId });
+  const org = useQuery({ queryKey: ['organisation', orgOf(user)], queryFn: () => api.get<OrganisationDto>('/organisation'), enabled: !!orgOf(user) });
 
-  if (!user?.organisationId) return <EmptyState title={t('organisation.notMember')} />;
+  if (!orgOf(user)) return <EmptyState title={t('organisation.notMember')} />;
   if (org.isLoading) return <Spinner />;
   if (!org.data) return <EmptyState title={t('errors.NOT_FOUND')} />;
   const o = org.data;

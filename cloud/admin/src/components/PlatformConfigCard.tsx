@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EmailLogDto, PlatformConfigDto, PlatformConfigGroup } from '@jumaah/core';
+import type { EmailLogDto, PlatformConfigDto, PlatformConfigGroup } from '@jumaah/cloud-shared';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
-import { api } from '../api';
-import { Checkbox, Field, FormRow, Select, TextInput } from './Field';
-import { Card } from './PageHeader';
-import { useToast } from './Toast';
-import { fmtDateTime } from '../lib/format';
+import { api } from '@jumaah/admin';
+import { Checkbox, Field, FormRow, Select, TextInput } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
+import { fmtDateTime } from '@jumaah/admin';
 
 type Values = Record<string, unknown>;
 type Secret = { set: boolean; hint: string | null };

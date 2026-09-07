@@ -54,6 +54,8 @@ export interface TenantDto {
   timezone: string;
   locale: 'ar' | 'en';
   librarySharingAllowed: boolean;
+  /** False once the super admin suspended the mosque. */
+  isActive: boolean;
   settings: Record<string, unknown>;
   languages: string[];
   createdAt: string;

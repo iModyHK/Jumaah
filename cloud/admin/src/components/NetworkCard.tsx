@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { NetworkStatusDto } from '@jumaah/core';
+import type { NetworkStatusDto } from '@jumaah/cloud-shared';
 import { Button, Spinner } from '@jumaah/ui';
-import { api } from '../api';
-import { useAuth } from '../auth/AuthProvider';
-import { Checkbox } from './Field';
-import { Card } from './PageHeader';
-import { useToast } from './Toast';
+import { api } from '@jumaah/admin';
+import { useAuth } from '@jumaah/admin';
+import { Checkbox } from '@jumaah/admin';
+import { Card } from '@jumaah/admin';
+import { useToast } from '@jumaah/admin';
 
 function Mini({ label, value }: { label: string; value: number }) {
   return (

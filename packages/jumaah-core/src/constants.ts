@@ -38,35 +38,12 @@ export type DisplayLayout = (typeof DISPLAY_LAYOUTS)[number];
 export const DISPLAY_THEMES = ['dark', 'light', 'green', 'gold'] as const;
 export type DisplayTheme = (typeof DISPLAY_THEMES)[number];
 
-export const SUBSCRIPTION_PLANS = ['FREE', 'BASIC', 'STANDARD', 'PRO', 'ENTERPRISE'] as const;
-export type SubscriptionPlan = (typeof SUBSCRIPTION_PLANS)[number];
-
 /**
- * What each hosted plan includes. Only the platform's own AI providers are gated by this; a mosque's own keys and
- * the self-hosted (community) edition are never limited. Allowances are counted in paragraph translations
- * (one paragraph into one language); PARAGRAPHS_PER_KHUTBAH_UNIT turns them into "khutbah translations" for people.
+ * Feature switches of a mosque. The core — preparation, review, imam control, screens, phones, offline, backups —
+ * is never listed here because it is always available. Community Edition has a fixed set (COMMUNITY_FEATURES);
+ * the hosted edition derives the set from the mosque's plan.
  */
-export interface PlanLimits {
-  /** Platform AI translation included. */
-  ai: boolean;
-  /** Distinct AI target languages allowed per job; null = unlimited. */
-  maxLanguages: number | null;
-  /** Paragraph translations per calendar month on platform AI; null = unlimited. */
-  monthlyParagraphs: number | null;
-}
-export const PARAGRAPHS_PER_KHUTBAH_UNIT = 15;
-export const PLAN_LIMITS: Record<SubscriptionPlan, PlanLimits> = {
-  FREE: { ai: false, maxLanguages: 0, monthlyParagraphs: 0 },
-  BASIC: { ai: false, maxLanguages: 0, monthlyParagraphs: 0 },
-  STANDARD: { ai: true, maxLanguages: 4, monthlyParagraphs: 60 * PARAGRAPHS_PER_KHUTBAH_UNIT },
-  PRO: { ai: true, maxLanguages: null, monthlyParagraphs: 150 * PARAGRAPHS_PER_KHUTBAH_UNIT },
-  ENTERPRISE: { ai: true, maxLanguages: null, monthlyParagraphs: 1500 * PARAGRAPHS_PER_KHUTBAH_UNIT },
-};
-/**
- * Paid-edition features by plan (the feature matrix of the plan document). The core — preparation, review, imam
- * control, screens, phones, offline, backups — is never listed here because it is always available.
- */
-export interface PlanFeatures {
+export interface Features {
   /** Upload a logo file (stored with the mosque) instead of hosting an image URL yourself. */
   logoUpload: boolean;
   /** Primary and accent colours on screens and the phone page. */
@@ -90,29 +67,12 @@ export interface PlanFeatures {
   networkPublish: boolean;
   /** API access and webhooks. */
   api: boolean;
-  /** The mosque's own address (khutbah.alnoor.org.sa) instead of <slug>.jumaah.net. */
+  /** The mosque's own address instead of one under the platform's domain. */
   customDomain: boolean;
 }
-const NO_FEATURES: PlanFeatures = { logoUpload: false, colours: false, css: false, hideMark: false, poster: false, signage: false, archive: false, handouts: false, insight: false, networkRead: false, networkPublish: false, api: false, customDomain: false };
-export const PLAN_FEATURES: Record<SubscriptionPlan, PlanFeatures> = {
-  FREE: NO_FEATURES,
-  BASIC: { ...NO_FEATURES, logoUpload: true, poster: true },
-  STANDARD: { ...NO_FEATURES, logoUpload: true, colours: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true },
-  PRO: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true, customDomain: true },
-  ENTERPRISE: { logoUpload: true, colours: true, css: true, hideMark: true, poster: true, signage: true, archive: true, handouts: true, insight: true, networkRead: true, networkPublish: true, api: true, customDomain: true },
-};
-/** Organisation account (ENTERPRISE plan): mosques one organisation may manage by default. */
-export const ORG_MAX_TENANTS = 10;
-/** Days after subscriptionEndsAt during which platform AI keeps working, so a late payment never blanks a Friday. */
-export const AI_GRACE_DAYS = 7;
-/** Length of the trial a new hosted mosque starts with. */
-export const TRIAL_DAYS = 30;
-
-export const SUBSCRIPTION_STATUSES = ['ACTIVE', 'TRIAL', 'PAST_DUE', 'SUSPENDED'] as const;
-export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
-
-export const DEPLOYMENT_MODES = ['edge', 'cloud'] as const;
-export type DeploymentMode = (typeof DEPLOYMENT_MODES)[number];
+export const NO_FEATURES: Features = { logoUpload: false, colours: false, css: false, hideMark: false, poster: false, signage: false, archive: false, handouts: false, insight: false, networkRead: false, networkPublish: false, api: false, customDomain: false };
+/** What every mosque on a Community server has: its logo on screens and the poster, and the screens between khutbahs. */
+export const COMMUNITY_FEATURES: Features = { ...NO_FEATURES, logoUpload: true, poster: true, signage: true };
 
 /** Average Arabic reading speed for a khatib: ~110 words per minute. */
 export const WORDS_PER_MINUTE_AR = 110;
@@ -123,7 +83,3 @@ export const SESSION_STALE_MS = 30000;
 /** Outbox rows rejected by the other side this many times are parked until an admin requeues them. */
 export const OUTBOX_MAX_ATTEMPTS = 10;
 export const MAX_DISPLAY_LANGUAGES = 4;
-
-/** Webhook events a mosque can subscribe to (hosted edition, plans with the API feature). */
-export const WEBHOOK_EVENTS = ['khutbah.created', 'khutbah.updated', 'translations.approved', 'session.started', 'session.ended', 'ping'] as const;
-export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];

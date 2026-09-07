@@ -88,8 +88,8 @@ export interface TenantPublicInfo {
   languages: string[];
   branding: TenantPublicBranding;
   signage: TenantPublicSignage;
-  /** The public archive page (/display/a/<slug>) is open: plan includes it and the mosque switched it on. */
-  archiveEnabled: boolean;
+  /** Data added by an extension (hosted edition: whether the public archive page is open). */
+  ext?: Record<string, unknown>;
 }
 
 export interface DisplayConfig {

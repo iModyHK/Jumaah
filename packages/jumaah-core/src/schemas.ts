@@ -1,9 +1,6 @@
 import { z } from 'zod';
 import { PRAYER_METHODS } from './prayer-times.js';
-import { BILLING_CYCLES } from './billing.js';
 import {
-  ORG_MAX_TENANTS,
-  WEBHOOK_EVENTS,
   DISPLAY_LAYOUTS,
   DISPLAY_THEMES,
   GLOSSARY_MODES,
@@ -12,8 +9,6 @@ import {
   PROVIDER_TYPES,
   ROLES,
   SECTION_TYPES,
-  SUBSCRIPTION_PLANS,
-  SUBSCRIPTION_STATUSES,
   TRANSLATION_STATUSES,
   MAX_DISPLAY_LANGUAGES,
 } from './constants.js';
@@ -93,19 +88,9 @@ export const prayerLocationSchema = z.object({
   adjustments: z.object({ fajr: z.number().int().min(-60).max(60), dhuhr: z.number().int().min(-60).max(60), asr: z.number().int().min(-60).max(60), maghrib: z.number().int().min(-60).max(60), isha: z.number().int().min(-60).max(60) }).partial().optional(),
 });
 
-/** Public archive of delivered khutbahs (paid editions): the mosque switches it on; the plan must include it. */
-export const archiveSchema = z.object({ enabled: z.boolean().optional() });
-export type ArchiveSettings = z.infer<typeof archiveSchema>;
-
-/** Shared translation network switches: read others' approved translations (default on), publish your own (opt-in). */
-export const networkSchema = z.object({ read: z.boolean().optional(), publish: z.boolean().optional() });
-export type NetworkSettings = z.infer<typeof networkSchema>;
-
 export const tenantSettingsSchema = z.object({
   branding: brandingSchema.optional(),
   signage: signageSchema.optional(),
-  archive: archiveSchema.optional(),
-  network: networkSchema.optional(),
   prayerLocation: prayerLocationSchema.nullable().optional(),
   welcomeMessage: z.string().max(500).optional(),
   welcomeMessageEn: z.string().max(500).optional(),
@@ -117,7 +102,9 @@ export const tenantSettingsSchema = z.object({
   wordsPerMinute: z.number().int().min(40).max(300).optional(),
   defaultProviderChain: z.array(z.enum(PROVIDER_TYPES)).optional(),
   publicDisplayEnabled: z.boolean().optional(),
-});
+})
+  // Extensions (hosted edition) keep their own settings next to these; they validate them through a hook.
+  .passthrough();
 export type TenantSettings = z.infer<typeof tenantSettingsSchema>;
 
 export const createTenantSchema = z.object({
@@ -129,8 +116,6 @@ export const createTenantSchema = z.object({
     .regex(/^[a-z0-9-]+$/),
   timezone: z.string().min(1).max(64).default('Asia/Riyadh'),
   locale: z.enum(['ar', 'en']).default('ar'),
-  /** New mosques start a 30-day Standard trial unless the super admin picks another plan. */
-  plan: z.enum(SUBSCRIPTION_PLANS).default('STANDARD'),
   adminEmail: z.string().email(),
   adminName: z.string().min(1).max(120),
   adminPassword: z.string().min(8).max(200).optional(),
@@ -141,156 +126,13 @@ export const updateTenantSchema = z.object({
   name: z.string().min(2).max(160).optional(),
   timezone: z.string().min(1).max(64).optional(),
   locale: z.enum(['ar', 'en']).optional(),
-  plan: z.enum(SUBSCRIPTION_PLANS).optional(),
-  subscriptionStatus: z.enum(SUBSCRIPTION_STATUSES).optional(),
-  subscriptionEndsAt: z.string().datetime().nullable().optional(),
   settings: tenantSettingsSchema.optional(),
   librarySharingAllowed: z.boolean().optional(),
 });
 
-/** A public host name: at least two labels of letters, digits and hyphens, ending in a TLD of letters. */
-export const HOSTNAME_RE = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-
-/** Custom domain of a mosque (Pro, hosted edition); null clears it. */
-export const customDomainSchema = z.object({
-  domain: z.string().trim().toLowerCase().max(253).regex(HOSTNAME_RE, 'Not a valid host name').nullable(),
-});
-
-// ---------- Organisations (hosted edition) ----------
-export const createOrganisationSchema = z.object({
-  name: z.string().min(2).max(160),
-  slug: z
-    .string()
-    .min(2)
-    .max(64)
-    .regex(/^[a-z0-9-]+$/),
-  maxTenants: z.number().int().min(1).max(100).default(ORG_MAX_TENANTS),
-});
-export const updateOrganisationSchema = createOrganisationSchema.partial().extend({
-  billingCycle: z.enum(BILLING_CYCLES).optional(),
-  billingName: z.string().max(160).nullable().optional(),
-  billingVatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
-  billingAddress: z.string().max(300).nullable().optional(),
-  billingEmail: z.string().email().max(200).nullable().optional(),
-});
-export const organisationTenantSchema = z.object({ tenantId: idSchema });
-export const organisationAdminSchema = z.object({ email: z.string().email().max(200) });
-
-// ---------- API keys and webhooks (hosted edition) ----------
-export const createApiKeySchema = z.object({
-  name: z.string().min(1).max(80),
-  readOnly: z.boolean().default(true),
-});
-export const createWebhookSchema = z.object({
-  name: z.string().min(1).max(80),
-  url: z.string().url().max(500),
-  events: z.array(z.enum(WEBHOOK_EVENTS)).min(1).max(10),
-  enabled: z.boolean().default(true),
-});
-export const updateWebhookSchema = createWebhookSchema.partial();
-
-// ---------- Billing (hosted edition) ----------
-export const billingSettingsSchema = z.object({
-  cycle: z.enum(BILLING_CYCLES),
-  billingName: z.string().max(160).optional(),
-  billingVatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').optional(),
-  billingAddress: z.string().max(300).optional(),
-  billingEmail: z.string().email().max(200).optional(),
-});
-export const sponsorSchema = z.object({
-  sponsorName: z.string().min(2).max(160),
-  sponsorEmail: z.string().email().max(200),
-  sponsorPhone: z.string().max(40).optional(),
-  mosques: z.number().int().min(1).max(100).default(1),
-  mosqueName: z.string().max(160).optional(),
-  message: z.string().max(1000).optional(),
-  lang: z.enum(['ar', 'en']).default('ar'),
-  turnstileToken: z.string().max(4096).optional(),
-});
-export const markPaidSchema = z.object({ reference: z.string().max(200).optional() });
-
-// ---------- Platform configuration in the portal (hosted edition) ----------
-export const PLATFORM_CONFIG_GROUPS = ['billing', 'payment', 'email', 'security'] as const;
-export type PlatformConfigGroup = (typeof PLATFORM_CONFIG_GROUPS)[number];
-/** A secret field: a string sets it, null clears it, undefined / '' keeps what is stored. */
-const secretField = z.string().max(500).nullable().optional();
-export const platformGroupSchemas = {
-  billing: z.object({
-    sellerName: z.string().min(1).max(160).nullable().optional(),
-    sellerAddress: z.string().max(300).nullable().optional(),
-    vatRate: z.number().min(0).max(1).nullable().optional(),
-    vatNumber: z.string().regex(/^\d{15}$/, 'A Saudi VAT number has 15 digits').nullable().optional(),
-    bank: z.string().max(120).nullable().optional(),
-    iban: z.string().max(40).nullable().optional(),
-  }),
-  payment: z.object({
-    provider: z.enum(['manual', 'moyasar']).optional(),
-    moyasarSecretKey: secretField,
-    moyasarWebhookSecret: secretField,
-  }),
-  email: z.object({
-    host: z.string().max(200).nullable().optional(),
-    port: z.number().int().min(1).max(65535).nullable().optional(),
-    secure: z.boolean().optional(),
-    user: z.string().max(200).nullable().optional(),
-    pass: secretField,
-    fromName: z.string().max(120).nullable().optional(),
-    fromEmail: z.string().email().max(200).nullable().optional(),
-    replyTo: z.string().email().max(200).nullable().optional(),
-    notifyEmail: z.string().email().max(200).nullable().optional(),
-  }),
-  security: z.object({
-    turnstileSecret: secretField,
-    siteUrl: z.string().url().max(200).nullable().optional(),
-  }),
-} as const;
-export const testEmailSchema = z.object({ to: z.string().email().max(200), locale: z.enum(['ar', 'en']).default('ar') });
-
 // ---------- Password reset ----------
 export const forgotPasswordSchema = z.object({ email: z.string().email().max(200), tenantSlug: z.string().max(64).optional() });
 export const resetPasswordSchema = z.object({ token: z.string().min(10).max(200), password: z.string().min(8).max(200) });
-/** Plans a mosque can start or buy by itself (Organisation accounts are set up with us). */
-export const SELF_SERVICE_PLANS = ['BASIC', 'STANDARD', 'PRO'] as const;
-export const signupSchema = z.object({
-  mosqueName: z.string().min(2).max(160),
-  slug: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .min(3)
-    .max(40)
-    .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/),
-  adminName: z.string().min(1).max(120),
-  adminEmail: z.string().email().max(200),
-  password: z.string().min(8).max(200),
-  plan: z.enum(SELF_SERVICE_PLANS).default('STANDARD'),
-  cycle: z.enum(BILLING_CYCLES).default('MONTHLY'),
-  locale: z.enum(['ar', 'en']).default('ar'),
-  languages: z.array(langCode).min(1).max(30).default(['en', 'ur']),
-  timezone: z.string().max(64).default('Asia/Riyadh'),
-  turnstileToken: z.string().max(4096).optional(),
-});
-export const subscribeSchema = z.object({ plan: z.enum(SELF_SERVICE_PLANS), cycle: z.enum(BILLING_CYCLES) });
-/** Super admin: an invoice with its own wording and amount (bulk contracts, adjustments); a period + plan extends the subscription when paid. */
-export const customInvoiceSchema = z
-  .object({
-    tenantId: idSchema.optional(),
-    organisationId: idSchema.optional(),
-    description: z.string().min(2).max(300),
-    descriptionAr: z.string().max(300).optional(),
-    quantity: z.number().int().min(1).max(10000).default(1),
-    /** Unit price in SAR. */
-    unitPriceSar: z.number().min(0).max(10_000_000),
-    dueDays: z.number().int().min(0).max(365).default(14),
-    plan: z.enum(SUBSCRIPTION_PLANS).optional(),
-    periodStart: z.string().datetime().optional(),
-    periodEnd: z.string().datetime().optional(),
-    note: z.string().max(500).optional(),
-  })
-  .refine((v) => !!v.tenantId !== !!v.organisationId, { message: 'Exactly one of tenantId or organisationId' })
-  .refine((v) => !v.periodEnd || !!v.periodStart, { message: 'periodStart is required with periodEnd' });
-export const applySponsorshipSchema = z.object({ tenantId: idSchema });
-
 export const tenantLanguagesSchema = z.object({
   languages: z.array(z.object({ code: langCode, enabled: z.boolean().default(true) })).max(30),
 });

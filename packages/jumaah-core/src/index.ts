@@ -6,4 +6,3 @@ export * from './socket-events.js';
 export * from './api-types.js';
 export * from './hijri.js';
 export * from './prayer-times.js';
-export * from './billing.js';

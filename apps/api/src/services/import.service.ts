@@ -1,8 +1,5 @@
-import { createRequire } from 'node:module';
 import { normalizeText, splitIntoParagraphs, type SplitParagraph } from '@jumaah/core';
 import { badRequest } from '../lib/errors.js';
-
-const require = createRequire(import.meta.url);
 
 export interface ImportedDocument {
   text: string;
@@ -27,10 +24,15 @@ export async function extractDocument(buffer: Buffer, filename: string, mimetype
     text = htmlToText(res.value);
     format = 'docx';
   } else if (isPdf) {
-    // pdf-parse's index.js runs a self-test when loaded without a parent module; load the lib directly.
-    const pdfParse = require('pdf-parse/lib/pdf-parse.js') as (b: Buffer) => Promise<{ text: string }>;
-    const res = await pdfParse(buffer);
-    text = fixPdfLines(res.text);
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: buffer });
+    try {
+      const res = await parser.getText();
+      // Pages joined by blank lines; res.text would insert "-- n of m --" markers between them.
+      text = fixPdfLines(res.pages.map((p) => p.text).join('\n\n'));
+    } finally {
+      await parser.destroy();
+    }
     format = 'pdf';
   } else if (isTxt) {
     text = buffer.toString('utf8').replace(/^﻿/, '');

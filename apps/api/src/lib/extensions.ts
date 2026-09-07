@@ -95,6 +95,8 @@ export interface CoreHooks {
   validateTenantSettings?(before: TenantRow, settings: Record<string, unknown>): void;
   /** Platform-AI gate for a translation run; null = no gate. */
   aiGate?(ctx: AppContext, tenantId: string): Promise<AiGate | null>;
+  /** Extra instructions for the LLM translators (tone, dialect, audience), appended to the built-in prompt. */
+  translationInstructions?(ctx: AppContext, tenantId: string): Promise<string | null>;
   recordAiUsage?(ctx: AppContext, tenantId: string, usage: { khutbahId?: string | null; lang: string; source: string; providerType: string; paragraphs: number; characters: number }): Promise<void>;
   /** Shared translation network: a reviewed translation of the same Arabic from elsewhere, if the mosque may read it. */
   networkLookup?(ctx: AppContext, tenantId: string, hash: string, lang: string): Promise<NetworkHit | null>;

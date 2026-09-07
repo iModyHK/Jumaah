@@ -158,6 +158,7 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
     let quotaLeft = ai?.remainingParagraphs ?? Number.POSITIVE_INFINITY;
     let warned80 = !!ai?.monthlyParagraphs && quotaLeft <= ai.monthlyParagraphs * 0.2;
     const glossary = await loadGlossary(ctx.db, tenantId);
+    const instructions = (await ctx.hooks.translationInstructions?.(ctx, tenantId)) ?? undefined;
     const offline = !ctx.hooks.assumeOnline && !(await isOnline(ctx));
     const tenant = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
 
@@ -215,7 +216,7 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
               sourceLang: 'ar',
               targetLang: lang,
               glossary,
-              context: { tenantName: tenant?.name, khutbahTitle: khutbah.title, sectionType: batch[0]?.sectionType },
+              context: { tenantName: tenant?.name, khutbahTitle: khutbah.title, sectionType: batch[0]?.sectionType, instructions },
               signal: controller.signal,
             },
             { offline, retries: 1, onAttempt: (a) => ctx.log.info({ jobId, lang, ...a }, 'provider attempt') },

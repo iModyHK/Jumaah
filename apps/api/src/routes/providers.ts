@@ -105,7 +105,8 @@ export async function providerRoutes(app: FastifyInstance): Promise<void> {
       let sampleError: string | null = null;
       if (health.ok && cfg.type !== 'MANUAL') {
         try {
-          const res = await provider.translate({ items: [{ id: 't', text: body.text }], sourceLang: 'ar', targetLang: body.targetLang, glossary: await loadGlossary(db, request.tenantId), signal: AbortSignal.timeout(60000) });
+          const instructions = (await app.ctx.hooks.translationInstructions?.(app.ctx, request.tenantId)) ?? undefined;
+          const res = await provider.translate({ items: [{ id: 't', text: body.text }], sourceLang: 'ar', targetLang: body.targetLang, glossary: await loadGlossary(db, request.tenantId), context: { instructions }, signal: AbortSignal.timeout(60000) });
           sample = res.items[0]?.text ?? null;
         } catch (err) {
           sampleError = (err as Error).message;

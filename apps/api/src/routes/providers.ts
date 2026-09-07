@@ -29,7 +29,7 @@ export async function providerRoutes(app: FastifyInstance): Promise<void> {
   app.get('/providers', { preHandler: admin }, async (request) => {
     const rows = await db.providerConfig.findMany({ where: { OR: [{ tenantId: request.tenantId }, { tenantId: null }] }, orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }] });
     const { chain } = await resolveChain(app.ctx, request.tenantId);
-    return { items: rows.map(providerDto), chain, cloudRelayAvailable: config.isEdge && !!config.cloudApiUrl };
+    return { items: rows.map(providerDto), chain, cloudRelayAvailable: !!config.cloudApiUrl };
   });
 
   app.post('/providers', { preHandler: admin }, async (request, reply) => {

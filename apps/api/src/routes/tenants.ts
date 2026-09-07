@@ -1,23 +1,22 @@
 import type { FastifyInstance } from 'fastify';
-import { randomToken, sha256 } from '@jumaah/db';
+import type { Prisma } from '@jumaah/db';
 import { createTenantSchema, paginationSchema, tenantLanguagesSchema, updateTenantSchema } from '@jumaah/core';
 import { audit, outbox } from '../lib/audit.js';
-import { conflict, notFound } from '../lib/errors.js';
+import { notFound } from '../lib/errors.js';
 import { signAccessToken } from '../lib/jwt.js';
 import { tenantDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { actorOf } from './auth.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';
-import { allowanceOf, getAiAllowance, monthKey } from '../services/plan.service.js';
-import { assertArchiveAllowed, assertBrandingAllowed, assertNetworkAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
+import { assertBrandingAllowed, assertSignageAllowed, tenantFeatures } from '../services/features.service.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { createTenantWithAdmin } from '../services/tenant.service.js';
-import { forgetCustomDomain } from '../services/domain.service.js';
 
 /** Super-admin tenant management + current-tenant settings. */
 export async function tenantRoutes(app: FastifyInstance): Promise<void> {
-  const { db, config } = app.ctx;
+  const { db, config, hooks } = app.ctx;
   const superOnly = app.requireRole('SUPER_ADMIN');
+  const dto = (t: Parameters<typeof tenantDto>[0]) => tenantDto(t, hooks.tenantDtoExt?.(t));
 
   app.get('/tenants', { preHandler: superOnly }, async (request) => {
     const q = parse(paginationSchema, request.query);
@@ -26,19 +25,20 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
       db.tenant.findMany({ where, include: { languages: true, _count: { select: { users: true, khutbahs: true, displays: true } } }, orderBy: { createdAt: 'desc' }, skip: (q.page - 1) * q.pageSize, take: q.pageSize }),
       db.tenant.count({ where }),
     ]);
-    return { items: items.map(tenantDto), total, page: q.page, pageSize: q.pageSize };
+    return { items: items.map(dto), total, page: q.page, pageSize: q.pageSize };
   });
 
   app.post('/tenants', { preHandler: superOnly }, async (request, reply) => {
-    const body = parse(createTenantSchema, request.body);
-    const { tenant, syncKey, password, generatedPassword } = await createTenantWithAdmin(app.ctx, { ...body, adminPassword: body.adminPassword }, actorOf(request));
-    return reply.code(201).send({ tenant: tenantDto(tenant), syncKey, adminPassword: generatedPassword ? password : undefined });
+    // Extension fields (a plan, a billing cycle) pass through to the tenantCreateData hook.
+    const body = parse(createTenantSchema.passthrough(), request.body);
+    const { tenant, password, generatedPassword, secrets } = await createTenantWithAdmin(app.ctx, { ...body, adminPassword: body.adminPassword }, actorOf(request));
+    return reply.code(201).send({ tenant: dto(tenant), adminPassword: generatedPassword ? password : undefined, ...secrets });
   });
 
   app.get('/tenants/:id', { preHandler: superOnly }, async (request) => {
     const t = await db.tenant.findUnique({ where: { id: idParam(request.params) }, include: { languages: true, _count: { select: { users: true, khutbahs: true, displays: true } } } });
     if (!t) throw notFound('Tenant');
-    return tenantDto(t);
+    return dto(t);
   });
 
   app.patch('/tenants/:id', { preHandler: superOnly }, async (request) => {
@@ -46,42 +46,31 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(updateTenantSchema, request.body);
     const before = await db.tenant.findUnique({ where: { id } });
     if (!before) throw notFound('Tenant');
+    if (body.settings) hooks.validateTenantSettings?.(before, body.settings);
     const t = await db.tenant.update({
       where: { id },
       data: {
         name: body.name,
         timezone: body.timezone,
         locale: body.locale,
-        plan: body.plan,
-        subscriptionStatus: body.subscriptionStatus,
-        subscriptionEndsAt: body.subscriptionEndsAt === undefined ? undefined : body.subscriptionEndsAt ? new Date(body.subscriptionEndsAt) : null,
         librarySharingAllowed: body.librarySharingAllowed,
-        settings: body.settings ? { ...(before.settings as object), ...body.settings } : undefined,
+        settings: body.settings ? ({ ...(before.settings as object), ...body.settings } as Prisma.InputJsonObject) : undefined,
       },
       include: { languages: true },
     });
     await audit(db, id, actorOf(request), 'tenant.update', 'Tenant', id, before, t);
     await outbox(db, id, 'Tenant', id, 'UPSERT', t);
-    return tenantDto(t);
+    return dto(t);
   });
 
+  /** Suspend a mosque: nobody can sign in, screens stop; nothing is deleted. */
   app.delete('/tenants/:id', { preHandler: superOnly }, async (request) => {
     const id = idParam(request.params);
     const t = await db.tenant.findUnique({ where: { id } });
     if (!t) throw notFound('Tenant');
-    // A suspended mosque releases its custom domain so another mosque can use it; keys and sockets stop through isActive.
-    await db.tenant.update({ where: { id }, data: { isActive: false, subscriptionStatus: 'SUSPENDED', customDomain: null, customDomainVerifiedAt: null } });
-    await forgetCustomDomain(app.ctx, t.customDomain);
-    await audit(db, id, actorOf(request), 'tenant.suspend', 'Tenant', id, { isActive: true, customDomain: t.customDomain }, { isActive: false, customDomain: null });
+    await db.tenant.update({ where: { id }, data: { isActive: false } });
+    await audit(db, id, actorOf(request), 'tenant.suspend', 'Tenant', id, { isActive: true }, { isActive: false });
     return { ok: true };
-  });
-
-  app.post('/tenants/:id/sync-key', { preHandler: superOnly }, async (request) => {
-    const id = idParam(request.params);
-    const syncKey = randomToken(24);
-    await db.tenant.update({ where: { id }, data: { syncKeyHash: sha256(syncKey) } });
-    await audit(db, id, actorOf(request), 'tenant.syncKey.rotate', 'Tenant', id);
-    return { syncKey };
   });
 
   /** Issue a short-lived MOSQUE_ADMIN token scoped to a tenant (audited). */
@@ -91,25 +80,26 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     if (!t) throw notFound('Tenant');
     const token = await signAccessToken(config.JWT_SECRET, { sub: request.user!.id, email: request.user!.email, role: 'MOSQUE_ADMIN', tid: id, imp: request.user!.id }, 3600);
     await audit(db, id, actorOf(request), 'tenant.impersonate', 'Tenant', id);
-    return { accessToken: token, expiresIn: 3600, tenant: tenantDto({ ...t, languages: [] }) };
+    return { accessToken: token, expiresIn: 3600, tenant: dto({ ...t, languages: [] }) };
   });
 
   // ---- Current tenant (mosque admin) ----
   app.get('/tenant', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
     const t = await db.tenant.findUnique({ where: { id: request.tenantId }, include: { languages: true, _count: { select: { users: true, khutbahs: true, displays: true } } } });
     if (!t) throw notFound('Tenant');
-    return tenantDto(t);
+    return dto(t);
   });
 
   app.patch('/tenant', { preHandler: app.requireRole(...ADMIN_ROLES) }, async (request) => {
-    const body = parse(updateTenantSchema.omit({ plan: true, subscriptionStatus: true, subscriptionEndsAt: true, librarySharingAllowed: true }), request.body);
+    const body = parse(updateTenantSchema.omit({ librarySharingAllowed: true }), request.body);
     const before = await db.tenant.findUnique({ where: { id: request.tenantId } });
     if (!before) throw notFound('Tenant');
-    // Paid-edition branding fields are only accepted when the plan includes them (clearing is always fine).
-    assertBrandingAllowed(body.settings?.branding, before);
-    assertSignageAllowed(body.settings?.signage, before);
-    assertArchiveAllowed(body.settings?.archive, before);
-    assertNetworkAllowed(body.settings?.network, before);
+    // Branding and signage are only accepted when the mosque's features include them (clearing is always fine);
+    // an extension validates the settings keys it owns.
+    const { features } = tenantFeatures(app.ctx, before);
+    assertBrandingAllowed(body.settings?.branding, features);
+    assertSignageAllowed(body.settings?.signage, features);
+    if (body.settings) hooks.validateTenantSettings?.(before, body.settings);
     const mergedBranding = body.settings?.branding ? { ...(((before.settings as { branding?: object }).branding) ?? {}), ...body.settings.branding } : undefined;
     const settings = body.settings ? { ...(before.settings as object), ...body.settings, ...(mergedBranding ? { branding: mergedBranding } : {}) } : undefined;
     const t = await db.tenant.update({
@@ -119,19 +109,17 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     });
     await audit(db, t.id, actorOf(request), 'tenant.settings.update', 'Tenant', t.id, before.settings, t.settings);
     await outbox(db, t.id, 'Tenant', t.id, 'UPSERT', t);
-    const info = await buildTenantPublicInfo(db, t.id);
+    const info = await buildTenantPublicInfo(app.ctx, t.id);
     if (info) app.ctx.io.to(`t:${t.id}`).emit('tenant:info', info);
-    return tenantDto(t);
+    return dto(t);
   });
 
-  /** Paid-edition features the mosque may use right now, by plan and subscription state. */
+  /** Features the mosque may use right now (plus whatever an extension adds, e.g. its plan). */
   app.get('/tenant/features', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
-    const t = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } });
-    return tenantFeatures(t);
+    const t = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId } });
+    const f = tenantFeatures(app.ctx, t);
+    return { features: f.features, ...(f.ext ?? {}) };
   });
-
-  /** Hosted edition: the mosque's platform-AI allowance and usage this month (self-hosted servers report applies=false). */
-  app.get('/tenant/ai-usage', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR') }, async (request) => getAiAllowance(app.ctx, request.tenantId));
 
   app.get('/tenant/languages', { preHandler: app.requireRole('SUPER_ADMIN', 'MOSQUE_ADMIN', 'TRANSLATOR', 'IMAM') }, async (request) => {
     const rows = await db.tenantLanguage.findMany({ where: { tenantId: request.tenantId }, orderBy: { order: 'asc' } });
@@ -160,7 +148,7 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
     return body.languages;
   });
 
-  // ---- Platform-level ----
+  // ---- Server-level ----
   app.get('/platform/stats', { preHandler: superOnly }, async () => {
     const [tenants, users, khutbahs, displays, activeSessions] = await Promise.all([
       db.tenant.count({ where: { isActive: true } }),
@@ -169,35 +157,7 @@ export async function tenantRoutes(app: FastifyInstance): Promise<void> {
       db.display.count(),
       db.liveSession.count({ where: { endedAt: null } }),
     ]);
-    const latest = await db.platformSetting.findUnique({ where: { key: 'edge.latestImageTag' } });
-    return { tenants, users, khutbahs, displays, activeSessions, latestImageTag: (latest?.value as { tag?: string })?.tag ?? config.IMAGE_TAG, imageTag: config.IMAGE_TAG, mode: config.DEPLOYMENT_MODE };
-  });
-
-  /** Hosted edition: every mosque's plan, subscription state and platform-AI usage this month, for manual billing. */
-  app.get('/platform/ai-usage', { preHandler: superOnly }, async () => {
-    const month = monthKey();
-    const [tenants, usage] = await Promise.all([
-      db.tenant.findMany({ where: { isActive: true }, select: { id: true, name: true, slug: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true }, orderBy: { name: 'asc' } }),
-      db.aiUsage.groupBy({ by: ['tenantId'], where: { month }, _sum: { paragraphs: true } }),
-    ]);
-    const used = new Map(usage.map((u) => [u.tenantId, u._sum.paragraphs ?? 0]));
-    const items = tenants.map((t) => {
-      const a = allowanceOf(t, used.get(t.id) ?? 0, config.isCloud);
-      return { id: t.id, name: t.name, slug: t.slug, plan: a.plan, status: a.status, state: a.state, endsAt: a.endsAt, graceEndsAt: a.graceEndsAt, aiIncluded: a.aiIncluded, usedParagraphs: a.usedParagraphs, monthlyParagraphs: a.monthlyParagraphs, allowed: a.allowed, reason: a.reason };
-    });
-    return { month, applies: config.isCloud, items };
-  });
-
-  app.get('/platform/settings', { preHandler: superOnly }, async () => {
-    const rows = await db.platformSetting.findMany();
-    return Object.fromEntries(rows.map((r) => [r.key, r.value]));
-  });
-
-  app.put('/platform/settings/:key', { preHandler: superOnly }, async (request) => {
-    const key = idParam(request.params, 'key');
-    const value = (request.body as { value: unknown })?.value;
-    const row = await db.platformSetting.upsert({ where: { key }, update: { value: value as never }, create: { key, value: value as never } });
-    await audit(db, null, actorOf(request), 'platform.setting.update', 'PlatformSetting', key, null, value);
-    return { key: row.key, value: row.value };
+    const extra = (await hooks.platformStats?.(app.ctx)) ?? {};
+    return { tenants, users, khutbahs, displays, activeSessions, imageTag: config.IMAGE_TAG, mode: hooks.mode ?? 'community', ...extra };
   });
 }

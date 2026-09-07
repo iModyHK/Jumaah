@@ -121,7 +121,7 @@ export async function resolveChain(ctx: AppContext, tenantId: string, override?:
       orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
     }),
   ]);
-  // Hosted edition: platform-owned providers (tenantId null) are only offered when the mosque's plan allows them.
+  // Server-owned providers (tenantId null) are only offered when the extension's gate allows them.
   const configs = opts.platformAi === false ? allConfigs.filter((c) => c.tenantId !== null) : allConfigs;
   // Tenant-specific config wins over a global one of the same type.
   const byType = new Map<ProviderType, ProviderConfig>();
@@ -129,7 +129,7 @@ export async function resolveChain(ctx: AppContext, tenantId: string, override?:
     const existing = byType.get(c.type);
     if (!existing || (existing.tenantId === null && c.tenantId === tenantId)) byType.set(c.type, c);
   }
-  const cloudAvailable = ctx.config.isEdge && !!ctx.config.cloudApiUrl && !!ctx.config.EDGE_SYNC_KEY;
+  const cloudAvailable = !!ctx.config.cloudApiUrl && !!ctx.config.EDGE_SYNC_KEY;
   if (cloudAvailable && !byType.has('CLOUD')) {
     byType.set('CLOUD', {
       id: 'virtual-cloud',

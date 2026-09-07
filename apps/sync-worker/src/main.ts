@@ -1,6 +1,6 @@
 /**
  * Edge sync worker: pushes the local outbox to the cloud and pulls the cloud's outbox for this tenant.
- * Runs only when DEPLOYMENT_MODE=edge and CLOUD_API_URL is set. Safe to restart at any time (idempotent
+ * Runs only when CLOUD_API_URL, EDGE_TENANT_SLUG and EDGE_SYNC_KEY are set (a mosque server connected to Jumaah Cloud). Safe to restart at any time (idempotent
  * apply on both sides via SyncApplied ids). Also checks the latest edge image tag for the admin UI.
  */
 import { createPrisma, applySyncEntries, type SyncEntry } from '@jumaah/db';
@@ -11,7 +11,6 @@ import pino from 'pino';
 const log = pino({ level: process.env.LOG_LEVEL ?? 'info', transport: process.env.NODE_ENV === 'production' ? undefined : { target: 'pino-pretty' } });
 
 const env = {
-  mode: process.env.DEPLOYMENT_MODE ?? 'edge',
   cloudUrl: (process.env.CLOUD_API_URL ?? '').replace(/\/$/, ''),
   tenantSlug: process.env.EDGE_TENANT_SLUG ?? '',
   syncKey: process.env.EDGE_SYNC_KEY ?? '',
@@ -43,7 +42,7 @@ async function tenantId(): Promise<string> {
   log.info('tenant not found locally — bootstrapping from cloud');
   const snapshot = await cloud<{ tenant: { id: string; name: string; slug: string; timezone: string; locale: string; settings: unknown } }>('/sync/bootstrap', { tenantSlug: env.tenantSlug });
   const created = await db.tenant.create({
-    data: { id: snapshot.tenant.id, name: snapshot.tenant.name, slug: snapshot.tenant.slug, timezone: snapshot.tenant.timezone, locale: snapshot.tenant.locale, settings: (snapshot.tenant.settings ?? {}) as never, plan: 'PRO', subscriptionStatus: 'ACTIVE' },
+    data: { id: snapshot.tenant.id, name: snapshot.tenant.name, slug: snapshot.tenant.slug, timezone: snapshot.tenant.timezone, locale: snapshot.tenant.locale, settings: (snapshot.tenant.settings ?? {}) as never },
   });
   // Replay the rest of the snapshot through the same restore path the API uses (via its HTTP endpoint is not
   // available without auth), so we apply it as sync entries.
@@ -139,8 +138,8 @@ export async function syncOnce(): Promise<void> {
 }
 
 async function main() {
-  if (env.mode !== 'edge' || !env.cloudUrl || !env.tenantSlug || !env.syncKey) {
-    log.info({ mode: env.mode, cloudUrl: env.cloudUrl || null }, 'sync disabled (edge mode with CLOUD_API_URL, EDGE_TENANT_SLUG and EDGE_SYNC_KEY required); idling');
+  if (!env.cloudUrl || !env.tenantSlug || !env.syncKey) {
+    log.info({ cloudUrl: env.cloudUrl || null }, 'sync disabled (CLOUD_API_URL, EDGE_TENANT_SLUG and EDGE_SYNC_KEY required); idling');
     setInterval(() => undefined, 1 << 30);
     return;
   }

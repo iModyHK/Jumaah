@@ -4,10 +4,10 @@ import type { Server as HttpServer } from 'node:http';
 import { ROOMS, sessionCommandSchema, type DisplayConfig, type SessionCommand } from '@jumaah/core';
 import type { Redis } from 'ioredis';
 import type { AppContext, IO } from '../lib/context.js';
-import { tenantBaseUrlFor } from '../lib/host.js';
+import { tenantBaseUrl } from '../lib/host.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
-import { viewerTotal, viewersChanged } from '../services/insight.service.js';
+import { viewerCounts, viewerTotal } from '../lib/viewers.js';
 import { applyCommand, getLiveKhutbah, getSnapshot, heartbeat } from '../services/session.service.js';
 
 export function displayConfigOf(d: {
@@ -72,13 +72,10 @@ export function attachSocketHandlers(ctx: AppContext): void {
         const claims = await verifyAccessToken(config.JWT_SECRET, auth.token);
         const wanted = (socket.handshake.query.tenantId as string | undefined) || null;
         let tenantId = claims.tid ?? wanted;
-        // Organisation admins (hosted edition) may follow a member mosque they switched to in the admin.
+        // An extension may let a user follow another mosque they switched to in the admin (organisation admins).
         if (claims.tid && wanted && wanted !== claims.tid) {
-          const [me, target] = await Promise.all([
-            db.user.findUnique({ where: { id: claims.sub }, select: { organisationId: true } }),
-            db.tenant.findUnique({ where: { id: wanted }, select: { organisationId: true } }),
-          ]);
-          if (me?.organisationId && target?.organisationId === me.organisationId) tenantId = wanted;
+          const switched = await ctx.hooks.socketTenant?.({ sub: claims.sub, tid: claims.tid }, wanted);
+          if (switched) tenantId = switched;
         }
         if (!tenantId) return next(new Error('NO_TENANT'));
         socket.data = {
@@ -125,17 +122,19 @@ export function attachSocketHandlers(ctx: AppContext): void {
     // khutbah the count also feeds that session's attendance insight.
     const emitCount = async () => {
       const snap = await getSnapshot(ctx, tenantId);
-      const count = await viewersChanged(ctx, tenantId, snap.sessionId && snap.state !== 'ENDED' ? snap.sessionId : null);
+      const counts = await viewerCounts(ctx, tenantId);
+      await ctx.hooks.viewersChanged?.(ctx, tenantId, snap.sessionId && snap.state !== 'ENDED' ? snap.sessionId : null, counts).catch(() => undefined);
+      const count = counts.displays + counts.phones;
       io.to(ROOMS.imam(tenantId)).to(ROOMS.admin(tenantId)).emit('displays:count', { count });
     };
 
     if (role === 'DISPLAY' || role === 'PUBLIC') {
       await emitCount();
-      const info = await buildTenantPublicInfo(db, tenantId);
+      const info = await buildTenantPublicInfo(ctx, tenantId);
       if (info) socket.emit('tenant:info', info);
       if (role === 'DISPLAY' && socket.data.displayId) {
-        const d = await db.display.findUnique({ where: { id: socket.data.displayId }, include: { tenant: { select: { slug: true, customDomain: true, customDomainVerifiedAt: true } } } });
-        if (d) socket.emit('display:config', displayConfigOf(d, tenantBaseUrlFor(config, d.tenant), d.tenant.slug));
+        const d = await db.display.findUnique({ where: { id: socket.data.displayId }, include: { tenant: { select: { id: true, slug: true } } } });
+        if (d) socket.emit('display:config', displayConfigOf(d, await tenantBaseUrl(ctx, d.tenant), d.tenant.slug));
         touchDisplay(ctx, socket.data.displayId);
       }
       await sendState();

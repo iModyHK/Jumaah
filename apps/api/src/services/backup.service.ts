@@ -132,7 +132,7 @@ export function parseBackup(buf: Buffer): BackupFile {
   return data;
 }
 
-const dateFields = new Set(['createdAt', 'updatedAt', 'gregorianDate', 'lastSeenAt', 'lastLoginAt', 'lastTestedAt', 'deletedAt', 'subscriptionEndsAt']);
+const dateFields = new Set(['createdAt', 'updatedAt', 'gregorianDate', 'lastSeenAt', 'lastLoginAt', 'lastTestedAt', 'deletedAt']);
 function revive<T extends Record<string, unknown>>(row: T): T {
   const out: Record<string, unknown> = { ...row };
   for (const k of Object.keys(out)) {

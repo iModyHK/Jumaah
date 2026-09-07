@@ -13,6 +13,7 @@ export { applySyncEntries, type SyncEntry } from '@jumaah/db';
 
 export type CloudPrismaClient = PrismaClient;
 export type CloudDb = PrismaClient | Prisma.TransactionClient;
+export type Db = CloudDb;
 
 export function createPrisma(url?: string): PrismaClient {
   return new PrismaClient({

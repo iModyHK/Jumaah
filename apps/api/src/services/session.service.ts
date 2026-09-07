@@ -3,8 +3,8 @@ import { ROOMS, SESSION_STALE_MS } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 import { buildLiveKhutbah } from '../lib/live-payload.js';
 import { conflict, notFound, badRequest } from '../lib/errors.js';
-import { readSessionStats, seedSessionStats } from './insight.service.js';
-import { emitWebhook } from './webhook.service.js';
+import { emitEvent } from '../lib/events.js';
+import { viewerCounts } from '../lib/viewers.js';
 
 const SESSION_KEY = (t: string) => `session:${t}`;
 const KHUTBAH_KEY = (t: string, k: string) => `livekhutbah:${t}:${k}`;
@@ -89,9 +89,9 @@ export async function getSnapshot(ctx: AppContext, tenantId: string): Promise<Li
 async function persist(ctx: AppContext, snap: LiveSessionSnapshot, extra: { deviceId?: string; heartbeat?: boolean } = {}): Promise<void> {
   await ctx.redis.set(SESSION_KEY(snap.tenantId), JSON.stringify(snap));
   if (snap.sessionId) {
-    // The session is over: freeze its attendance numbers on the row (insight page) and tell the webhooks.
-    const stats = snap.state === 'ENDED' ? await readSessionStats(ctx, snap.tenantId, snap.sessionId) : null;
-    if (stats) emitWebhook(ctx, snap.tenantId, 'session.ended', { sessionId: snap.sessionId, khutbahId: snap.khutbahId, ...stats });
+    // The session is over: let extensions freeze their numbers on the row (attendance insight) and tell them.
+    const stats = snap.state === 'ENDED' ? ((await ctx.hooks.sessionEndStats?.(ctx, snap.tenantId, snap.sessionId)) ?? null) : null;
+    if (snap.state === 'ENDED') emitEvent(ctx, snap.tenantId, 'session.ended', { sessionId: snap.sessionId, khutbahId: snap.khutbahId, ...(stats ?? {}) });
     await ctx.db.liveSession
       .update({
         where: { id: snap.sessionId },
@@ -167,7 +167,7 @@ export async function startSession(ctx: AppContext, tenantId: string, input: Sta
     },
   });
   await ctx.db.khutbah.updateMany({ where: { id: input.khutbahId, tenantId }, data: { status: 'DELIVERED' } });
-  void seedSessionStats(ctx, tenantId, row.id);
+  void viewerCounts(ctx, tenantId).then((c) => ctx.hooks.viewersChanged?.(ctx, tenantId, row.id, c)).catch(() => undefined);
   const snap: LiveSessionSnapshot = {
     sessionId: row.id,
     tenantId,
@@ -185,7 +185,7 @@ export async function startSession(ctx: AppContext, tenantId: string, input: Sta
   };
   await ctx.redis.set(SESSION_KEY(tenantId), JSON.stringify(snap));
   ctx.io.to(ROOMS.tenant(tenantId)).emit('session:khutbah', khutbah);
-  emitWebhook(ctx, tenantId, 'session.started', { sessionId: row.id, khutbahId: input.khutbahId });
+  emitEvent(ctx, tenantId, 'session.started', { sessionId: row.id, khutbahId: input.khutbahId });
   broadcast(ctx, snap);
   scheduleAutoAdvance(ctx, snap, khutbah);
   return snap;

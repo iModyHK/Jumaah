@@ -12,8 +12,6 @@ import type { Actor } from '../lib/audit.js';
 import { audit, outbox } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { jobDto } from '../lib/serialize.js';
-import { lookupNetwork, networkAccessOf, saveNetworkTranslation } from './network.service.js';
-import { aiDenied, getAiAllowance, platformAiDenied, recordAiUsage } from './plan.service.js';
 import { isOnline, loadGlossary, resolveChain } from './provider.service.js';
 import { notifyKhutbahChanged } from './session.service.js';
 
@@ -58,18 +56,17 @@ async function collectWork(ctx: AppContext, tenantId: string, khutbahId: string,
 
 export async function estimateCost(ctx: AppContext, tenantId: string, khutbahId: string, opts: TranslateOptions): Promise<CostEstimate> {
   const { languages, work } = await collectWork(ctx, tenantId, khutbahId, opts);
-  // Hosted edition: report the allowance and leave platform providers out of the estimate when the plan excludes them.
-  const ai = ctx.config.isCloud ? await getAiAllowance(ctx, tenantId) : undefined;
-  const { providers } = await resolveChain(ctx, tenantId, opts.providerChain, { platformAi: ai ? !platformAiDenied(ai, languages.length, work.length) : true });
+  // An extension may gate the server's own providers (plans): report the gate and leave them out when it says so.
+  const ai = (await ctx.hooks.aiGate?.(ctx, tenantId)) ?? undefined;
+  const { providers } = await resolveChain(ctx, tenantId, opts.providerChain, { platformAi: ai ? !ai.denied(languages.length, work.length) : true });
   const glossary = await loadGlossary(ctx.db, tenantId);
   let cachedUnits = 0;
   const uniqueParagraphs = new Map<string, Paragraph>();
   for (const w of work) uniqueParagraphs.set(w.paragraph.id, w.paragraph);
   // Network hits cost nothing; cache hits are provider-specific and count against the first provider in the chain.
-  const network = await networkAccessOf(ctx.db, tenantId);
   const first = providers[0];
   for (const w of work) {
-    if (network.read && (await lookupNetwork(ctx.db, w.paragraph.hash, w.lang))) {
+    if (await ctx.hooks.networkLookup?.(ctx, tenantId, w.paragraph.hash, w.lang)) {
       cachedUnits += 1;
       continue;
     }
@@ -86,18 +83,18 @@ export async function estimateCost(ctx: AppContext, tenantId: string, khutbahId:
     languages: perLang,
     cachedUnits,
     perProvider: providers.map((p) => p.estimateCost({ characters, items: uniqueParagraphs.size, languages: perLang })),
-    ai,
+    ext: ai ? { ai: ai.dto } : undefined,
   };
 }
 
 export async function startJob(ctx: AppContext, tenantId: string, khutbahId: string, opts: TranslateOptions, actor: Actor): Promise<TranslationJob> {
   const { khutbah, languages, work } = await collectWork(ctx, tenantId, khutbahId, opts);
-  // Hosted edition: platform providers join the chain only within the mosque's plan; its own providers are never gated.
-  const ai = ctx.config.isCloud ? await getAiAllowance(ctx, tenantId) : null;
-  const denied = ai ? platformAiDenied(ai, languages.length, work.length) : null;
+  // Server-owned providers join the chain only when the extension's gate allows; a mosque's own providers are never gated.
+  const ai = (await ctx.hooks.aiGate?.(ctx, tenantId)) ?? null;
+  const denied = ai ? ai.denied(languages.length, work.length) : null;
   const { chain } = await resolveChain(ctx, tenantId, opts.providerChain, { platformAi: !denied });
   if (chain.length === 0) {
-    if (denied) throw aiDenied(denied, { plan: ai!.plan, state: ai!.state, maxLanguages: ai!.maxLanguages, remaining: ai!.remainingParagraphs, needed: work.length });
+    if (denied) throw ai!.error(denied, { needed: work.length });
     throw badRequest('No translation providers configured');
   }
   const existing = await ctx.db.translationJob.findFirst({ where: { tenantId, khutbahId, status: { in: ['QUEUED', 'RUNNING'] } } });
@@ -154,15 +151,14 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
     job = await ctx.db.translationJob.update({ where: { id: jobId }, data: { status: 'RUNNING', startedAt: new Date() } });
     emitProgress(ctx, tenantId, job);
     const { khutbah, work } = await collectWork(ctx, tenantId, job.khutbahId, { ...opts, languages: job.languages, paragraphIds: job.paragraphIds.length ? job.paragraphIds : undefined });
-    const ai = ctx.config.isCloud ? await getAiAllowance(ctx, tenantId) : null;
+    const ai = (await ctx.hooks.aiGate?.(ctx, tenantId)) ?? null;
     const { providers, configs } = await resolveChain(ctx, tenantId, job.providerChain as ProviderType[], { platformAi: ai ? ai.allowed : true });
     // Platform-owned providers are metered (hosted edition); a mosque's own providers are not.
     const platformTypes = new Set(configs.filter((c) => c.tenantId === null).map((c) => c.type));
     let quotaLeft = ai?.remainingParagraphs ?? Number.POSITIVE_INFINITY;
     let warned80 = !!ai?.monthlyParagraphs && quotaLeft <= ai.monthlyParagraphs * 0.2;
     const glossary = await loadGlossary(ctx.db, tenantId);
-    const network = await networkAccessOf(ctx.db, tenantId);
-    const offline = ctx.config.isEdge && !(await isOnline(ctx));
+    const offline = !ctx.hooks.assumeOnline && !(await isOnline(ctx));
     const tenant = await ctx.db.tenant.findUnique({ where: { id: tenantId } });
 
     // Group by language; each group goes through the chain in batches.
@@ -179,10 +175,10 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
       // 1) shared translation network (a reviewed translation from another mosque), then the cache
       const toTranslate: typeof items = [];
       for (const w of items) {
-        if (network.read) {
-          const net = await lookupNetwork(ctx.db, w.paragraph.hash, lang);
+        {
+          const net = await ctx.hooks.networkLookup?.(ctx, tenantId, w.paragraph.hash, lang);
           if (net) {
-            await saveNetworkTranslation(ctx, tenantId, w.paragraph.id, lang, net, job.createdById);
+            await ctx.hooks.networkSave?.(ctx, tenantId, w.paragraph.id, lang, net, job.createdById);
             cached += 1;
             done += 1;
             continue;
@@ -240,7 +236,7 @@ async function runJob(ctx: AppContext, jobId: string, opts: TranslateOptions): P
             }
           }
           for (const [providerType, m] of metered) {
-            await recordAiUsage(ctx.db, tenantId, { khutbahId: job.khutbahId, lang, source: 'JOB', providerType, ...m });
+            await ctx.hooks.recordAiUsage?.(ctx, tenantId, { khutbahId: job.khutbahId, lang, source: 'JOB', providerType, ...m });
             quotaLeft -= m.paragraphs;
           }
           // Operator alert: a mosque crossing 80 percent of its monthly allowance (once per job).
@@ -333,12 +329,12 @@ export async function translateAdHoc(
   targetLangs: string[],
   glossary: GlossaryEntry[],
 ) {
-  // The relay spends the cloud's keys, so the mosque's plan decides (edge servers are gated here, not locally).
-  const ai = ctx.config.isCloud ? await getAiAllowance(ctx, tenantId) : null;
-  const denied = ai ? platformAiDenied(ai, targetLangs.length, items.length * targetLangs.length) : null;
+  // The relay spends this server's keys, so the extension's gate decides (mosque servers are gated here, not locally).
+  const ai = (await ctx.hooks.aiGate?.(ctx, tenantId)) ?? null;
+  const denied = ai ? ai.denied(targetLangs.length, items.length * targetLangs.length) : null;
   const { providers, configs } = await resolveChain(ctx, tenantId, undefined, { platformAi: !denied });
   if (providers.length === 0) {
-    if (denied) throw aiDenied(denied, { plan: ai!.plan, state: ai!.state, maxLanguages: ai!.maxLanguages, remaining: ai!.remainingParagraphs });
+    if (denied) throw ai!.error(denied);
     throw badRequest('No providers configured on the cloud');
   }
   const platformTypes = new Set(configs.filter((c) => c.tenantId === null).map((c) => c.type));
@@ -358,7 +354,7 @@ export async function translateAdHoc(
         m.characters += items.find((x) => x.id === i.id)?.text.length ?? 0;
         metered.set(providerType, m);
       }
-      for (const [providerType, m] of metered) await recordAiUsage(ctx.db, tenantId, { lang, source: 'RELAY', providerType, ...m });
+      for (const [providerType, m] of metered) await ctx.hooks.recordAiUsage?.(ctx, tenantId, { lang, source: 'RELAY', providerType, ...m });
     }
   }
   return { results, costUsd };

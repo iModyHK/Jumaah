@@ -1,39 +1,23 @@
 import type { FastifyInstance } from 'fastify';
-import type { ArchiveKhutbahDto, ArchiveListDto, HostInfoDto } from '@jumaah/core';
+import type { HostInfoDto } from '@jumaah/core';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { notFound } from '../lib/errors.js';
-import { tenantBaseUrlFor } from '../lib/host.js';
+import { tenantBaseUrl } from '../lib/host.js';
 import { idParam } from '../lib/validate.js';
 import { displayConfigOf } from '../realtime/socket.js';
-import { tenantByCustomDomain } from '../services/domain.service.js';
-import { archiveEnabled } from '../services/features.service.js';
 import { getLiveKhutbah, getSnapshot } from '../services/session.service.js';
-
-/** Khutbahs that may appear in the public archive: delivered ones and those filed away afterwards. */
-const ARCHIVE_STATUSES = ['DELIVERED', 'ARCHIVED'] as const;
 
 /** Unauthenticated endpoints used by display screens and the public mobile page (bootstrap before the socket connects). */
 export async function publicRoutes(app: FastifyInstance): Promise<void> {
-  const { db, config } = app.ctx;
+  const { db } = app.ctx;
 
   app.get('/public/display/:token', async (request) => {
     const token = idParam(request.params, 'token');
-    const d = await db.display.findUnique({ where: { token }, include: { tenant: { select: { slug: true, isActive: true, customDomain: true, customDomainVerifiedAt: true } } } });
+    const d = await db.display.findUnique({ where: { token }, include: { tenant: { select: { id: true, slug: true, isActive: true } } } });
     if (!d || !d.tenant.isActive) throw notFound('Display');
-    const [tenant, session] = await Promise.all([buildTenantPublicInfo(db, d.tenantId), getSnapshot(app.ctx, d.tenantId)]);
+    const [tenant, session, base] = await Promise.all([buildTenantPublicInfo(app.ctx, d.tenantId), getSnapshot(app.ctx, d.tenantId), tenantBaseUrl(app.ctx, d.tenant)]);
     const khutbah = session.khutbahId ? await getLiveKhutbah(app.ctx, d.tenantId, session.khutbahId) : null;
-    return { display: displayConfigOf(d, tenantBaseUrlFor(config, d.tenant), d.tenant.slug), tenant, session, khutbah, serverTime: Date.now() };
-  });
-
-  /**
-   * Caddy's on-demand TLS "ask" endpoint: 200 when a mosque has verified this custom domain, 404 otherwise, so a
-   * certificate is only ever requested for domains their owners pointed at us.
-   */
-  app.get('/public/domain-check', async (request, reply) => {
-    const domain = (request.query as { domain?: string }).domain?.trim().toLowerCase();
-    const t = domain ? await tenantByCustomDomain(app.ctx, domain) : null;
-    if (!t) return reply.code(404).send({ ok: false });
-    return { ok: true, slug: t.slug };
+    return { display: displayConfigOf(d, base, d.tenant.slug), tenant, session, khutbah, serverTime: Date.now() };
   });
 
   app.get('/public/tenant/:slug', async (request) => {
@@ -41,55 +25,17 @@ export async function publicRoutes(app: FastifyInstance): Promise<void> {
     const t = await db.tenant.findUnique({ where: { slug } });
     const enabled = (t?.settings as { publicDisplayEnabled?: boolean })?.publicDisplayEnabled !== false;
     if (!t || !t.isActive || !enabled) throw notFound('Mosque');
-    const [tenant, session] = await Promise.all([buildTenantPublicInfo(db, t.id), getSnapshot(app.ctx, t.id)]);
+    const [tenant, session] = await Promise.all([buildTenantPublicInfo(app.ctx, t.id), getSnapshot(app.ctx, t.id)]);
     const khutbah = session.khutbahId ? await getLiveKhutbah(app.ctx, t.id, session.khutbahId) : null;
     return { tenant, session, khutbah, serverTime: Date.now() };
   });
 
-  /** The mosque behind an archive address, or 404 when it has no open archive (plan or setting). Never leaks which. */
-  const archiveTenant = async (slug: string) => {
-    const t = await db.tenant.findUnique({ where: { slug } });
-    if (!t || !t.isActive || !archiveEnabled((t.settings as Record<string, unknown>) ?? {}, t)) throw notFound('Archive');
-    return t;
-  };
-
-  /** Public archive (paid editions): past khutbahs of a mosque, newest first. */
-  app.get('/public/archive/:slug', async (request): Promise<ArchiveListDto> => {
-    const t = await archiveTenant(idParam(request.params, 'slug'));
-    const [tenant, rows] = await Promise.all([
-      buildTenantPublicInfo(db, t.id),
-      db.khutbah.findMany({
-        where: { tenantId: t.id, deletedAt: null, status: { in: [...ARCHIVE_STATUSES] } },
-        orderBy: { gregorianDate: 'desc' },
-        take: 100,
-        select: { id: true, title: true, hijriDate: true, gregorianDate: true, imamName: true, targetLanguages: true },
-      }),
-    ]);
-    if (!tenant) throw notFound('Archive');
-    return {
-      tenant,
-      items: rows.map((k) => ({ id: k.id, title: k.title, hijriDate: k.hijriDate, gregorianDate: k.gregorianDate.toISOString().slice(0, 10), imamName: k.imamName, languages: k.targetLanguages })),
-    };
-  });
-
-  /** One archived khutbah: Arabic text and approved translations only (same payload the screens receive). */
-  app.get('/public/archive/:slug/:id', async (request): Promise<ArchiveKhutbahDto> => {
-    const t = await archiveTenant(idParam(request.params, 'slug'));
-    const id = idParam(request.params, 'id');
-    const k = await db.khutbah.findFirst({ where: { id, tenantId: t.id, deletedAt: null, status: { in: [...ARCHIVE_STATUSES] } }, select: { id: true } });
-    if (!k) throw notFound('Khutbah');
-    const [tenant, khutbah] = await Promise.all([buildTenantPublicInfo(db, t.id), getLiveKhutbah(app.ctx, t.id, id)]);
-    if (!tenant || !khutbah) throw notFound('Khutbah');
-    return { tenant, khutbah };
-  });
-
   /**
-   * What the address the browser used says about the mosque. On alnoor.jumaah.net this names the mosque so the
-   * login pages can skip the "mosque" field and the phone page can open without a slug in the path.
-   * On the platform address or an edge server it returns nulls, and the apps behave as before.
+   * What the address the browser used says about the mosque. With per-mosque hosts (an extension) this names the
+   * mosque so the login pages can skip the "mosque" field; on a single-address server it returns nulls.
    */
   app.get('/public/host', async (request): Promise<HostInfoDto> => {
-    const base: HostInfoDto = { tenantBaseDomain: config.tenantBaseDomain, slug: request.hostSlug, tenant: null };
+    const base: HostInfoDto = { tenantBaseDomain: null, slug: request.hostSlug, tenant: null, ...((await app.ctx.hooks.hostInfo?.(request)) ?? {}) };
     if (!request.hostSlug) return base;
     const t = await db.tenant.findUnique({ where: { slug: request.hostSlug }, select: { id: true, name: true, slug: true, locale: true, isActive: true } });
     if (!t || !t.isActive) return { ...base, slug: null };

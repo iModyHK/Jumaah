@@ -27,23 +27,18 @@ import type {
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 
-export function tenantDto(t: Tenant & { languages?: TenantLanguage[]; _count?: TenantDto['_count'] }): TenantDto {
+export function tenantDto(t: Tenant & { languages?: TenantLanguage[]; _count?: TenantDto['_count'] }, ext?: Record<string, unknown>): TenantDto {
   return {
     id: t.id,
     name: t.name,
     slug: t.slug,
     timezone: t.timezone,
     locale: t.locale as 'ar' | 'en',
-    plan: t.plan,
-    subscriptionStatus: t.subscriptionStatus,
-    subscriptionEndsAt: iso(t.subscriptionEndsAt),
     librarySharingAllowed: t.librarySharingAllowed,
     settings: (t.settings as Record<string, unknown>) ?? {},
     languages: (t.languages ?? []).filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     createdAt: t.createdAt.toISOString(),
-    organisationId: t.organisationId,
-    customDomain: t.customDomain,
-    customDomainVerifiedAt: iso(t.customDomainVerifiedAt),
+    ext,
     _count: t._count,
   };
 }

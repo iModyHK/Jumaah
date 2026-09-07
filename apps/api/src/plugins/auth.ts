@@ -2,18 +2,16 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { forbidden, unauthorized } from '../lib/errors.js';
 import { verifyAccessToken } from '../lib/jwt.js';
 import type { AppContext, RequestUser } from '../lib/context.js';
-import { API_KEY_FORBIDDEN, looksLikeApiKey, resolveApiKey, touchApiKey } from '../services/api-key.service.js';
-import { tenantInOrganisation } from '../services/organisation.service.js';
 
-/** What the liveness cache remembers about a user for a minute: still allowed in, and which organisation they administer. */
+/** What the liveness cache remembers about a user for a minute: still allowed in, plus what an extension attached. */
 interface Liveness {
   ok: boolean;
-  oid: string | null;
+  ext: Record<string, unknown> | null;
 }
 
 const livenessKey = (userId: string) => `auth:user:${userId}`;
 
-/** Drop the cached liveness of users whose rights just changed (organisation admin added/removed, account disabled). */
+/** Drop the cached liveness of users whose rights just changed (account disabled, extension data changed). */
 export async function forgetUserAuth(ctx: AppContext, userIds: string[]): Promise<void> {
   if (userIds.length) await ctx.redis.del(...userIds.map(livenessKey)).catch(() => undefined);
 }
@@ -23,22 +21,16 @@ export async function authPlugin(app: FastifyInstance): Promise<void> {
   app.decorateRequest('tenantId', '');
 
   app.decorate('authenticate', async (request: FastifyRequest, _reply: FastifyReply) => {
+    const { hooks } = app.ctx;
     const header = request.headers.authorization;
     const token = header?.startsWith('Bearer ') ? header.slice(7) : (request.query as { token?: string })?.token;
     if (!token) throw unauthorized('Missing token');
 
-    // API keys (hosted edition): a key stands in for a mosque admin of its mosque, read-only or read-write, and
-    // can never reach account, key, webhook or subscription management.
-    if (looksLikeApiKey(token)) {
-      const key = await resolveApiKey(app.ctx, token);
-      if (!key) throw unauthorized('Invalid or revoked API key');
-      // At a mosque address (or its custom domain) the key must belong to that mosque.
-      if (request.hostSlug && request.hostSlug !== key.slug) throw unauthorized('This API key belongs to another mosque');
-      if (key.readOnly && request.method !== 'GET' && request.method !== 'HEAD') throw forbidden('This API key is read-only');
-      if (API_KEY_FORBIDDEN.test(request.url)) throw forbidden('Not available to API keys');
-      request.user = { id: `key:${key.id}`, email: `apikey:${key.name}`, role: 'MOSQUE_ADMIN', tenantId: key.tenantId, organisationId: null, apiKey: { id: key.id, readOnly: key.readOnly } };
-      request.tenantId = key.tenantId;
-      touchApiKey(app.ctx, key.id);
+    // Tokens that are not JWTs (API keys) are an extension's business.
+    const viaExtension = await hooks.authenticateToken?.(request, token);
+    if (viaExtension) {
+      request.user = viaExtension.user;
+      request.tenantId = viaExtension.tenantId;
       return;
     }
 
@@ -48,39 +40,43 @@ export async function authPlugin(app: FastifyInstance): Promise<void> {
     } catch {
       throw unauthorized('Invalid or expired token');
     }
-    const user: RequestUser = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tid, impersonating: !!claims.imp, organisationId: claims.oid ?? null };
+    const user: RequestUser = { id: claims.sub, email: claims.email, role: claims.role, tenantId: claims.tid, impersonating: !!claims.imp, ext: claims.ext };
     request.user = user;
 
-    // Cheap liveness check (suspended user / tenant) cached in Redis for 60s. The same lookup tells us which
-    // organisation the user administers right now, so organisation rights follow the database, not the token.
+    // Cheap liveness check (disabled user / suspended mosque) cached in Redis for 60s. An extension may answer it
+    // instead and attach data (which organisation the user administers) so rights follow the database, not the token.
     const cacheKey = livenessKey(user.id);
     const cached = await app.ctx.redis.get(cacheKey);
     let live: Liveness;
     if (cached === null) {
-      const dbUser = await app.ctx.db.user.findUnique({ where: { id: user.id }, select: { isActive: true, organisationId: true, tenant: { select: { isActive: true, subscriptionStatus: true } } } });
-      const ok = !!dbUser?.isActive && (dbUser.tenant ? dbUser.tenant.isActive && dbUser.tenant.subscriptionStatus !== 'SUSPENDED' : true);
-      live = { ok, oid: ok ? (dbUser?.organisationId ?? null) : null };
+      const viaHook = await hooks.liveness?.(app.ctx, user.id);
+      if (viaHook) live = { ok: viaHook.ok, ext: viaHook.ext ?? null };
+      else {
+        const dbUser = await app.ctx.db.user.findUnique({ where: { id: user.id }, select: { isActive: true, tenant: { select: { isActive: true } } } });
+        live = { ok: !!dbUser?.isActive && (dbUser.tenant ? dbUser.tenant.isActive : true), ext: null };
+      }
       await app.ctx.redis.set(cacheKey, JSON.stringify(live), 'EX', 60);
     } else if (cached === '0' || cached === '1') {
-      // value written by an older API build
-      live = { ok: cached === '1', oid: user.organisationId ?? null };
+      live = { ok: cached === '1', ext: null }; // value written by an older API build
     } else {
-      live = JSON.parse(cached) as Liveness;
+      const parsed = JSON.parse(cached) as { ok: boolean; ext?: Record<string, unknown> | null; oid?: string | null };
+      live = { ok: !!parsed.ok, ext: parsed.ext ?? (parsed.oid !== undefined ? { organisationId: parsed.oid } : null) };
     }
     if (!live.ok) throw unauthorized('Account disabled');
-    user.organisationId = live.oid;
+    if (live.ext) user.ext = { ...(user.ext ?? {}), ...live.ext };
 
-    // Tenant resolution: regular users are bound to their tenant; super admins may target any tenant; organisation
-    // admins may target any mosque of their organisation (hosted edition).
+    // Tenant resolution: regular users are bound to their mosque; super admins may target any mosque; an extension
+    // may let some users switch to another mosque (organisation admins).
     const hdr = request.headers['x-tenant-id'];
     if (user.role === 'SUPER_ADMIN') {
       const q = (request.query as { tenantId?: string })?.tenantId;
       request.tenantId = (typeof hdr === 'string' && hdr) || q || user.tenantId || '';
     } else {
       if (!user.tenantId) throw forbidden('User has no tenant');
-      if (user.organisationId && typeof hdr === 'string' && hdr && hdr !== user.tenantId) {
-        if (!(await tenantInOrganisation(app.ctx, hdr, user.organisationId))) throw forbidden('Mosque is not in your organisation');
-        request.tenantId = hdr;
+      if (typeof hdr === 'string' && hdr && hdr !== user.tenantId) {
+        // An extension may allow the switch (organisation admins) or refuse it; users without such a right stay on
+        // their own mosque, whatever the header says.
+        request.tenantId = (await hooks.switchTenant?.(request, user, hdr)) ?? user.tenantId;
       } else {
         request.tenantId = user.tenantId;
       }

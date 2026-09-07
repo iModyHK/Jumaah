@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, randomToken, sha256, verifyPassword } from '@jumaah/db';
 import { acceptInviteSchema, changePasswordSchema, forgotPasswordSchema, loginSchema, refreshSchema, resetPasswordSchema, type AuthResponse, type AuthUser } from '@jumaah/core';
-import { tenantBaseUrlFor } from '../lib/host.js';
+import { tenantBaseUrl } from '../lib/host.js';
 import { sendEmailLater } from '../services/email.service.js';
 import { audit } from '../lib/audit.js';
 import { badRequest, notFound, unauthorized } from '../lib/errors.js';
@@ -11,15 +11,16 @@ import { parse } from '../lib/validate.js';
 export function actorOf(request: FastifyRequest) {
   const u = request.user;
   // API keys are not users: their audit rows carry the key's name and no user id (the user foreign key would fail).
-  return { id: u?.apiKey ? null : (u?.id ?? null), email: u?.email ?? null, ip: request.ip, userAgent: request.headers['user-agent'] ?? null };
+  return { id: u?.virtual ? null : (u?.id ?? null), email: u?.email ?? null, ip: request.ip, userAgent: request.headers['user-agent'] ?? null };
 }
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
-  const { db, config } = app.ctx;
+  const { db, config, hooks } = app.ctx;
 
-  async function issueTokens(user: { id: string; email: string; role: AuthUser['role']; tenantId: string | null; locale: string; name: string; organisationId?: string | null }, request: FastifyRequest, imp?: string): Promise<AuthResponse> {
+  async function issueTokens(user: { id: string; email: string; role: AuthUser['role']; tenantId: string | null; locale: string; name: string }, request: FastifyRequest, imp?: string): Promise<AuthResponse> {
     const tenant = user.tenantId ? await db.tenant.findUnique({ where: { id: user.tenantId }, select: { slug: true, name: true } }) : null;
-    const accessToken = await signAccessToken(config.JWT_SECRET, { sub: user.id, email: user.email, role: user.role, tid: user.tenantId, imp, oid: user.organisationId ?? null }, config.accessTokenTtlSeconds);
+    const ext = (await hooks.tokenExt?.(user)) ?? undefined;
+    const accessToken = await signAccessToken(config.JWT_SECRET, { sub: user.id, email: user.email, role: user.role, tid: user.tenantId, imp, ext }, config.accessTokenTtlSeconds);
     const refresh = randomToken(48);
     await db.refreshToken.create({
       data: {
@@ -43,7 +44,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         tenantSlug: tenant?.slug ?? null,
         tenantName: tenant?.name ?? null,
         locale: user.locale as 'ar' | 'en',
-        organisationId: user.organisationId ?? null,
+        ext,
       },
     };
   }
@@ -66,7 +67,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       await audit(db, null, { id: null, ip: request.ip }, 'auth.login.failed', 'User', null, null, { email });
       throw unauthorized('Invalid credentials');
     }
-    if (user.tenant && (!user.tenant.isActive || user.tenant.subscriptionStatus === 'SUSPENDED')) throw unauthorized('Tenant suspended');
+    if (user.tenant && (!user.tenant.isActive || hooks.tenantLoginAllowed?.(user.tenant) === false)) throw unauthorized('Tenant suspended');
     await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     await audit(db, user.tenantId, { id: user.id, ip: request.ip }, 'auth.login', 'User', user.id);
     return issueTokens(user, request);
@@ -98,7 +99,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       tenantSlug: u.tenant?.slug ?? null,
       tenantName: u.tenant?.name ?? null,
       locale: u.locale as 'ar' | 'en',
-      organisationId: u.organisationId,
+      ext: request.user!.ext,
     };
     return me;
   });
@@ -151,12 +152,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(forgotPasswordSchema, request.body);
     const email = body.email.toLowerCase();
     const slug = request.hostSlug ?? body.tenantSlug ?? null;
-    const users = await db.user.findMany({ where: { email, isActive: true, ...(slug ? { tenant: { slug } } : {}) }, include: { tenant: { select: { name: true, slug: true, customDomain: true, customDomainVerifiedAt: true, isActive: true } } } });
+    const users = await db.user.findMany({ where: { email, isActive: true, ...(slug ? { tenant: { slug } } : {}) }, include: { tenant: { select: { id: true, name: true, slug: true, isActive: true } } } });
     for (const u of users) {
       if (u.tenant && !u.tenant.isActive) continue;
       const token = randomToken(32);
       await db.passwordReset.create({ data: { userId: u.id, tokenHash: sha256(token), expiresAt: new Date(Date.now() + RESET_MINUTES * 60_000) } });
-      const base = u.tenant ? tenantBaseUrlFor(config, u.tenant) : config.PUBLIC_BASE_URL.replace(/\/$/, '');
+      const base = u.tenant ? await tenantBaseUrl(app.ctx, u.tenant) : config.PUBLIC_BASE_URL.replace(/\/$/, '');
       sendEmailLater(app.ctx, { to: u.email, locale: u.locale === 'en' ? 'en' : 'ar', template: 'passwordReset', tenantId: u.tenantId, data: { name: u.name, resetUrl: `${base}/admin/reset/${token}`, mosqueName: u.tenant?.name ?? null, expiresMinutes: RESET_MINUTES } });
       await audit(db, u.tenantId, { id: null, ip: request.ip }, 'auth.password.forgot', 'User', u.id);
     }

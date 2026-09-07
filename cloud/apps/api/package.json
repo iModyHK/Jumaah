@@ -1,0 +1,23 @@
+{
+  "name": "@jumaah/cloud-server",
+  "version": "1.2.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@jumaah/api": "workspace:*",
+    "@jumaah/cloud-api": "workspace:*",
+    "@jumaah/cloud-db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

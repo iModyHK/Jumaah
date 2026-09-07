@@ -293,6 +293,62 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(lightningcss@1.32.0)(terser@5.51.2)
 
+  cloud/api:
+    dependencies:
+      '@jumaah/api':
+        specifier: workspace:*
+        version: link:../../apps/api
+      '@jumaah/cloud-db':
+        specifier: workspace:*
+        version: link:../db
+      '@jumaah/cloud-shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@jumaah/core':
+        specifier: workspace:*
+        version: link:../../packages/jumaah-core
+      '@jumaah/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      fastify:
+        specifier: ^5.2.0
+        version: 5.12.3
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.20.1)(lightningcss@1.32.0)(terser@5.51.2)
+
+  cloud/apps/api:
+    dependencies:
+      '@jumaah/api':
+        specifier: workspace:*
+        version: link:../../../apps/api
+      '@jumaah/cloud-api':
+        specifier: workspace:*
+        version: link:../../api
+      '@jumaah/cloud-db':
+        specifier: workspace:*
+        version: link:../../db
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   cloud/db:
     dependencies:
       '@jumaah/cloud-shared':

@@ -4,6 +4,7 @@ import type { Server as SocketServer } from 'socket.io';
 import type { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from '@jumaah/core';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Config } from '../config.js';
+import type { CoreHooks } from './extensions.js';
 
 export type IO = SocketServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
@@ -13,6 +14,8 @@ export interface AppContext {
   config: Config;
   log: FastifyBaseLogger;
   io: IO;
+  /** Extension hooks (empty on the Community Edition). */
+  hooks: CoreHooks;
 }
 
 export interface RequestUser {
@@ -21,10 +24,10 @@ export interface RequestUser {
   role: 'SUPER_ADMIN' | 'MOSQUE_ADMIN' | 'TRANSLATOR' | 'IMAM' | 'DISPLAY';
   tenantId: string | null;
   impersonating?: boolean;
-  /** Organisation admins may target any mosque of their organisation with x-tenant-id. */
-  organisationId?: string | null;
-  /** Set when the request is authenticated with an API key rather than a signed-in person. */
-  apiKey?: { id: string; readOnly: boolean };
+  /** Not a person (an API key): audit rows carry no user id. */
+  virtual?: boolean;
+  /** Data an extension attached (from the token or the liveness check). */
+  ext?: Record<string, unknown>;
 }
 
 declare module 'fastify' {
@@ -37,7 +40,7 @@ declare module 'fastify' {
     user: RequestUser | null;
     /** Resolved tenant id for the request (user's tenant, or x-tenant-id for super admins). */
     tenantId: string;
-    /** Tenant slug taken from the Host header in the hosted edition (alnoor.jumaah.net -> "alnoor"), else null. */
+    /** Tenant slug an extension derived from the Host header (per-mosque hosts), else null. */
     hostSlug: string | null;
   }
 }

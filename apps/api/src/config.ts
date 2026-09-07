@@ -11,7 +11,6 @@ function durationToSeconds(v: string): number {
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  DEPLOYMENT_MODE: z.enum(['edge', 'cloud']).default('edge'),
   /** Shown in the portal and /api/health: the image tag from compose, else the version baked into the image. */
   IMAGE_TAG: z.string().default(process.env.APP_VERSION || 'dev'),
   API_PORT: z.coerce.number().int().default(4000),
@@ -19,8 +18,6 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   PUBLIC_BASE_URL: z.string().default('http://localhost:8080'),
-  /** Hosted edition: mosques live at <slug>.<TENANT_BASE_DOMAIN>. Empty = single address (edge / self-hosted). */
-  TENANT_BASE_DOMAIN: z.string().optional(),
   CORS_ORIGINS: z.string().default(''),
   LOG_LEVEL: z.string().default('info'),
   JWT_SECRET: z.string().min(16),
@@ -44,22 +41,7 @@ const schema = z.object({
   BACKUP_DIR: z.string().default('./backups'),
   BACKUP_KEEP: z.coerce.number().int().default(20),
   STATIC_DIR: z.string().optional(),
-  // ---- Billing (hosted edition) ----
-  /** 0 until the company is VAT-registered, then 0.15. */
-  BILLING_VAT_RATE: z.coerce.number().min(0).max(1).default(0),
-  BILLING_VAT_NUMBER: z.string().optional(),
-  BILLING_SELLER_NAME: z.string().default('Jumaah Cloud'),
-  BILLING_SELLER_ADDRESS: z.string().optional(),
-  BILLING_IBAN: z.string().optional(),
-  BILLING_BANK: z.string().optional(),
-  BILLING_INTERVAL_MINUTES: z.coerce.number().int().min(5).default(360),
-  /** manual = bank transfer, the super admin marks invoices paid; moyasar = hosted card / mada / Apple Pay page. */
-  PAYMENT_PROVIDER: z.enum(['manual', 'moyasar']).default('manual'),
-  MOYASAR_SECRET_KEY: z.string().optional(),
-  MOYASAR_WEBHOOK_SECRET: z.string().optional(),
-  /** Cloudflare Turnstile secret for the public sponsor form (www.jumaah.net posts to this API). */
-  TURNSTILE_SECRET_KEY: z.string().optional(),
-  // ---- Email (defaults; the portal's Platform → Email settings override them) ----
+  // ---- Email (optional; an extension may supply settings from elsewhere) ----
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   SMTP_SECURE: z
@@ -71,10 +53,8 @@ const schema = z.object({
   MAIL_FROM_NAME: z.string().default('Jumaah'),
   MAIL_FROM_EMAIL: z.string().optional(),
   MAIL_REPLY_TO: z.string().optional(),
-  /** Where platform notices go (new sponsorships, failed deliveries). */
+  /** Where server notices go. */
   MAIL_NOTIFY: z.string().optional(),
-  /** The marketing site, linked from emails and the admin. */
-  SITE_URL: z.string().optional(),
 });
 
 export type Config = ReturnType<typeof loadConfig>;
@@ -89,14 +69,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   return {
     ...e,
     isProd: e.NODE_ENV === 'production',
-    isEdge: e.DEPLOYMENT_MODE === 'edge',
-    isCloud: e.DEPLOYMENT_MODE === 'cloud',
     accessTokenTtlSeconds: durationToSeconds(e.ACCESS_TOKEN_TTL),
     corsOrigins: e.CORS_ORIGINS.split(',')
       .map((s) => s.trim())
       .filter(Boolean),
     cloudApiUrl: e.CLOUD_API_URL?.replace(/\/$/, '') || null,
-    tenantBaseDomain: e.TENANT_BASE_DOMAIN?.trim().toLowerCase().replace(/^\.+|\.+$/g, '') || null,
     edgeDeviceId: e.EDGE_DEVICE_ID || `edge-${randomBytes(4).toString('hex')}`,
   };
 }

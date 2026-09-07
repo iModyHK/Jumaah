@@ -5,7 +5,7 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/health', { config: { rateLimit: false } }, async () => ({
     ok: true,
-    mode: config.DEPLOYMENT_MODE,
+    mode: app.ctx.hooks.mode ?? 'community',
     version: config.IMAGE_TAG,
     time: new Date().toISOString(),
   }));

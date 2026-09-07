@@ -8,9 +8,8 @@ import { idParam, parse } from '../lib/validate.js';
 import { ALL_STAFF, EDITOR_ROLES } from '../plugins/auth.js';
 import { getKhutbahOrThrow } from '../services/khutbah.service.js';
 import { notifyKhutbahChanged } from '../services/session.service.js';
-import { publishLater } from '../services/network.service.js';
+import { emitEvent } from '../lib/events.js';
 import { cancelJob, estimateCost, startJob } from '../services/translation.service.js';
-import { emitWebhook } from '../services/webhook.service.js';
 import { actorOf } from './auth.js';
 
 export async function translationRoutes(app: FastifyInstance): Promise<void> {
@@ -54,7 +53,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     });
     await audit(db, tenantId, actorOf(request), 'translation.upsert', 'Translation', row.id, existing ? { text: existing.text, status: existing.status } : null, { text: row.text, status: row.status });
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
-    if (row.status === 'APPROVED') publishLater(app.ctx, tenantId, [row.id]);
+    if (row.status === 'APPROVED') emitEvent(app.ctx, tenantId, 'translations.approved', { khutbahId, count: 1, lang: row.lang, translationIds: [row.id] });
     return translationDto(row);
   });
 
@@ -86,8 +85,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     await notifyKhutbahChanged(app.ctx, tenantId, t.paragraph.section.khutbahId);
     await maybeMarkReady(t.paragraph.section.khutbahId, tenantId);
     if (row.status === 'APPROVED') {
-      publishLater(app.ctx, tenantId, [row.id]);
-      emitWebhook(app.ctx, tenantId, 'translations.approved', { khutbahId: t.paragraph.section.khutbahId, count: 1, lang: row.lang });
+      emitEvent(app.ctx, tenantId, 'translations.approved', { khutbahId: t.paragraph.section.khutbahId, count: 1, lang: row.lang, translationIds: [row.id] });
     }
     return translationDto(row);
   });
@@ -115,8 +113,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
     await maybeMarkReady(khutbahId, tenantId);
     if (ids.length) {
-      publishLater(app.ctx, tenantId, ids);
-      emitWebhook(app.ctx, tenantId, 'translations.approved', { khutbahId, count: ids.length, lang: lang ?? null });
+      emitEvent(app.ctx, tenantId, 'translations.approved', { khutbahId, count: ids.length, lang: lang ?? null, translationIds: ids });
     }
     return { approved: ids.length };
   });
@@ -149,7 +146,7 @@ export async function translationRoutes(app: FastifyInstance): Promise<void> {
     });
     await audit(db, tenantId, actorOf(request), 'translation.import', 'Khutbah', khutbahId, null, { lang: body.lang, written });
     await notifyKhutbahChanged(app.ctx, tenantId, khutbahId);
-    if (body.status === 'APPROVED') publishLater(app.ctx, tenantId, writtenIds);
+    if (body.status === 'APPROVED' && writtenIds.length) emitEvent(app.ctx, tenantId, 'translations.approved', { khutbahId, count: writtenIds.length, lang: body.lang, translationIds: writtenIds });
     return { written };
   });
 

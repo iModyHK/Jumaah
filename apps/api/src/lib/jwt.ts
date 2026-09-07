@@ -8,14 +8,14 @@ export interface AccessClaims {
   tid: string | null;
   /** Set when a super admin is acting inside a tenant. */
   imp?: string;
-  /** Organisation the user administers (hosted edition), if any. */
-  oid?: string | null;
+  /** Data an extension carries in the token (e.g. the organisation the user administers). */
+  ext?: Record<string, unknown>;
 }
 
 const enc = new TextEncoder();
 
 export async function signAccessToken(secret: string, claims: AccessClaims, ttlSeconds: number): Promise<string> {
-  return new SignJWT({ email: claims.email, role: claims.role, tid: claims.tid, imp: claims.imp, oid: claims.oid ?? undefined })
+  return new SignJWT({ email: claims.email, role: claims.role, tid: claims.tid, imp: claims.imp, ext: claims.ext })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(claims.sub)
     .setIssuedAt()
@@ -32,6 +32,6 @@ export async function verifyAccessToken(secret: string, token: string): Promise<
     role: payload.role as Role,
     tid: (payload.tid as string | null) ?? null,
     imp: payload.imp as string | undefined,
-    oid: (payload.oid as string | undefined) ?? null,
+    ext: (payload.ext as Record<string, unknown> | undefined) ?? undefined,
   };
 }

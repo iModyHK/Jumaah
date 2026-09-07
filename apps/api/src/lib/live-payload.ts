@@ -1,6 +1,7 @@
 import type { Db } from '@jumaah/db';
 import type { LiveKhutbah, LiveParagraph, TenantPublicInfo } from '@jumaah/core';
-import { archiveEnabled, effectiveBranding, effectiveSignage } from '../services/features.service.js';
+import type { AppContext } from './context.js';
+import { effectiveBranding, effectiveSignage, tenantFeatures } from '../services/features.service.js';
 
 /** Build the payload displays/imam receive: full khutbah tree with translation statuses. */
 export async function buildLiveKhutbah(db: Db, tenantId: string, khutbahId: string): Promise<LiveKhutbah | null> {
@@ -54,11 +55,12 @@ export async function buildLiveKhutbah(db: Db, tenantId: string, khutbahId: stri
   };
 }
 
-export async function buildTenantPublicInfo(db: Db, tenantId: string): Promise<TenantPublicInfo | null> {
-  const t = await db.tenant.findUnique({ where: { id: tenantId }, include: { languages: true } });
+export async function buildTenantPublicInfo(ctx: AppContext, tenantId: string): Promise<TenantPublicInfo | null> {
+  const t = await ctx.db.tenant.findUnique({ where: { id: tenantId }, include: { languages: true } });
   if (!t) return null;
   const s = (t.settings as Record<string, unknown>) ?? {};
-  const branding = effectiveBranding(s, t);
+  const { features } = tenantFeatures(ctx, t);
+  const branding = effectiveBranding(s, features);
   return {
     id: t.id,
     name: t.name,
@@ -72,7 +74,7 @@ export async function buildTenantPublicInfo(db: Db, tenantId: string): Promise<T
     prayerLocation: (s.prayerLocation as TenantPublicInfo['prayerLocation']) ?? null,
     languages: t.languages.filter((l) => l.enabled).sort((a, b) => a.order - b.order).map((l) => l.code),
     branding,
-    signage: effectiveSignage(s, t),
-    archiveEnabled: archiveEnabled(s, t),
+    signage: effectiveSignage(s, features, t.timezone),
+    ext: ctx.hooks.publicInfoExt?.(t, features),
   };
 }

@@ -4,10 +4,9 @@ import { createPrisma, encryptSecret, apiKeyHint } from '@jumaah/db';
 import { loadConfig } from './config.js';
 import { buildApp } from './app.js';
 import { createRedis } from './lib/redis.js';
-import { startBillingScheduler } from './services/billing.service.js';
 
 /** Load the repository-root .env in development (Docker passes real env vars; nothing is overridden). */
-function loadDotEnv() {
+export function loadDotEnv() {
   if (process.env.NODE_ENV === 'production') return;
   const candidates = ['.env', '../.env', '../../.env'];
   for (const c of candidates) {
@@ -37,9 +36,7 @@ async function main() {
   await bootstrapGlobalProviders(db, config, app.log);
 
   await app.listen({ port: config.API_PORT, host: config.API_HOST });
-  // Hosted edition: renewal invoices and overdue checks run in the background.
-  startBillingScheduler(app.ctx);
-  app.log.info({ mode: config.DEPLOYMENT_MODE, version: config.IMAGE_TAG }, `Jumaah API listening on ${config.API_HOST}:${config.API_PORT}`);
+  app.log.info({ mode: 'community', version: config.IMAGE_TAG }, `Jumaah API listening on ${config.API_HOST}:${config.API_PORT}`);
 
   const shutdown = async (signal: string) => {
     app.log.info({ signal }, 'shutting down');
@@ -59,8 +56,8 @@ async function main() {
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
-/** On first start, turn env-provided API keys into global (platform) provider configs. */
-async function bootstrapGlobalProviders(db: ReturnType<typeof createPrisma>, config: ReturnType<typeof loadConfig>, log: { info: (o: unknown, m?: string) => void }) {
+/** On first start, turn env-provided API keys into global (server-wide) provider configs. */
+export async function bootstrapGlobalProviders(db: ReturnType<typeof createPrisma>, config: ReturnType<typeof loadConfig>, log: { info: (o: unknown, m?: string) => void }) {
   const candidates: Array<{ type: 'ANTHROPIC' | 'OPENAI' | 'GOOGLE' | 'DEEPL' | 'LIBRETRANSLATE' | 'OLLAMA'; key?: string; baseUrl?: string; model?: string; priority: number; name: string }> = [
     { type: 'ANTHROPIC', key: config.ANTHROPIC_API_KEY, model: 'claude-opus-5', priority: 10, name: 'Anthropic Claude (central)' },
     { type: 'OPENAI', key: config.OPENAI_API_KEY, model: 'gpt-4.1', priority: 20, name: 'OpenAI (central)' },
@@ -92,7 +89,10 @@ async function bootstrapGlobalProviders(db: ReturnType<typeof createPrisma>, con
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only start when run directly (the cloud entry imports the helpers above).
+if (process.argv[1] && /server\.(ts|js)$/.test(process.argv[1])) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

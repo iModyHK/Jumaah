@@ -28,4 +28,4 @@ export { renderTemplate, buildEmail, esc, dateLabel, FOOT, type Locale, type Tem
 export { getLiveKhutbah, getSnapshot, notifyKhutbahChanged, startSession, applyCommand } from './services/session.service.js';
 export { exportTenant, restoreBackup } from './services/backup.service.js';
 export { translateAdHoc, estimateCost, startJob } from './services/translation.service.js';
-export { isOnline, loadGlossary, resolveChain } from './services/provider.service.js';
+export { isOnline, loadGlossary, providerFromConfig, resolveChain } from './services/provider.service.js';

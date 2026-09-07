@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { createPrisma, encryptSecret, apiKeyHint } from '@jumaah/db';
 import { loadConfig } from './config.js';
 import { buildApp } from './app.js';
@@ -89,8 +90,10 @@ export async function bootstrapGlobalProviders(db: ReturnType<typeof createPrism
   }
 }
 
-// Only start when run directly (the cloud entry imports the helpers above).
-if (process.argv[1] && /server\.(ts|js)$/.test(process.argv[1])) {
+// Only start when this file itself is the entry point. The cloud server is also called server.ts and imports the
+// helpers above, so a name check is not enough: compare the module URL with the script that was started.
+const isMain = !!process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isMain) {
   main().catch((err) => {
     console.error(err);
     process.exit(1);

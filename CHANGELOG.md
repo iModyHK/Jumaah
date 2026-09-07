@@ -6,7 +6,7 @@
   announcement sits beside the clock and the QR code beside the prayer times; if the board is still too tall it is
   scaled down instead of being clipped.
 - API: the server starts only when it is the actual entry point, so an extension that imports it (Jumaah Cloud) no
-  longer boots a second server on the same port.  is exported for extensions.
+  longer boots a second server on the same port. The provider factory is exported for extensions.
 
 ## 1.0.0 — 2026-09-07
 

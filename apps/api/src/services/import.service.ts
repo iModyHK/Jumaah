@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { normalizeText, splitIntoParagraphs, type SplitParagraph } from '@jumaah/shared';
+import { normalizeText, splitIntoParagraphs, type SplitParagraph } from '@jumaah/core';
 import { badRequest } from '../lib/errors.js';
 
 const require = createRequire(import.meta.url);

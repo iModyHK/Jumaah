@@ -2,7 +2,7 @@
  * Transactional email templates, Arabic and English. Each template returns a subject, a plain-text body and an HTML
  * body built on one small layout. Money arrives as halalas; dates as ISO strings.
  */
-import { formatSar } from '@jumaah/shared';
+import { formatSar } from '@jumaah/core';
 
 export type Locale = 'ar' | 'en';
 

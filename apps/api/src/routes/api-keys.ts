@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { randomToken, sha256 } from '@jumaah/db';
-import { createApiKeySchema, createWebhookSchema, updateWebhookSchema, type ApiKeyDto, type WebhookDto } from '@jumaah/shared';
+import { createApiKeySchema, createWebhookSchema, updateWebhookSchema, type ApiKeyDto, type WebhookDto } from '@jumaah/core';
 import { audit } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';

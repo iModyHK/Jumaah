@@ -4,7 +4,7 @@ Jumaah is built as an ongoing charity (sadaqah jariyah) for mosques. Every contr
 
 ## Ways to help
 
-- **Review translations.** If you read Urdu, Bengali, Somali, Turkish, Amharic or any other language natively, review the interface strings in `packages/shared/src/i18n/` and open a pull request with corrections.
+- **Review translations.** If you read Urdu, Bengali, Somali, Turkish, Amharic or any other language natively, review the interface strings in `packages/jumaah-core/src/i18n/` and open a pull request with corrections.
 - **Test on real hardware.** Old smart TVs, projectors, Raspberry Pi boards, cheap tablets. Open an issue with the device, browser version and what broke.
 - **Report bugs.** Use the bug report template. Include the version and, for the display or imam apps, the browser.
 - **Code.** See below.
@@ -25,7 +25,7 @@ Playwright end-to-end tests (`pnpm test:e2e`) are welcome but not required for s
 
 - One change per pull request, with a short description of what and why.
 - Keep the imam and display apps working offline; do not add network calls to the Friday path.
-- Qur'an and hadith handling is deliberately conservative (`packages/shared/src/paragraphs.ts`). Changes there need a note explaining the reasoning and test cases.
+- Qur'an and hadith handling is deliberately conservative (`packages/jumaah-core/src/paragraphs.ts`). Changes there need a note explaining the reasoning and test cases.
 - User-facing text goes through i18n (`en.json` and `ar.json`). Arabic is the primary market; keep RTL layouts working.
 - Do not commit secrets, `.env` files, or provider keys.
 

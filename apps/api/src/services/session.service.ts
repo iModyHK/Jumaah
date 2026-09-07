@@ -1,5 +1,5 @@
-import type { LiveKhutbah, LiveSessionSnapshot, SectionType, SessionCommand } from '@jumaah/shared';
-import { ROOMS, SESSION_STALE_MS } from '@jumaah/shared';
+import type { LiveKhutbah, LiveSessionSnapshot, SectionType, SessionCommand } from '@jumaah/core';
+import { ROOMS, SESSION_STALE_MS } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 import { buildLiveKhutbah } from '../lib/live-payload.js';
 import { conflict, notFound, badRequest } from '../lib/errors.js';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PLAN_LIMITS } from '@jumaah/shared';
+import { PLAN_LIMITS } from '@jumaah/core';
 import { allowanceOf, assertAiAllowed, monthKey, subscriptionState } from './plan.service.js';
 
 const day = 86_400_000;

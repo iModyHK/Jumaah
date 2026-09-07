@@ -1,5 +1,5 @@
-import type { DisplayLayout, LiveParagraph, SessionState } from '@jumaah/shared';
-import { getLanguage } from '@jumaah/shared';
+import type { DisplayLayout, LiveParagraph, SessionState } from '@jumaah/core';
+import { getLanguage } from '@jumaah/core';
 import { LangText } from '@jumaah/ui';
 import { contentFor, FittedText, lengthFactor, ParagraphBody } from './ParagraphText';
 

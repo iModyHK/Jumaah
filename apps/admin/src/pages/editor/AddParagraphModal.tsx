@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { PARAGRAPH_KINDS, paragraphInputSchema, type ParagraphDto, type ParagraphKind } from '@jumaah/shared';
+import { PARAGRAPH_KINDS, paragraphInputSchema, type ParagraphDto, type ParagraphKind } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Field, FormRow, Select, TextArea, TextInput } from '../../components/Field';

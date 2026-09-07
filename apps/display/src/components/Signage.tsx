@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { toHijri, type TenantPublicSignage } from '@jumaah/shared';
+import { toHijri, type TenantPublicSignage } from '@jumaah/core';
 import { LangText, useNow } from '@jumaah/ui';
 
 /** Hijri and Gregorian date for the mosque's timezone, shown under the clock between khutbahs. */

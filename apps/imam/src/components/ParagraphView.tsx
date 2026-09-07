@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { LangText } from '@jumaah/ui';
-import type { LiveParagraph } from '@jumaah/shared';
+import type { LiveParagraph } from '@jumaah/core';
 
 export const KIND_COLOR: Record<LiveParagraph['kind'], string | undefined> = {
   TEXT: undefined,

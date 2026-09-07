@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { bulkTranslateSchema, type CostEstimate, type KhutbahDto, type TranslationJobDto } from '@jumaah/shared';
+import { bulkTranslateSchema, type CostEstimate, type KhutbahDto, type TranslationJobDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Checkbox, Field } from '../../components/Field';

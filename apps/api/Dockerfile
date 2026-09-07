@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/api/package.json apps/api/
 COPY apps/sync-worker/package.json apps/sync-worker/
-COPY packages/shared/package.json packages/shared/
+COPY packages/jumaah-core/package.json packages/jumaah-core/
 COPY packages/db/package.json packages/db/
 COPY packages/db/prisma packages/db/prisma
 COPY packages/translation-providers/package.json packages/translation-providers/
@@ -20,12 +20,12 @@ COPY packages/translation-providers/package.json packages/translation-providers/
 FROM base AS build
 RUN pnpm install --frozen-lockfile --filter @jumaah/api... --filter @jumaah/sync-worker... --filter @jumaah/db...
 COPY tsconfig.base.json ./
-COPY packages/shared packages/shared
+COPY packages/jumaah-core packages/jumaah-core
 COPY packages/db packages/db
 COPY packages/translation-providers packages/translation-providers
 COPY apps/api apps/api
 COPY apps/sync-worker apps/sync-worker
-RUN pnpm --filter @jumaah/shared build \
+RUN pnpm --filter @jumaah/core build \
  && pnpm --filter @jumaah/db build \
  && pnpm --filter @jumaah/translation-providers build \
  && pnpm --filter @jumaah/api build \
@@ -38,7 +38,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @jumaah/api... --filter @juma
  && pnpm --filter @jumaah/db exec prisma generate
 # TypeScript is only an optional peer of the Prisma CLI (needed for prisma.config.ts, which this project does not use).
 RUN rm -rf node_modules/.pnpm/typescript@* pnpm-lock.yaml
-COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/jumaah-core/dist packages/jumaah-core/dist
 COPY --from=build /app/packages/db/dist packages/db/dist
 COPY --from=build /app/packages/translation-providers/dist packages/translation-providers/dist
 COPY --from=build /app/apps/api/dist apps/api/dist

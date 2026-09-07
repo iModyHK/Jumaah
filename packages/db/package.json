@@ -25,7 +25,7 @@
     "studio": "prisma studio"
   },
   "dependencies": {
-    "@jumaah/shared": "workspace:*",
+    "@jumaah/core": "workspace:*",
     "@prisma/client": "^6.1.0",
     "prisma": "^6.1.0"
   },

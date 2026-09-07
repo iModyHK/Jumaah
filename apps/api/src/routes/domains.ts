@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { customDomainSchema, type DomainStatusDto } from '@jumaah/shared';
+import { customDomainSchema, type DomainStatusDto } from '@jumaah/core';
 import { audit } from '../lib/audit.js';
 import { badRequest, conflict, notFound } from '../lib/errors.js';
 import { parse } from '../lib/validate.js';

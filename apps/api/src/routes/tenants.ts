@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { randomToken, sha256 } from '@jumaah/db';
-import { createTenantSchema, paginationSchema, tenantLanguagesSchema, updateTenantSchema } from '@jumaah/shared';
+import { createTenantSchema, paginationSchema, tenantLanguagesSchema, updateTenantSchema } from '@jumaah/core';
 import { audit, outbox } from '../lib/audit.js';
 import { conflict, notFound } from '../lib/errors.js';
 import { signAccessToken } from '../lib/jwt.js';

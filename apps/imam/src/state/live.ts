@@ -1,4 +1,4 @@
-import { SESSION_HEARTBEAT_MS, type LiveKhutbah, type LiveParagraph, type LiveSessionSnapshot, type SessionCommand } from '@jumaah/shared';
+import { SESSION_HEARTBEAT_MS, type LiveKhutbah, type LiveParagraph, type LiveSessionSnapshot, type SessionCommand } from '@jumaah/core';
 import { createSocket, deviceId, measureClockOffset, type JumaahSocket } from '@jumaah/ui';
 import { api } from '../api';
 import { applyLocal } from './reducer';

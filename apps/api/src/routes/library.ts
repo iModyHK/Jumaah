@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { paginationSchema, shareToLibrarySchema, toHijri, type LibraryKhutbahDto } from '@jumaah/shared';
+import { paginationSchema, shareToLibrarySchema, toHijri, type LibraryKhutbahDto } from '@jumaah/core';
 import { z } from 'zod';
 import { audit, outbox } from '../lib/audit.js';
 import { forbidden, notFound } from '../lib/errors.js';

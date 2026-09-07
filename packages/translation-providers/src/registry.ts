@@ -1,4 +1,4 @@
-import type { ProviderType } from '@jumaah/shared';
+import type { ProviderType } from '@jumaah/core';
 import { AnthropicProvider } from './providers/anthropic.js';
 import { DeepLProvider } from './providers/deepl.js';
 import { GoogleTranslateProvider } from './providers/google.js';

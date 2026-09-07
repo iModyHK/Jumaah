@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { SECTION_TYPES, copyKhutbahSchema, createKhutbahSchema, paginationSchema, replaceSectionTextSchema, updateKhutbahSchema, type HandoutDto, type SectionType } from '@jumaah/shared';
+import { SECTION_TYPES, copyKhutbahSchema, createKhutbahSchema, paginationSchema, replaceSectionTextSchema, updateKhutbahSchema, type HandoutDto, type SectionType } from '@jumaah/core';
 import { z } from 'zod';
 import { audit, outbox } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';

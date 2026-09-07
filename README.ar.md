@@ -128,10 +128,10 @@ Caddy يحصل على شهادة TLS تلقائياً لـ `SITE_ADDRESS`. مف�
 
 ## إضافة موفّر ترجمة جديد
 
-1. أضف النوع إلى `PROVIDER_TYPES` في `packages/shared/src/constants.ts` وإلى enum `ProviderType` في `packages/db/prisma/schema.prisma` (`pnpm db:migrate:dev --name add_provider`).
+1. أضف النوع إلى `PROVIDER_TYPES` في `packages/jumaah-core/src/constants.ts` وإلى enum `ProviderType` في `packages/db/prisma/schema.prisma` (`pnpm db:migrate:dev --name add_provider`).
 2. نفّذ `TranslationProvider` في `packages/translation-providers/src/providers/<name>.ts` (انظر `google.ts` لمحرك MT مع حماية المصطلحات، أو `anthropic.ts` لنموذج لغوي يستخدم `buildSystemPrompt`). ارمِ `ProviderError` بالرمز الصحيح (`AUTH`, `RATE_LIMITED` قابل لإعادة المحاولة، `UNSUPPORTED_LANG`…) كي تتصرف سلسلة الـ fallback بشكل صحيح.
 3. سجّله في `packages/translation-providers/src/registry.ts` (`factories` + `PROVIDER_META`) وأضف اختباراً بـ `fetch` وهمي في `chain.test.ts`.
-4. أضف الاسم المعروض في `providers.types.*` داخل `packages/shared/src/i18n/{ar,en}.json`. لوحة الإدارة تلتقطه تلقائياً.
+4. أضف الاسم المعروض في `providers.types.*` داخل `packages/jumaah-core/src/i18n/{ar,en}.json`. لوحة الإدارة تلتقطه تلقائياً.
 
 ## المتغيرات البيئية
 

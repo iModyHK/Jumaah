@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { PLATFORM_CONFIG_GROUPS, platformGroupSchemas, testEmailSchema, type PlatformConfigGroup } from '@jumaah/shared';
+import { PLATFORM_CONFIG_GROUPS, platformGroupSchemas, testEmailSchema, type PlatformConfigGroup } from '@jumaah/core';
 import { z } from 'zod';
 import { audit } from '../lib/audit.js';
 import { badRequest } from '../lib/errors.js';

@@ -6,7 +6,7 @@
  * phones and is dropped with the Redis set (48 h).
  */
 import type { Db } from '@jumaah/db';
-import { ROOMS, type InsightDto, type InsightSessionDto } from '@jumaah/shared';
+import { ROOMS, type InsightDto, type InsightSessionDto } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 
 export interface Counts {

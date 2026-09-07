@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { getLanguage, type ParagraphDto, type TranslationDto } from '@jumaah/shared';
+import { getLanguage, type ParagraphDto, type TranslationDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { TranslationStatusBadge } from '../../components/StatusBadge';

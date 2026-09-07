@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { randomToken } from '@jumaah/db';
-import { displaySchema } from '@jumaah/shared';
+import { displaySchema } from '@jumaah/core';
 import { audit, outbox } from '../lib/audit.js';
 import { notFound } from '../lib/errors.js';
 import { tenantBaseUrlFor, type TenantAddress } from '../lib/host.js';

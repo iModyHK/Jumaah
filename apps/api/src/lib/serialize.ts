@@ -23,7 +23,7 @@ import type {
   TranslationDto,
   TranslationJobDto,
   UserDto,
-} from '@jumaah/shared';
+} from '@jumaah/core';
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : null);
 

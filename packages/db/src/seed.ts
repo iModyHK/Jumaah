@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { PrismaClient } from '@prisma/client';
 import { hashPassword, sha256 } from './crypto.js';
-import { paragraphHash, estimateSeconds, splitIntoParagraphs, toHijri, nextFriday } from '@jumaah/shared';
+import { paragraphHash, estimateSeconds, splitIntoParagraphs, toHijri, nextFriday } from '@jumaah/core';
 
 const prisma = new PrismaClient();
 

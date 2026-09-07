@@ -1,4 +1,4 @@
-import { toHijri } from '@jumaah/shared';
+import { toHijri } from '@jumaah/core';
 
 export function formatGregorian(iso: string, locale: string): string {
   const d = new Date(iso);

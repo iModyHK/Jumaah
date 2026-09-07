@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@jumaah/shared": "workspace:*",
+    "@jumaah/core": "workspace:*",
     "@jumaah/ui": "workspace:*",
     "i18next": "^24.2.0",
     "qrcode": "^1.5.4",

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { KHUTBAH_STATUSES, toHijri, updateKhutbahSchema, type KhutbahDto, type KhutbahStatus } from '@jumaah/shared';
+import { KHUTBAH_STATUSES, toHijri, updateKhutbahSchema, type KhutbahDto, type KhutbahStatus } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Field, FormRow, Select, TextArea, TextInput } from '../../components/Field';

@@ -1,5 +1,5 @@
 import { decryptSecret, type Db, type ProviderConfig } from '@jumaah/db';
-import type { ProviderType } from '@jumaah/shared';
+import type { ProviderType } from '@jumaah/core';
 import {
   ProviderError,
   createProvider,

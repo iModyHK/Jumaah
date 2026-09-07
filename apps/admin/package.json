@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@jumaah/shared": "workspace:*",
+    "@jumaah/core": "workspace:*",
     "@jumaah/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.8",
     "i18next": "^24.2.0",

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { SECTION_TYPES, createKhutbahSchema, nextFriday, toHijri, type KhutbahDto, type SectionType, type TenantDto } from '@jumaah/shared';
+import { SECTION_TYPES, createKhutbahSchema, nextFriday, toHijri, type KhutbahDto, type SectionType, type TenantDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

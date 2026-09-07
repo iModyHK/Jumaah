@@ -9,7 +9,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/admin/package.json apps/admin/
 COPY apps/imam/package.json apps/imam/
 COPY apps/display/package.json apps/display/
-COPY packages/shared/package.json packages/shared/
+COPY packages/jumaah-core/package.json packages/jumaah-core/
 COPY packages/ui/package.json packages/ui/
 RUN pnpm install --frozen-lockfile --filter @jumaah/admin... --filter @jumaah/imam... --filter @jumaah/display...
 
@@ -17,12 +17,12 @@ FROM deps AS build
 ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
 COPY tsconfig.base.json ./
-COPY packages/shared packages/shared
+COPY packages/jumaah-core packages/jumaah-core
 COPY packages/ui packages/ui
 COPY apps/admin apps/admin
 COPY apps/imam apps/imam
 COPY apps/display apps/display
-RUN pnpm --filter @jumaah/shared build \
+RUN pnpm --filter @jumaah/core build \
  && pnpm --filter @jumaah/admin build \
  && pnpm --filter @jumaah/imam build \
  && pnpm --filter @jumaah/display build

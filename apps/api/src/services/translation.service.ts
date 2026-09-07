@@ -1,5 +1,5 @@
 import type { Paragraph, Prisma, TranslationJob } from '@jumaah/db';
-import { ROOMS, type CostEstimate, type ProviderType } from '@jumaah/shared';
+import { ROOMS, type CostEstimate, type ProviderType } from '@jumaah/core';
 import {
   ProviderChainError,
   cacheKey,

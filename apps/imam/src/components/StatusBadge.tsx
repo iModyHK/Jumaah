@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { KhutbahStatus } from '@jumaah/shared';
+import type { KhutbahStatus } from '@jumaah/core';
 
 const TONE: Record<KhutbahStatus, string> = {
   READY: 'var(--j-accent)',

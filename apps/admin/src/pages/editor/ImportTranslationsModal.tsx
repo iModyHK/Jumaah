@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { SECTION_TYPES, getLanguage, importTranslationsSchema, type KhutbahDto, type SectionType } from '@jumaah/shared';
+import { SECTION_TYPES, getLanguage, importTranslationsSchema, type KhutbahDto, type SectionType } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Field, FormRow, Select } from '../../components/Field';

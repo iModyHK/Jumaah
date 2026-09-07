@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { DISPLAY_LAYOUTS, DISPLAY_THEMES, MAX_DISPLAY_LANGUAGES, displaySchema, type DisplayDto, type DisplayLayout, type DisplayTheme } from '@jumaah/shared';
+import { DISPLAY_LAYOUTS, DISPLAY_THEMES, MAX_DISPLAY_LANGUAGES, displaySchema, type DisplayDto, type DisplayLayout, type DisplayTheme } from '@jumaah/core';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

@@ -1,5 +1,5 @@
 import type { Db, Prisma } from '@jumaah/db';
-import { estimateSeconds, paragraphHash, splitIntoParagraphs, toHijri, type SectionType } from '@jumaah/shared';
+import { estimateSeconds, paragraphHash, splitIntoParagraphs, toHijri, type SectionType } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 import type { Actor } from '../lib/audit.js';
 import { audit, outbox } from '../lib/audit.js';

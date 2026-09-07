@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { signupSchema, type SignupResultDto, type SlugCheckDto } from '@jumaah/shared';
+import { signupSchema, type SignupResultDto, type SlugCheckDto } from '@jumaah/core';
 import { badRequest, forbidden } from '../lib/errors.js';
 import { tenantBaseUrlFor } from '../lib/host.js';
 import { parse } from '../lib/validate.js';

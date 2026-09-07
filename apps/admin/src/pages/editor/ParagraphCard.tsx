@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { PARAGRAPH_KINDS, type KhutbahDto, type ParagraphDto, type ParagraphKind } from '@jumaah/shared';
+import { PARAGRAPH_KINDS, type KhutbahDto, type ParagraphDto, type ParagraphKind } from '@jumaah/core';
 import { Button, LangText, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../../api';
 import { useToast } from '../../components/Toast';

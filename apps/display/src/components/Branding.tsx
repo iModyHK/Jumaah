@@ -1,5 +1,5 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react';
-import type { TenantPublicBranding } from '@jumaah/shared';
+import type { TenantPublicBranding } from '@jumaah/core';
 
 const NEUTRAL: TenantPublicBranding = { logoUrl: null, primary: null, accent: null, css: null, hideMark: false };
 

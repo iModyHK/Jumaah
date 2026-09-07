@@ -12,7 +12,7 @@
 | ORM | Prisma 6 | مخطط واضح، migrations مضمّنة، تولّد أنواع كاملة. Drizzle بديل جيد لكن Prisma أسهل للمساهمين. |
 | DB / Cache | PostgreSQL 16 + Redis 7 | RLS في Postgres؛ Redis للحالة اللحظية + pub/sub + rate limit. |
 | Frontends | React 19 + Vite 6 + Tailwind 4 | PWA سهلة عبر `vite-plugin-pwa`؛ Tailwind 4 بلا ملف إعداد. |
-| i18n | i18next + ملفات JSON مشتركة في `packages/shared/src/i18n` | مصدر واحد للنصوص لكل التطبيقات (ar أساسي RTL / en). |
+| i18n | i18next + ملفات JSON مشتركة في `packages/jumaah-core/src/i18n` | مصدر واحد للنصوص لكل التطبيقات (ar أساسي RTL / en). |
 | Fonts | حزم `@fontsource/*` مضمّنة في البناء | لا CDN أبداً: الشاشات تعمل بدون إنترنت. |
 | Password hashing | `scrypt` من `node:crypto` | بدون تبعيات native (argon2/bcrypt تحتاج build على Alpine/ARM). |
 | Secrets at rest | AES-256-GCM بمفتاح مشتق من `ENCRYPTION_KEY` | مفاتيح API لا تُرجع أبداً (فقط hint `sk-a…1234`). |

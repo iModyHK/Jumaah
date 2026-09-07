@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PRAYER_METHODS, computePrayerTimes, tenantLanguagesSchema, tenantSettingsSchema, updateTenantSchema, type PrayerMethod, type TenantDto, type TenantSettings } from '@jumaah/shared';
+import { PRAYER_METHODS, computePrayerTimes, tenantLanguagesSchema, tenantSettingsSchema, updateTenantSchema, type PrayerMethod, type TenantDto, type TenantSettings } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { BackupDto } from '@jumaah/shared';
+import type { BackupDto } from '@jumaah/core';
 import { badRequest } from '../lib/errors.js';
 import { idParam } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';

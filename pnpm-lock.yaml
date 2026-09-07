@@ -26,9 +26,9 @@ importers:
 
   apps/admin:
     dependencies:
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: link:../../packages/jumaah-core
       '@jumaah/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -96,12 +96,12 @@ importers:
       '@fastify/static':
         specifier: ^8.0.3
         version: 8.3.0
+      '@jumaah/core':
+        specifier: workspace:*
+        version: link:../../packages/jumaah-core
       '@jumaah/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@jumaah/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@jumaah/translation-providers':
         specifier: workspace:*
         version: link:../../packages/translation-providers
@@ -160,9 +160,9 @@ importers:
 
   apps/display:
     dependencies:
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: link:../../packages/jumaah-core
       '@jumaah/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -215,9 +215,9 @@ importers:
 
   apps/imam:
     dependencies:
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: link:../../packages/jumaah-core
       '@jumaah/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -264,12 +264,12 @@ importers:
 
   apps/sync-worker:
     dependencies:
+      '@jumaah/core':
+        specifier: workspace:*
+        version: link:../../packages/jumaah-core
       '@jumaah/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@jumaah/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       ioredis:
         specifier: ^5.4.2
         version: 5.11.1
@@ -295,9 +295,9 @@ importers:
 
   packages/db:
     dependencies:
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../shared
+        version: link:../jumaah-core
       '@prisma/client':
         specifier: ^6.1.0
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
@@ -315,7 +315,7 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  packages/shared:
+  packages/jumaah-core:
     dependencies:
       adhan:
         specifier: '4'
@@ -339,9 +339,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.123.0
         version: 0.123.0(zod@3.25.76)
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../shared
+        version: link:../jumaah-core
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -388,9 +388,9 @@ importers:
       '@fontsource/noto-sans-tamil':
         specifier: ^5.1.0
         version: 5.3.0
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../shared
+        version: link:../jumaah-core
       i18next:
         specifier: ^24.2.0
         version: 24.2.3(typescript@5.9.3)
@@ -419,9 +419,9 @@ importers:
 
   tests/e2e:
     dependencies:
-      '@jumaah/shared':
+      '@jumaah/core':
         specifier: workspace:*
-        version: link:../../packages/shared
+        version: link:../../packages/jumaah-core
     devDependencies:
       '@playwright/test':
         specifier: ^1.49.1

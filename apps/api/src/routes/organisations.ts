@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { createOrganisationSchema, organisationAdminSchema, organisationTenantSchema, updateOrganisationSchema, type OrganisationDto } from '@jumaah/shared';
+import { createOrganisationSchema, organisationAdminSchema, organisationTenantSchema, updateOrganisationSchema, type OrganisationDto } from '@jumaah/core';
 import { audit } from '../lib/audit.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';

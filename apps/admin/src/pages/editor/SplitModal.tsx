@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import type { KhutbahDto, ParagraphDto } from '@jumaah/shared';
+import type { KhutbahDto, ParagraphDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Modal } from '../../components/Modal';

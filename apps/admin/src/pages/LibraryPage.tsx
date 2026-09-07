@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { KhutbahDto, LibraryKhutbahDto, Paginated, TenantDto } from '@jumaah/shared';
+import type { KhutbahDto, LibraryKhutbahDto, Paginated, TenantDto } from '@jumaah/core';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
@@ -14,7 +14,7 @@ import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
 import { useToast } from '../components/Toast';
 import { fmtDate, toDateInput } from '../lib/format';
-import { nextFriday } from '@jumaah/shared';
+import { nextFriday } from '@jumaah/core';
 
 const PAGE_SIZE = 24;
 

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { sessionCommandSchema, startSessionSchema } from '@jumaah/shared';
+import { sessionCommandSchema, startSessionSchema } from '@jumaah/core';
 import { z } from 'zod';
 import { audit } from '../lib/audit.js';
 import { parse } from '../lib/validate.js';

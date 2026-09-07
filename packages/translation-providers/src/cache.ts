@@ -1,4 +1,4 @@
-import { fnv1a64, normalizeArabicForHash, type ProviderType } from '@jumaah/shared';
+import { fnv1a64, normalizeArabicForHash, type ProviderType } from '@jumaah/core';
 import { glossaryFingerprint } from './glossary.js';
 import type { GlossaryEntry } from './types.js';
 

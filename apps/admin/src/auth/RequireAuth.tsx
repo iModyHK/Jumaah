@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Role } from '@jumaah/shared';
+import type { Role } from '@jumaah/core';
 import { EmptyState } from '@jumaah/ui';
 import { useAuth } from './AuthProvider';
 

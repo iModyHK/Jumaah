@@ -3,7 +3,7 @@
  * the hosted edition. Every new mosque starts a 30-day trial of the chosen plan.
  */
 import { hashPassword, randomToken, sha256 } from '@jumaah/db';
-import { TRIAL_DAYS, type BillingCycle, type SubscriptionPlan } from '@jumaah/shared';
+import { TRIAL_DAYS, type BillingCycle, type SubscriptionPlan } from '@jumaah/core';
 import { audit, type Actor } from '../lib/audit.js';
 import type { AppContext } from '../lib/context.js';
 import { conflict } from '../lib/errors.js';

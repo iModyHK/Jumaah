@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiRequestError, Button, ConnectionDot, Spinner, deviceId, useLocalStorage, useOnline } from '@jumaah/ui';
-import type { KhutbahDto, KhutbahStatus, LiveKhutbah, LiveSessionSnapshot, Paginated } from '@jumaah/shared';
+import type { KhutbahDto, KhutbahStatus, LiveKhutbah, LiveSessionSnapshot, Paginated } from '@jumaah/core';
 import { api } from '../api';
 import { store, useAppState } from '../state/store';
 import { acceptSnapshot, disconnectLive, refreshFromHttp, setKhutbah } from '../state/live';

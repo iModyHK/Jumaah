@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createSocket, deviceId, type JumaahSocket } from '@jumaah/ui';
-import type { ServerToClientEvents } from '@jumaah/shared';
+import type { ServerToClientEvents } from '@jumaah/core';
 import { getSession } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 

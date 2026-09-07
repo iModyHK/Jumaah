@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TranslationJobDto } from '@jumaah/shared';
+import type { TranslationJobDto } from '@jumaah/core';
 import { Button, StatusPill } from '@jumaah/ui';
 import { api } from '../../api';
 import { ProgressBar } from '../../components/ProgressBar';

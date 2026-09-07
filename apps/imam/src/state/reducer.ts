@@ -1,4 +1,4 @@
-import type { LiveKhutbah, LiveSessionSnapshot, SectionType, SessionCommand } from '@jumaah/shared';
+import type { LiveKhutbah, LiveSessionSnapshot, SectionType, SessionCommand } from '@jumaah/core';
 
 /** Index of the current paragraph in the cached khutbah (falls back to `currentIndex`). */
 export function indexOfParagraph(snap: LiveSessionSnapshot | null, k: LiveKhutbah | null): number {

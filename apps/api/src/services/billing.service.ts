@@ -24,7 +24,7 @@ import {
   type SellerInfoDto,
   type SponsorshipDto,
   type SubscriptionPlan,
-} from '@jumaah/shared';
+} from '@jumaah/core';
 import type { Config } from '../config.js';
 import { audit, type Actor } from '../lib/audit.js';
 import type { AppContext } from '../lib/context.js';

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { forgotPasswordSchema, resetPasswordSchema, type HostInfoDto } from '@jumaah/shared';
+import { forgotPasswordSchema, resetPasswordSchema, type HostInfoDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { Field, TextInput } from '../components/Field';

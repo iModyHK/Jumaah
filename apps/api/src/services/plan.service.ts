@@ -6,7 +6,7 @@
  * the cloud are gated on the cloud side, where the platform keys live.
  */
 import type { Db, ProviderType } from '@jumaah/db';
-import { AI_GRACE_DAYS, PLAN_LIMITS, type AiAllowanceDto, type AiDenyReason, type SubscriptionPlan, type SubscriptionStatus } from '@jumaah/shared';
+import { AI_GRACE_DAYS, PLAN_LIMITS, type AiAllowanceDto, type AiDenyReason, type SubscriptionPlan, type SubscriptionStatus } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 import { HttpError } from '../lib/errors.js';
 

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import type { ArchiveKhutbahDto, ArchiveListDto, HostInfoDto } from '@jumaah/shared';
+import type { ArchiveKhutbahDto, ArchiveListDto, HostInfoDto } from '@jumaah/core';
 import { buildTenantPublicInfo } from '../lib/live-payload.js';
 import { notFound } from '../lib/errors.js';
 import { tenantBaseUrlFor } from '../lib/host.js';

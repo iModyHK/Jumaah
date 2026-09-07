@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { glossaryEntrySchema } from '@jumaah/shared';
+import { glossaryEntrySchema } from '@jumaah/core';
 import { z } from 'zod';
 import { audit, outbox } from '../lib/audit.js';
 import { conflict, notFound } from '../lib/errors.js';

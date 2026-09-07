@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { DomainStatusDto, TenantDto } from '@jumaah/shared';
+import type { DomainStatusDto, TenantDto } from '@jumaah/core';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

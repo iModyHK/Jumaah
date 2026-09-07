@@ -7,7 +7,7 @@ labels: translation
 
 **Language**
 
-**Where the text appears** (screen, imam app, admin page, or file path under `packages/shared/src/i18n/`)
+**Where the text appears** (screen, imam app, admin page, or file path under `packages/jumaah-core/src/i18n/`)
 
 **Current text**
 

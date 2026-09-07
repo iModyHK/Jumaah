@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { WEBHOOK_EVENTS, createApiKeySchema, createWebhookSchema, type ApiKeyDto, type PlanFeatures, type SubscriptionPlan, type WebhookDto, type WebhookEvent } from '@jumaah/shared';
+import { WEBHOOK_EVENTS, createApiKeySchema, createWebhookSchema, type ApiKeyDto, type PlanFeatures, type SubscriptionPlan, type WebhookDto, type WebhookEvent } from '@jumaah/core';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

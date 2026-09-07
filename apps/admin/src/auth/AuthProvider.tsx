@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { AuthResponse, AuthUser, Role } from '@jumaah/shared';
+import type { AuthResponse, AuthUser, Role } from '@jumaah/core';
 import type { StoredSession } from '@jumaah/ui';
 import { activeTenantId, api, getSession, onUnauthorized, setSession, subscribeSession } from '../api';
 

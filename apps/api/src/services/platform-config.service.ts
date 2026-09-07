@@ -7,7 +7,7 @@
  */
 import { apiKeyHint, decryptSecret, encryptSecret } from '@jumaah/db';
 import type { Prisma } from '@jumaah/db';
-import type { PlatformConfigDto, PlatformConfigGroup } from '@jumaah/shared';
+import type { PlatformConfigDto, PlatformConfigGroup } from '@jumaah/core';
 import type { Config } from '../config.js';
 import type { AppContext } from '../lib/context.js';
 

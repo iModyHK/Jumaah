@@ -121,7 +121,7 @@ The marketing site can run in the same stack: set `RESEND_API_KEY`, `SITE_TO_EMA
 
 ### What the hosted edition adds
 
-Everything below is switched on per mosque by its plan (`PLAN_FEATURES` in `packages/shared/src/constants.ts`); a Community server simply has the free plan and the complete core.
+Everything below is switched on per mosque by its plan (`PLAN_FEATURES` in `packages/jumaah-core/src/constants.ts`); a Community server simply has the free plan and the complete core.
 
 - **Plans and AI**: Basic, Standard, Pro and Organisation with a 30-day trial; platform AI metered per mosque with a grace period. Admin → Settings shows the allowance.
 - **Branding and screens**: logo upload, colours, custom CSS, printable QR poster, date and announcements between khutbahs, prayer times computed from the mosque location.
@@ -141,10 +141,10 @@ Kiosk hint (Raspberry Pi OS): `chromium-browser --kiosk --noerrdialogs --disable
 
 ## Adding a translation provider
 
-1. Add the type to `PROVIDER_TYPES` in `packages/shared/src/constants.ts` and to the `ProviderType` enum in `packages/db/prisma/schema.prisma` (`pnpm db:migrate:dev --name add_provider`).
+1. Add the type to `PROVIDER_TYPES` in `packages/jumaah-core/src/constants.ts` and to the `ProviderType` enum in `packages/db/prisma/schema.prisma` (`pnpm db:migrate:dev --name add_provider`).
 2. Implement `TranslationProvider` in `packages/translation-providers/src/providers/<name>.ts` (see `google.ts` for a placeholder-protected MT engine or `anthropic.ts` for an LLM using `buildSystemPrompt`). Throw `ProviderError` with the right code (`AUTH`, `RATE_LIMITED` retryable, `UNSUPPORTED_LANG`…) so the fallback chain behaves.
 3. Register it in `packages/translation-providers/src/registry.ts` (`factories` + `PROVIDER_META`) and add a unit test with a mocked `fetch` in `chain.test.ts`.
-4. Add the display name to `providers.types.*` in `packages/shared/src/i18n/{ar,en}.json`. The admin UI picks it up automatically.
+4. Add the display name to `providers.types.*` in `packages/jumaah-core/src/i18n/{ar,en}.json`. The admin UI picks it up automatically.
 
 ## Environment
 

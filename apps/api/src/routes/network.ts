@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { networkSchema } from '@jumaah/shared';
+import { networkSchema } from '@jumaah/core';
 import { parse } from '../lib/validate.js';
 import { ADMIN_ROLES, ALL_STAFF } from '../plugins/auth.js';
 import { assertNetworkAllowed } from '../services/features.service.js';

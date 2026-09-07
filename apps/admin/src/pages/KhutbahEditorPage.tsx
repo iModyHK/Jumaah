@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { SECTION_TYPES, getLanguage, shareToLibrarySchema, type KhutbahDto, type LibraryKhutbahDto, type ParagraphDto, type SectionDto, type SectionType, type TranslationJobDto } from '@jumaah/shared';
+import { SECTION_TYPES, getLanguage, shareToLibrarySchema, type KhutbahDto, type LibraryKhutbahDto, type ParagraphDto, type SectionDto, type SectionType, type TranslationJobDto } from '@jumaah/core';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

@@ -4,7 +4,7 @@
  * with the x-tenant-id header, exactly as a super admin does, but only inside the organisation.
  */
 import type { Db } from '@jumaah/db';
-import type { OrganisationDto } from '@jumaah/shared';
+import type { OrganisationDto } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 
 const CACHE_TTL_S = 60;

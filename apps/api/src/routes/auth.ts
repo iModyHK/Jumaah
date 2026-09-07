@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { hashPassword, randomToken, sha256, verifyPassword } from '@jumaah/db';
-import { acceptInviteSchema, changePasswordSchema, forgotPasswordSchema, loginSchema, refreshSchema, resetPasswordSchema, type AuthResponse, type AuthUser } from '@jumaah/shared';
+import { acceptInviteSchema, changePasswordSchema, forgotPasswordSchema, loginSchema, refreshSchema, resetPasswordSchema, type AuthResponse, type AuthUser } from '@jumaah/core';
 import { tenantBaseUrlFor } from '../lib/host.js';
 import { sendEmailLater } from '../services/email.service.js';
 import { audit } from '../lib/audit.js';

@@ -3,7 +3,7 @@
  * (branding, signage, archive, …) are what distinguishes the paid edition from the free core. A community server
  * simply has the FREE plan; the core it needs is never listed in PLAN_FEATURES.
  */
-import { PLAN_FEATURES, type ArchiveSettings, type Branding, type NetworkSettings, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/shared';
+import { PLAN_FEATURES, type ArchiveSettings, type Branding, type NetworkSettings, type PlanFeatures, type Signage, type SubscriptionPlan, type TenantPublicBranding, type TenantPublicSignage } from '@jumaah/core';
 import { HttpError } from '../lib/errors.js';
 import { subscriptionState, type SubscriptionLike } from './plan.service.js';
 

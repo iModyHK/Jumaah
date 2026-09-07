@@ -1,4 +1,4 @@
-import type { ProviderType } from '@jumaah/shared';
+import type { ProviderType } from '@jumaah/core';
 import type { CostLine } from './types.js';
 
 /** USD per 1M tokens (LLMs) or per 1M characters (MT engines). Update as vendors change pricing. */

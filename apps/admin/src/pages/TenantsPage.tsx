@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { SUBSCRIPTION_PLANS, SUBSCRIPTION_STATUSES, createTenantSchema, updateTenantSchema, type Paginated, type SubscriptionPlan, type SubscriptionStatus, type TenantDto } from '@jumaah/shared';
+import { SUBSCRIPTION_PLANS, SUBSCRIPTION_STATUSES, createTenantSchema, updateTenantSchema, type Paginated, type SubscriptionPlan, type SubscriptionStatus, type TenantDto } from '@jumaah/core';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

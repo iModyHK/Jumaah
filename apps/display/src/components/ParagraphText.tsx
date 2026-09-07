@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import type { LiveParagraph, ParagraphKind } from '@jumaah/shared';
-import { getLanguage } from '@jumaah/shared';
+import type { LiveParagraph, ParagraphKind } from '@jumaah/core';
+import { getLanguage } from '@jumaah/core';
 import { LangText } from '@jumaah/ui';
 import { phrase } from '../phrases';
 

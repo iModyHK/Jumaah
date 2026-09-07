@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { acceptInviteSchema, type AuthResponse, type Role } from '@jumaah/shared';
+import { acceptInviteSchema, type AuthResponse, type Role } from '@jumaah/core';
 import { Button, EmptyState, Spinner, currentLocale, setLocale } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

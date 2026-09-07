@@ -1,7 +1,7 @@
 import i18next, { type i18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import ar from '@jumaah/shared/i18n/ar.json';
-import en from '@jumaah/shared/i18n/en.json';
+import ar from '@jumaah/core/i18n/ar.json';
+import en from '@jumaah/core/i18n/en.json';
 
 export type UiLocale = 'ar' | 'en';
 

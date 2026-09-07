@@ -1,4 +1,4 @@
-import { LANGUAGES, getLanguage } from '@jumaah/shared';
+import { LANGUAGES, getLanguage } from '@jumaah/core';
 
 /** Multi-select of languages as toggle chips; keeps click order. */
 export function LanguagePicker({

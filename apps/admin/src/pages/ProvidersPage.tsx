@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { providerConfigSchema, type ProviderConfigDto, type ProviderType } from '@jumaah/shared';
+import { providerConfigSchema, type ProviderConfigDto, type ProviderType } from '@jumaah/core';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

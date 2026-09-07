@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { TenantPublicInfo } from '@jumaah/shared';
+import type { TenantPublicInfo } from '@jumaah/core';
 import { LangText } from '@jumaah/ui';
 import { phrase } from '../phrases';
 import { useClock } from './Clock';

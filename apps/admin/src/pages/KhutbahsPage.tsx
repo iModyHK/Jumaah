@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KHUTBAH_STATUSES, copyKhutbahSchema, type KhutbahDto, type Paginated } from '@jumaah/shared';
+import { KHUTBAH_STATUSES, copyKhutbahSchema, type KhutbahDto, type Paginated } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { bulkTranslateSchema, importTranslationsSchema, reviewTranslationSchema, upsertTranslationSchema, type TranslationStatus } from '@jumaah/shared';
+import { bulkTranslateSchema, importTranslationsSchema, reviewTranslationSchema, upsertTranslationSchema, type TranslationStatus } from '@jumaah/core';
 import { z } from 'zod';
 import { audit, outbox } from '../lib/audit.js';
 import { badRequest, notFound } from '../lib/errors.js';

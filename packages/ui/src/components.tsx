@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { getLanguage } from '@jumaah/shared';
+import { getLanguage } from '@jumaah/core';
 
 /** Renders text with the right direction, font stack and line-height for its language. */
 export function LangText({

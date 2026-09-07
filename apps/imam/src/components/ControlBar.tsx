@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button } from '@jumaah/ui';
-import type { SessionState } from '@jumaah/shared';
+import type { SessionState } from '@jumaah/core';
 
 export interface ControlBarProps {
   state: SessionState;

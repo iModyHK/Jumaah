@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
-import type { Role } from '@jumaah/shared';
+import type { Role } from '@jumaah/core';
 
 export interface AccessClaims {
   sub: string;

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import type { InsightDto, PlanFeatures, SubscriptionPlan } from '@jumaah/shared';
+import type { InsightDto, PlanFeatures, SubscriptionPlan } from '@jumaah/core';
 import { Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

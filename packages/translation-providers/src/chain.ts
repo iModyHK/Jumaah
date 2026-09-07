@@ -1,4 +1,4 @@
-import type { ProviderType } from '@jumaah/shared';
+import type { ProviderType } from '@jumaah/core';
 import { ProviderError, isAbort, type TranslateRequest, type TranslateResult, type TranslationProvider } from './types.js';
 
 export interface ChainAttempt {

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { LiveKhutbah, LiveSessionSnapshot } from '@jumaah/shared';
+import type { LiveKhutbah, LiveSessionSnapshot } from '@jumaah/core';
 import { loadSession, type StoredSession } from '@jumaah/ui';
 
 export type Screen = 'pick' | 'live';

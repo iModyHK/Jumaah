@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getLanguage, type ArchiveKhutbahDto, type ArchiveListDto, type LiveParagraph, type SectionType } from '@jumaah/shared';
+import { getLanguage, type ArchiveKhutbahDto, type ArchiveListDto, type LiveParagraph, type SectionType } from '@jumaah/core';
 import { apiBaseUrl, LangText, useLocalStorage } from '@jumaah/ui';
 import { Branded, JumaahMark } from '../components/Branding';
 import { CenterMessage } from '../components/Overlays';

@@ -18,7 +18,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@jumaah/shared": "workspace:*",
+    "@jumaah/core": "workspace:*",
     "@anthropic-ai/sdk": "^0.123.0",
     "zod": "^3.24.1"
   },

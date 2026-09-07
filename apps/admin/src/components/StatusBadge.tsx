@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { KhutbahStatus, TranslationStatus } from '@jumaah/shared';
+import type { KhutbahStatus, TranslationStatus } from '@jumaah/core';
 import { StatusPill } from '@jumaah/ui';
 
 const KHUTBAH_TONE: Record<KhutbahStatus, 'ok' | 'warn' | 'danger' | 'muted'> = {

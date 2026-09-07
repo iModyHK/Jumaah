@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { PLAN_PRICES_SAR, applySponsorshipSchema, billingSettingsSchema, customInvoiceSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/shared';
+import { PLAN_PRICES_SAR, applySponsorshipSchema, billingSettingsSchema, customInvoiceSchema, markPaidSchema, sponsorSchema, subscribeSchema, type BillingOverviewDto, type PlatformBillingDto, type PublicInvoiceDto, type SponsorResultDto } from '@jumaah/core';
 import { z } from 'zod';
 import { badRequest, forbidden, notFound } from '../lib/errors.js';
 import { idParam, parse } from '../lib/validate.js';

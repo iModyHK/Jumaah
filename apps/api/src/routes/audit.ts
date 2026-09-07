@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { paginationSchema, type AuditLogDto } from '@jumaah/shared';
+import { paginationSchema, type AuditLogDto } from '@jumaah/core';
 import { z } from 'zod';
 import { parse } from '../lib/validate.js';
 import { ADMIN_ROLES } from '../plugins/auth.js';

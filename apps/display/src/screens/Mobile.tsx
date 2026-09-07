@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getLanguage } from '@jumaah/shared';
+import { getLanguage } from '@jumaah/core';
 import { Button, ConnectionDot, LangText, useLocalStorage, useWakeLock } from '@jumaah/ui';
 import { useTheme } from '../kiosk';
 import { Branded, JumaahMark } from '../components/Branding';

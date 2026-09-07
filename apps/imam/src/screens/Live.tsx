@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, ConnectionDot, useFullscreen, useLocalStorage, useNow, useOnline, useSwipe, useWakeLock } from '@jumaah/ui';
-import type { SessionCommand } from '@jumaah/shared';
+import type { SessionCommand } from '@jumaah/core';
 import { store, useAppState } from '../state/store';
 import { sendCommand, startHeartbeat, stopHeartbeat } from '../state/live';
 import { hasSection, indexOfParagraph, remainingSeconds } from '../state/reducer';

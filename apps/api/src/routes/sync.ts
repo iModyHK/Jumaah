@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { applySyncEntries, sha256 } from '@jumaah/db';
-import { OUTBOX_MAX_ATTEMPTS, remoteTranslateSchema, syncPullSchema, syncPushSchema, type SyncStatusDto } from '@jumaah/shared';
+import { OUTBOX_MAX_ATTEMPTS, remoteTranslateSchema, syncPullSchema, syncPushSchema, type SyncStatusDto } from '@jumaah/core';
 import { z } from 'zod';
 import { audit } from '../lib/audit.js';
 import { forbidden, unauthorized } from '../lib/errors.js';

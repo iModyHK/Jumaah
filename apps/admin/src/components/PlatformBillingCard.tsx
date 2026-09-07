@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { formatSar, type Paginated, type PlatformBillingDto, type TenantDto } from '@jumaah/shared';
+import { formatSar, type Paginated, type PlatformBillingDto, type TenantDto } from '@jumaah/core';
 import { Button, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { Field, Select, TextInput } from './Field';

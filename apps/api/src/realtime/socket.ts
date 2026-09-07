@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import type { Server as HttpServer } from 'node:http';
-import { ROOMS, sessionCommandSchema, type DisplayConfig, type SessionCommand } from '@jumaah/shared';
+import { ROOMS, sessionCommandSchema, type DisplayConfig, type SessionCommand } from '@jumaah/core';
 import type { Redis } from 'ioredis';
 import type { AppContext, IO } from '../lib/context.js';
 import { tenantBaseUrlFor } from '../lib/host.js';

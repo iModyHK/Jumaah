@@ -1,5 +1,5 @@
 import type { Db } from '@jumaah/db';
-import type { LiveKhutbah, LiveParagraph, TenantPublicInfo } from '@jumaah/shared';
+import type { LiveKhutbah, LiveParagraph, TenantPublicInfo } from '@jumaah/core';
 import { archiveEnabled, effectiveBranding, effectiveSignage } from '../services/features.service.js';
 
 /** Build the payload displays/imam receive: full khutbah tree with translation statuses. */

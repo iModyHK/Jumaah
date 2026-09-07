@@ -1,4 +1,4 @@
-import { getLanguage } from '@jumaah/shared';
+import { getLanguage } from '@jumaah/core';
 import { applicableGlossary, glossaryInstructions } from './glossary.js';
 import type { TranslateRequest } from './types.js';
 

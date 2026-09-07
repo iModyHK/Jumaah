@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TenantPublicInfo } from '@jumaah/shared';
+import type { TenantPublicInfo } from '@jumaah/core';
 import { apiBaseUrl, LangText } from '@jumaah/ui';
 import { Branded, JumaahMark } from '../components/Branding';
 import { QrCode } from '../components/QrCode';

@@ -1,4 +1,4 @@
-import type { ApiError, AuthResponse, AuthUser, HostInfoDto } from '@jumaah/shared';
+import type { ApiError, AuthResponse, AuthUser, HostInfoDto } from '@jumaah/core';
 
 export class ApiRequestError extends Error {
   constructor(

@@ -4,7 +4,7 @@
  * apply on both sides via SyncApplied ids). Also checks the latest edge image tag for the admin UI.
  */
 import { createPrisma, applySyncEntries, type SyncEntry } from '@jumaah/db';
-import { OUTBOX_MAX_ATTEMPTS } from '@jumaah/shared';
+import { OUTBOX_MAX_ATTEMPTS } from '@jumaah/core';
 import { Redis } from 'ioredis';
 import pino from 'pino';
 

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { computePrayerTimes, isFriday, type TenantPublicInfo } from '@jumaah/shared';
+import { computePrayerTimes, isFriday, type TenantPublicInfo } from '@jumaah/core';
 import { useNow } from '@jumaah/ui';
 
 const FIVE = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;

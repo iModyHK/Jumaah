@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client';
-import type { ClientToServerEvents, ServerToClientEvents } from '@jumaah/shared';
+import type { ClientToServerEvents, ServerToClientEvents } from '@jumaah/core';
 import { apiBaseUrl } from './api.js';
 
 export type JumaahSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

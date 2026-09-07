@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HostInfoDto } from '@jumaah/shared';
+import type { HostInfoDto } from '@jumaah/core';
 import { ApiRequestError, Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { store } from '../state/store';

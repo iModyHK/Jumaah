@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/api/package.json apps/api/
 COPY apps/sync-worker/package.json apps/sync-worker/
-COPY packages/shared/package.json packages/shared/
+COPY packages/jumaah-core/package.json packages/jumaah-core/
 COPY packages/db/package.json packages/db/
 COPY packages/db/prisma packages/db/prisma
 COPY packages/translation-providers/package.json packages/translation-providers/
@@ -16,17 +16,17 @@ COPY packages/translation-providers/package.json packages/translation-providers/
 FROM base AS build
 RUN pnpm install --frozen-lockfile --filter @jumaah/sync-worker... --filter @jumaah/db...
 COPY tsconfig.base.json ./
-COPY packages/shared packages/shared
+COPY packages/jumaah-core packages/jumaah-core
 COPY packages/db packages/db
 COPY apps/sync-worker apps/sync-worker
-RUN pnpm --filter @jumaah/shared build && pnpm --filter @jumaah/db build && pnpm --filter @jumaah/sync-worker build
+RUN pnpm --filter @jumaah/core build && pnpm --filter @jumaah/db build && pnpm --filter @jumaah/sync-worker build
 
 FROM base AS prod
 ENV NODE_ENV=production
 RUN pnpm install --frozen-lockfile --prod --filter @jumaah/sync-worker... --filter @jumaah/db... \
  && pnpm --filter @jumaah/db exec prisma generate
 RUN rm -rf node_modules/.pnpm/typescript@* pnpm-lock.yaml
-COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/jumaah-core/dist packages/jumaah-core/dist
 COPY --from=build /app/packages/db/dist packages/db/dist
 COPY --from=build /app/apps/sync-worker/dist apps/sync-worker/dist
 

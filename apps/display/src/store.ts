@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
-import type { DisplayConfig, LiveKhutbah, LiveParagraph, LiveSessionSnapshot, TenantPublicInfo } from '@jumaah/shared';
+import type { DisplayConfig, LiveKhutbah, LiveParagraph, LiveSessionSnapshot, TenantPublicInfo } from '@jumaah/core';
 import { apiBaseUrl, createSocket, deviceId, measureClockOffset, type JumaahSocket } from '@jumaah/ui';
 
 export type LiveSource = { kind: 'display'; token: string } | { kind: 'mobile'; slug: string };

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { hashPassword, randomToken, sha256 } from '@jumaah/db';
-import { createUserSchema, inviteUserSchema, paginationSchema, updateUserSchema } from '@jumaah/shared';
+import { createUserSchema, inviteUserSchema, paginationSchema, updateUserSchema } from '@jumaah/core';
 import { audit } from '../lib/audit.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { tenantBaseUrlFor } from '../lib/host.js';

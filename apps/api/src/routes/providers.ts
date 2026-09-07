@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { apiKeyHint, encryptSecret } from '@jumaah/db';
-import { providerConfigSchema, providerTestSchema, type ProviderType } from '@jumaah/shared';
+import { providerConfigSchema, providerTestSchema, type ProviderType } from '@jumaah/core';
 import { PROVIDER_META, listProviderTypes } from '@jumaah/translation-providers';
 import { z } from 'zod';
 import { audit } from '../lib/audit.js';

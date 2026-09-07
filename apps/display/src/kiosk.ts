@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DISPLAY_THEMES, type DisplayTheme } from '@jumaah/shared';
+import { DISPLAY_THEMES, type DisplayTheme } from '@jumaah/core';
 import { useFullscreen, useWakeLock } from '@jumaah/ui';
 
 export function normalizeTheme(theme: string | null | undefined): DisplayTheme {

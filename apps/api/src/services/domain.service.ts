@@ -4,7 +4,7 @@
  * and Caddy is allowed to fetch a certificate for it on demand (GET /public/domain-check).
  */
 import { promises as dns } from 'node:dns';
-import { HOSTNAME_RE } from '@jumaah/shared';
+import { HOSTNAME_RE } from '@jumaah/core';
 import type { Config } from '../config.js';
 import type { AppContext } from '../lib/context.js';
 import { hostnameOf } from '../lib/host.js';

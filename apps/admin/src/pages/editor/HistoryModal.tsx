@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getLanguage, type ProviderType, type TranslationStatus } from '@jumaah/shared';
+import { getLanguage, type ProviderType, type TranslationStatus } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../../api';
 import { Modal } from '../../components/Modal';

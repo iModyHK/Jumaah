@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createOrganisationSchema, ORG_MAX_TENANTS, type OrganisationDto, type Paginated, type TenantDto } from '@jumaah/shared';
+import { createOrganisationSchema, ORG_MAX_TENANTS, type OrganisationDto, type Paginated, type TenantDto } from '@jumaah/core';
 import { Button, EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { Field, FormRow, Select, TextInput } from '../components/Field';

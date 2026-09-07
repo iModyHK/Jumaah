@@ -7,7 +7,7 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import { promises as dns } from 'node:dns';
 import type { Webhook } from '@jumaah/db';
-import type { WebhookEvent } from '@jumaah/shared';
+import type { WebhookEvent } from '@jumaah/core';
 import type { AppContext } from '../lib/context.js';
 import { tenantFeatures } from './features.service.js';
 

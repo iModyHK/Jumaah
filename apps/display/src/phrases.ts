@@ -1,5 +1,5 @@
 /**
- * Short on-screen phrases in every supported language (see packages/shared/src/languages.ts).
+ * Short on-screen phrases in every supported language (see packages/jumaah-core/src/languages.ts).
  * These are rendered inside each language panel, so they must exist for every code; English is the fallback.
  */
 export type PhraseKey = 'imamSpeaking' | 'translationPending' | 'paused' | 'ended' | 'waiting';

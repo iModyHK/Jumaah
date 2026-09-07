@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { brandingSchema, type Branding, type PlanFeatures, type SubscriptionPlan, type TenantDto } from '@jumaah/shared';
+import { brandingSchema, type Branding, type PlanFeatures, type SubscriptionPlan, type TenantDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { mergeParagraphSchema, paragraphInputSchema, reorderParagraphsSchema, splitParagraphSchema, updateParagraphSchema } from '@jumaah/shared';
+import { mergeParagraphSchema, paragraphInputSchema, reorderParagraphsSchema, splitParagraphSchema, updateParagraphSchema } from '@jumaah/core';
 import { khutbahDto, paragraphDto } from '../lib/serialize.js';
 import { idParam, parse } from '../lib/validate.js';
 import { EDITOR_ROLES } from '../plugins/auth.js';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatSar, type PublicInvoiceDto } from '@jumaah/shared';
+import { formatSar, type PublicInvoiceDto } from '@jumaah/core';
 import { apiBaseUrl, LangText } from '@jumaah/ui';
 import { CenterMessage } from '../components/Overlays';
 import { QrCode } from '../components/QrCode';

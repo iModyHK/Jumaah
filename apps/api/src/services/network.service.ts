@@ -5,7 +5,7 @@
  * switches publishing off takes its contributions down again.
  */
 import type { Db, Prisma } from '@jumaah/db';
-import type { NetworkSettings, NetworkStatusDto } from '@jumaah/shared';
+import type { NetworkSettings, NetworkStatusDto } from '@jumaah/core';
 import { audit, outbox, type Actor } from '../lib/audit.js';
 import type { AppContext } from '../lib/context.js';
 import { tenantFeatures } from './features.service.js';

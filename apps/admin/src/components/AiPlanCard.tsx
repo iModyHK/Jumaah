@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { PARAGRAPHS_PER_KHUTBAH_UNIT, type AiAllowanceDto } from '@jumaah/shared';
+import { PARAGRAPHS_PER_KHUTBAH_UNIT, type AiAllowanceDto } from '@jumaah/core';
 import { StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

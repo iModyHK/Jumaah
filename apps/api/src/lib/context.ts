@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@jumaah/db';
 import type { Redis } from 'ioredis';
 import type { Server as SocketServer } from 'socket.io';
-import type { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from '@jumaah/shared';
+import type { ClientToServerEvents, InterServerEvents, ServerToClientEvents, SocketData } from '@jumaah/core';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Config } from '../config.js';
 

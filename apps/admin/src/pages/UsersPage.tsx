@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { inviteUserSchema, updateUserSchema, type Paginated, type Role, type UserDto } from '@jumaah/shared';
+import { inviteUserSchema, updateUserSchema, type Paginated, type Role, type UserDto } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

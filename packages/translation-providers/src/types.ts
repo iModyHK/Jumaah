@@ -1,4 +1,4 @@
-import type { GlossaryMode, ParagraphKind, ProviderType } from '@jumaah/shared';
+import type { GlossaryMode, ParagraphKind, ProviderType } from '@jumaah/core';
 
 export interface GlossaryEntry {
   term: string;

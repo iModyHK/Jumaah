@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { getLanguage, type KhutbahDto, type LiveKhutbah, type LiveSessionSnapshot, type Paginated } from '@jumaah/shared';
+import { getLanguage, type KhutbahDto, type LiveKhutbah, type LiveSessionSnapshot, type Paginated } from '@jumaah/core';
 import { EmptyState, Spinner, StatusPill } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

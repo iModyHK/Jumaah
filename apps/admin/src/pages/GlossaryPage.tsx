@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { GLOSSARY_MODES, LANGUAGES, getLanguage, glossaryEntrySchema, type GlossaryDto, type GlossaryMode } from '@jumaah/shared';
+import { GLOSSARY_MODES, LANGUAGES, getLanguage, glossaryEntrySchema, type GlossaryDto, type GlossaryMode } from '@jumaah/core';
 import { Button, Spinner } from '@jumaah/ui';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';

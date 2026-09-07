@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import type { BillingOverviewDto } from '@jumaah/shared';
+import type { BillingOverviewDto } from '@jumaah/core';
 import { api } from '../api';
 import { useAuth } from '../auth/AuthProvider';
 import { fmtDate } from '../lib/format';

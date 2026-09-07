@@ -1,9 +1,7 @@
 /* eslint-disable no-console */
-import { PrismaClient } from '@prisma/client';
-import { hashPassword, sha256 } from './crypto.js';
+import type { PrismaClient } from '@prisma/client';
+import { hashPassword } from './crypto.js';
 import { paragraphHash, estimateSeconds, splitIntoParagraphs, toHijri, nextFriday } from '@jumaah/core';
-
-const prisma = new PrismaClient();
 
 const SUPER_ADMIN_EMAIL = process.env.SEED_SUPER_ADMIN_EMAIL ?? 'admin@jumaah.app';
 const SUPER_ADMIN_PASSWORD = process.env.SEED_SUPER_ADMIN_PASSWORD ?? 'Admin12345!';
@@ -13,7 +11,6 @@ const DEMO_SLUG = 'demo';
 // Fixed tokens so docs / e2e tests can reference them.
 export const DEMO_DISPLAY_TOKEN_MAIN = 'demo-main-display-token-0001';
 export const DEMO_DISPLAY_TOKEN_HALL = 'demo-hall-display-token-0002';
-export const DEMO_SYNC_KEY = 'demo-sync-key-change-me';
 
 const FIRST_KHUTBAH_AR = `الحمد لله رب العالمين، والصلاة والسلام على أشرف الأنبياء والمرسلين، نبينا محمد وعلى آله وصحبه أجمعين. أما بعد، فأوصيكم عباد الله ونفسي بتقوى الله عز وجل، فإنها وصية الله للأولين والآخرين.
 
@@ -104,7 +101,8 @@ const DUA_TR: Tr = {
   ],
 };
 
-async function main() {
+/** Seed the super admin and the demo mosque. Returns the ids other seeds build on. */
+export async function seed(prisma: PrismaClient): Promise<{ superAdminId: string; tenantId: string }> {
   console.log('Seeding…');
 
   // ---- Super admin (no tenant)
@@ -131,10 +129,7 @@ async function main() {
       slug: DEMO_SLUG,
       timezone: 'Asia/Riyadh',
       locale: 'ar',
-      plan: 'PRO',
-      subscriptionStatus: 'ACTIVE',
       librarySharingAllowed: true,
-      syncKeyHash: sha256(DEMO_SYNC_KEY),
       settings: {
         welcomeMessage: 'مرحباً بكم في المسجد التجريبي — تقبل الله طاعتكم',
         welcomeMessageEn: 'Welcome to the Demo Mosque',
@@ -351,20 +346,8 @@ async function main() {
     create: { tenantId: tenant.id, deviceId: 'seed-edge-device' },
   });
 
-  await prisma.platformSetting.upsert({
-    where: { key: 'edge.latestImageTag' },
-    update: {},
-    create: { key: 'edge.latestImageTag', value: { tag: process.env.IMAGE_TAG ?? '1.0.0' } },
-  });
-
   console.log(`Seeded. Super admin: ${superAdmin.email} / ${SUPER_ADMIN_PASSWORD}`);
   console.log(`Demo tenant "${tenant.slug}": admin@demo.mosque, translator@demo.mosque, imam@demo.mosque / ${DEMO_PASSWORD}`);
   console.log(`Display tokens: ${DEMO_DISPLAY_TOKEN_MAIN}, ${DEMO_DISPLAY_TOKEN_HALL}`);
+  return { superAdminId: superAdmin.id, tenantId: tenant.id };
 }
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());

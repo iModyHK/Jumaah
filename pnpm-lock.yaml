@@ -293,6 +293,34 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.20.1)(lightningcss@1.32.0)(terser@5.51.2)
 
+  cloud/db:
+    dependencies:
+      '@jumaah/cloud-shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@jumaah/core':
+        specifier: workspace:*
+        version: link:../../packages/jumaah-core
+      '@jumaah/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@prisma/client':
+        specifier: ^6.1.0
+        version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      prisma:
+        specifier: ^6.1.0
+        version: 6.19.3(typescript@5.9.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.20.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.13
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   cloud/shared:
     dependencies:
       '@jumaah/core':

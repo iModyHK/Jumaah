@@ -20,7 +20,7 @@ case "${1:-api}" in
     (cd packages/db && ./node_modules/.bin/prisma migrate deploy)
     if [ "${SEED_ON_START:-0}" = "1" ]; then
       echo "seeding (SEED_ON_START=1)"
-      (cd packages/db && node dist/seed.js) || echo "seed skipped/failed (non-fatal)"
+      (cd packages/db && node dist/seed-run.js) || echo "seed skipped/failed (non-fatal)"
     fi
     exec node apps/api/dist/server.js
     ;;
@@ -34,7 +34,7 @@ case "${1:-api}" in
     ;;
   seed)
     wait_for_db
-    exec sh -c "cd packages/db && node dist/seed.js"
+    exec sh -c "cd packages/db && node dist/seed-run.js"
     ;;
   *)
     exec "$@"

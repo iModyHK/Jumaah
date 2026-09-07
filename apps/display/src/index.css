@@ -283,7 +283,7 @@ html.j-kiosk body {
   justify-content: center;
   text-align: center;
   gap: 2vmin;
-  padding: 3vmin 4vmin;
+  padding: 2vmin 4vmin;
   overflow: hidden;
 }
 /* The wall board: laid out at its natural size, then scaled down by FitBox when the screen is shorter. */
@@ -295,6 +295,52 @@ html.j-kiosk body {
   align-items: center;
   gap: 2vmin;
   transform-origin: center;
+}
+.j-idle-head,
+.j-idle-main,
+.j-idle-ann,
+.j-idle-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vmin;
+  min-width: 0;
+}
+/* Wide screens: the announcement sits beside the clock and the QR beside the prayer times, so the board
+   uses the width instead of being shrunk to fit the height. */
+@media (min-aspect-ratio: 4/3) {
+  .j-idle-fit[data-side] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 36vw);
+    grid-template-areas:
+      'head head'
+      'main ann'
+      'foot qr';
+    column-gap: 4vw;
+    row-gap: 2vmin;
+    align-items: center;
+    justify-items: center;
+  }
+  .j-idle-fit[data-side] .j-idle-head {
+    grid-area: head;
+  }
+  .j-idle-fit[data-side] .j-idle-main {
+    grid-area: main;
+  }
+  .j-idle-fit[data-side] .j-idle-ann {
+    grid-area: ann;
+    width: 100%;
+  }
+  .j-idle-fit[data-side] .j-idle-foot {
+    grid-area: foot;
+  }
+  .j-idle-fit[data-side] .j-qr {
+    grid-area: qr;
+    margin-top: 0;
+  }
+  .j-idle-fit[data-side] .j-announce {
+    max-width: 100%;
+  }
 }
 .j-idle-logo {
   max-height: 16vmin;

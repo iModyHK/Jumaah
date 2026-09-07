@@ -1,11 +1,21 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react';
 
 /**
  * Scales its content down (never up) so the whole block stays visible inside the box, whatever the
  * screen's shape and however many lines the mosque shows. Sizes elsewhere are in vmin, which fits a
  * square-ish screen but overflows a 16:9 wall screen once logo, welcome lines, announcements and QR are all on.
  */
-export function FitBox({ className = '', innerClassName = '', children }: { className?: string; innerClassName?: string; children: ReactNode }) {
+export function FitBox({
+  className = '',
+  innerClassName = '',
+  innerProps,
+  children,
+}: {
+  className?: string;
+  innerClassName?: string;
+  innerProps?: HTMLAttributes<HTMLDivElement> & Record<`data-${string}`, unknown>;
+  children: ReactNode;
+}) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -34,7 +44,7 @@ export function FitBox({ className = '', innerClassName = '', children }: { clas
 
   return (
     <div ref={outer} className={className}>
-      <div ref={inner} className={innerClassName} style={scale < 1 ? { transform: `scale(${scale})` } : undefined}>
+      <div ref={inner} {...innerProps} className={innerClassName} style={scale < 1 ? { transform: `scale(${scale})` } : undefined}>
         {children}
       </div>
     </div>

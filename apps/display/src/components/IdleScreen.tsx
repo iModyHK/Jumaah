@@ -35,8 +35,11 @@ export function IdleScreen({
   // During the week the screen is a prayer-times and announcements board; the waiting line belongs to Friday.
   const waiting = !compact && (friday || expecting);
 
-  const body = (
-    <>
+  const announcements = tenant.signage?.announcements?.length ? tenant.signage.announcements : null;
+  const hasSide = !compact && !!(announcements || qrUrl);
+
+  const head = (
+    <div className="j-idle-head">
       {logoUrl && <img src={logoUrl} alt="" className="j-idle-logo" draggable={false} />}
       <LangText lang={tenant.locale} as="h1" className="j-idle-name" style={{ textAlign: 'center', margin: 0 }}>
         {tenant.name}
@@ -51,23 +54,35 @@ export function IdleScreen({
           {tenant.welcomeMessageEn}
         </LangText>
       )}
+    </div>
+  );
+  const main = (
+    <div className="j-idle-main">
       <div className="j-idle-clock" dir="ltr">
         {time}
       </div>
       {tenant.signage?.showDate && <DateLine offsetMs={offsetMs} timeZone={tenant.timezone} locale={tenant.locale} />}
-      {tenant.signage?.announcements?.length ? <Announcements items={tenant.signage.announcements} compact={compact} /> : null}
+    </div>
+  );
+  const announce = announcements ? (
+    <div className="j-idle-ann">
+      <Announcements items={announcements} compact={compact} />
+    </div>
+  ) : null;
+  const qr = qrUrl && (
+    <div className="j-qr">
+      <QrCode value={qrUrl} />
+      <div className="j-qr-caption">
+        <LangText lang="ar">{t('display.scanQr', { lng: 'ar' })}</LangText>
+        <LangText lang="en" style={{ opacity: 0.8, fontSize: '0.85em' }}>
+          {t('display.scanQr', { lng: 'en' })}
+        </LangText>
+      </div>
+    </div>
+  );
+  const foot = (
+    <div className="j-idle-foot">
       <PrayerTimesRow tenant={tenant} offsetMs={offsetMs} />
-      {qrUrl && (
-        <div className="j-qr">
-          <QrCode value={qrUrl} />
-          <div className="j-qr-caption">
-            <LangText lang="ar">{t('display.scanQr', { lng: 'ar' })}</LangText>
-            <LangText lang="en" style={{ opacity: 0.8, fontSize: '0.85em' }}>
-              {t('display.scanQr', { lng: 'en' })}
-            </LangText>
-          </div>
-        </div>
-      )}
       {waiting && (
         <div className="j-idle-waiting">
           <LangText lang="ar" as="span">
@@ -83,13 +98,30 @@ export function IdleScreen({
           ))}
         </div>
       )}
-    </>
+    </div>
   );
-  // Wall screens are a fixed box: the board shrinks to fit it. On a phone the page scrolls instead.
-  if (compact) return <div className="j-idle j-fade-in">{body}</div>;
+
+  // Phones scroll a single column. Wall screens are a fixed box: on a wide (16:9) screen the announcement sits
+  // beside the clock and the QR beside the prayer times, and FitBox shrinks the board only if it still does not
+  // fit (a tall 4:3 screen, or a very long welcome).
+  if (compact) {
+    return (
+      <div className="j-idle j-fade-in">
+        {head}
+        {main}
+        {announce}
+        {foot}
+        {qr}
+      </div>
+    );
+  }
   return (
-    <FitBox className="j-idle j-fade-in" innerClassName="j-idle-fit">
-      {body}
+    <FitBox className="j-idle j-fade-in" innerClassName="j-idle-fit" innerProps={{ 'data-side': hasSide || undefined }}>
+      {head}
+      {main}
+      {announce}
+      {foot}
+      {qr}
     </FitBox>
   );
 }

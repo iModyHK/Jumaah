@@ -16,7 +16,7 @@
     "@fastify/helmet": "^13.0.0",
     "@fastify/multipart": "^10.1.1",
     "@fastify/rate-limit": "^10.2.1",
-    "@fastify/static": "^8.0.3",
+    "@fastify/static": "^10.1.3",
     "@jumaah/core": "workspace:*",
     "@jumaah/db": "workspace:*",
     "@jumaah/translation-providers": "workspace:*",

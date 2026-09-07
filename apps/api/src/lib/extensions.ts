@@ -66,6 +66,9 @@ export interface NetworkHit {
   sourceTenantId: string;
 }
 
+/** What a `quota` hook may cap. */
+export type QuotaKind = 'display' | 'user' | 'language';
+
 export interface CoreHooks {
   /** Label for /health and the admin: 'community' unless an extension says otherwise. */
   mode?: string;
@@ -97,6 +100,11 @@ export interface CoreHooks {
   aiGate?(ctx: AppContext, tenantId: string): Promise<AiGate | null>;
   /** Extra instructions for the LLM translators (tone, dialect, audience), appended to the built-in prompt. */
   translationInstructions?(ctx: AppContext, tenantId: string): Promise<string | null>;
+  /**
+   * Called before a mosque creates one more row of `kind`. An extension (the hosted edition's plans) throws to refuse;
+   * the Community server sets no hook, so nothing is ever capped there.
+   */
+  quota?(ctx: AppContext, tenantId: string, kind: QuotaKind, current: number): Promise<void>;
   recordAiUsage?(ctx: AppContext, tenantId: string, usage: { khutbahId?: string | null; lang: string; source: string; providerType: string; paragraphs: number; characters: number }): Promise<void>;
   /** Shared translation network: a reviewed translation of the same Arabic from elsewhere, if the mosque may read it. */
   networkLookup?(ctx: AppContext, tenantId: string, hash: string, lang: string): Promise<NetworkHit | null>;

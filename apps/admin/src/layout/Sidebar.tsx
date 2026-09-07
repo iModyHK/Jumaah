@@ -17,8 +17,8 @@ const ITEMS: AdminNavItem[] = [
   { to: '/sync', key: 'nav.sync', icon: '☁', admin: true, needsTenant: true },
 ];
 const TAIL: AdminNavItem[] = [
-  { to: '/tenants', key: 'nav.tenants', icon: '🕌', superOnly: true },
-  { to: '/platform', key: 'tenants.platform', icon: '◎', superOnly: true },
+  { to: '/tenants', key: 'nav.tenants', icon: '🕌', superOnly: true, group: 'nav.groups.platform' },
+  { to: '/platform', key: 'tenants.platform', icon: '◎', superOnly: true, group: 'nav.groups.platform' },
 ];
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -26,6 +26,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { isAdmin, isSuper, tenantId, user } = useAuth();
   const ext = useExtensions();
   const visible = [...ITEMS, ...ext.nav, ...TAIL].filter((i) => (!i.admin || isAdmin) && (!i.superOnly || isSuper) && (!i.visible || i.visible(user)) && (!i.needsTenant || tenantId || !isSuper));
+  // Items keep their order; each heading appears once, before the first item that names it.
+  const groups: Array<{ key: string | undefined; items: AdminNavItem[] }> = [];
+  for (const i of visible) {
+    const last = groups[groups.length - 1];
+    if (last && last.key === i.group) last.items.push(i);
+    else groups.push({ key: i.group, items: [i] });
+  }
   return (
     <nav className="flex h-full flex-col gap-1 p-3">
       <div className="mb-3 flex items-center gap-2 px-2 py-2">
@@ -37,11 +44,16 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           <div className="j-muted text-[0.65rem]">{t('app.tagline')}</div>
         </div>
       </div>
-      {visible.map((i) => (
-        <NavLink key={i.to} to={i.to} end={i.to === '/'} className="j-nav-link" onClick={onNavigate}>
-          <span className="w-5 text-center text-sm opacity-70">{i.icon}</span>
-          <span>{t(i.key)}</span>
-        </NavLink>
+      {groups.map((g, gi) => (
+        <div key={gi} className={g.key ? 'mt-4' : undefined}>
+          {g.key && <div className="j-muted px-3 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider">{t(g.key)}</div>}
+          {g.items.map((i) => (
+            <NavLink key={i.to} to={i.to} end={i.to === '/'} className="j-nav-link" onClick={onNavigate}>
+              <span className="w-5 text-center text-sm opacity-70">{i.icon}</span>
+              <span>{t(i.key)}</span>
+            </NavLink>
+          ))}
+        </div>
       ))}
       <div className="mt-auto border-t pt-3" style={{ borderColor: 'var(--j-border)' }}>
         <a href="/imam/" target="_blank" rel="noreferrer" className="j-nav-link">

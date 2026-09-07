@@ -20,7 +20,9 @@ export interface PlatformStats {
 export function PlatformPage() {
   const { t } = useTranslation();
   const ext = useExtensions();
-  const stats = useQuery({ queryKey: ['platform', 'stats'], queryFn: () => api.get<PlatformStats>('/platform/stats'), refetchInterval: 30_000 });
+  const Ext = ext.platformPage;
+  const stats = useQuery({ queryKey: ['platform', 'stats'], queryFn: () => api.get<PlatformStats>('/platform/stats'), refetchInterval: 30_000, enabled: !Ext });
+  if (Ext) return <Ext />;
   const s = stats.data;
   return (
     <div>

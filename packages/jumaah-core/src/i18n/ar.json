@@ -103,7 +103,11 @@
     "tenants": "المساجد",
     "sync": "المزامنة",
     "live": "البث المباشر",
-    "imamView": "واجهة المنبر"
+    "imamView": "واجهة المنبر",
+    "groups": {
+      "platform": "المنصة",
+      "mosque": "المسجد"
+    }
   },
   "dashboard": {
     "currentSection": "القسم الحالي",

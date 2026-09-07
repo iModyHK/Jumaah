@@ -13,6 +13,8 @@ export interface AdminNavItem {
   admin?: boolean;
   superOnly?: boolean;
   needsTenant?: boolean;
+  /** Heading this item sits under in the sidebar; items without one come first, in the mosque's own group. */
+  group?: string;
   /** Extra visibility rule (e.g. organisation admins only). */
   visible?: (user: AuthUser | null) => boolean;
 }
@@ -38,6 +40,11 @@ export interface TranslateGate {
 export interface AdminExtensions {
   routes: AdminRoute[];
   nav: AdminNavItem[];
+  /**
+   * Replaces the whole server-wide page (the hosted edition puts its operator console there). When it is not set,
+   * the built-in page shows the counts and `platformCards` below them.
+   */
+  platformPage?: ComponentType;
   /** Rendered above the dashboard cards. */
   dashboardTop: ComponentType[];
   /** Rendered below the dashboard cards. */

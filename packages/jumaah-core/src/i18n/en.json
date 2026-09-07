@@ -103,7 +103,11 @@
     "tenants": "Mosques",
     "sync": "Sync",
     "live": "Live",
-    "imamView": "Imam view"
+    "imamView": "Imam view",
+    "groups": {
+      "platform": "Platform",
+      "mosque": "Mosque"
+    }
   },
   "dashboard": {
     "currentSection": "Current section",

@@ -30,6 +30,7 @@ export async function userRoutes(app: FastifyInstance): Promise<void> {
     const email = body.email.toLowerCase();
     const existing = await db.user.findFirst({ where: { tenantId, email } });
     if (existing) throw conflict('Email already exists in this tenant');
+    if (tenantId) await app.ctx.hooks.quota?.(app.ctx, tenantId, 'user', await db.user.count({ where: { tenantId } }));
     const u = await db.user.create({ data: { tenantId, email, name: body.name, role: body.role, passwordHash: await hashPassword(body.password) } });
     await audit(db, tenantId, actorOf(request), 'user.create', 'User', u.id, null, { email, role: body.role });
     return reply.code(201).send(userDto(u));

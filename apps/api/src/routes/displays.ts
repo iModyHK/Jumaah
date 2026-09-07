@@ -28,6 +28,8 @@ export async function displayRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/displays', { preHandler: admin }, async (request, reply) => {
     const body = parse(displaySchema, request.body);
+    await app.ctx.hooks.quota?.(app.ctx, request.tenantId, 'display', await db.display.count({ where: { tenantId: request.tenantId } }));
+    await app.ctx.hooks.quota?.(app.ctx, request.tenantId, 'language', body.languages.length);
     const t = await db.tenant.findUniqueOrThrow({ where: { id: request.tenantId }, select: ADDRESS });
     const row = await db.display.create({ data: { tenantId: request.tenantId, token: randomToken(18), ...body } });
     await outbox(db, request.tenantId, 'Display', row.id, 'UPSERT', row);
@@ -40,6 +42,7 @@ export async function displayRoutes(app: FastifyInstance): Promise<void> {
     const body = parse(displaySchema.partial(), request.body);
     const before = await db.display.findFirst({ where: { id, tenantId: request.tenantId }, include: { tenant: { select: ADDRESS } } });
     if (!before) throw notFound('Display');
+    if (body.languages) await app.ctx.hooks.quota?.(app.ctx, request.tenantId, 'language', body.languages.length);
     const row = await db.display.update({ where: { id }, data: body });
     await outbox(db, request.tenantId, 'Display', row.id, 'UPSERT', row);
     await audit(db, request.tenantId, actorOf(request), 'display.update', 'Display', id, displayDto(before), displayDto(row));
